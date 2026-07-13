@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.majortomman.school.data.ImportTutorialRepository
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.material.MaterialPackRepository
+import com.majortomman.school.data.math.MathQuestionBankRepository
 import com.majortomman.school.ui.SchoolApp
 import com.majortomman.school.ui.theme.SchoolTheme
 
@@ -20,6 +21,9 @@ class MainActivity : ComponentActivity() {
     private val importTutorialRepository by lazy {
         ImportTutorialRepository(applicationContext)
     }
+    private val mathQuestionBankRepository by lazy {
+        MathQuestionBankRepository(applicationContext)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +35,7 @@ class MainActivity : ComponentActivity() {
                     repository = preferencesRepository,
                     materialRepository = materialPackRepository,
                     tutorialRepository = importTutorialRepository,
+                    mathQuestionRepository = mathQuestionBankRepository,
                     initialTextbookKey = initialTextbookKey,
                 )
             }

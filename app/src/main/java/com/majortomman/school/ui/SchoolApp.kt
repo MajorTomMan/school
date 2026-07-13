@@ -44,6 +44,7 @@ import com.majortomman.school.data.MasteryStatus
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.ScheduledReview
 import com.majortomman.school.data.material.MaterialPackRepository
+import com.majortomman.school.data.math.MathQuestionBankRepository
 import com.majortomman.school.data.recordAttempt
 import kotlinx.coroutines.launch
 
@@ -55,6 +56,7 @@ private enum class MainTab(val label: String) {
     SUBJECTS("学科"),
     TODAY("今天"),
     PATH("路径"),
+    BANK("题库"),
     REVIEW("复习"),
     SETTINGS("设置"),
 }
@@ -64,6 +66,7 @@ fun SchoolApp(
     repository: PreferencesRepository,
     materialRepository: MaterialPackRepository,
     tutorialRepository: ImportTutorialRepository,
+    mathQuestionRepository: MathQuestionBankRepository,
     initialTextbookKey: String? = null,
 ) {
     var selectedTabName by rememberSaveable { mutableStateOf(MainTab.SUBJECTS.name) }
@@ -238,6 +241,18 @@ fun SchoolApp(
                                 }
                             }
 
+                            MainTab.BANK -> MathQuestionBankScreen(
+                                repository = mathQuestionRepository,
+                                textbook = activeTextbook,
+                                onOpenSubjects = { selectedTabName = MainTab.SUBJECTS.name },
+                                onOpenTextbook = { page ->
+                                    activeTextbook?.let { textbook ->
+                                        openedTextbookKey = textbook.key
+                                        openedTextbookPage = page
+                                    }
+                                },
+                            )
+
                             MainTab.REVIEW -> MinimalRoomReviewScreen(
                                 fallbackItems = emptyList(),
                                 progress = progress,
@@ -271,7 +286,7 @@ private fun MinimalBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(NavigationBlack)
-            .padding(horizontal = 10.dp, vertical = 13.dp),
+            .padding(horizontal = 7.dp, vertical = 13.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -280,14 +295,14 @@ private fun MinimalBottomBar(
             Column(
                 modifier = Modifier
                     .clickable { onSelect(tab) }
-                    .padding(horizontal = 5.dp, vertical = 4.dp),
+                    .padding(horizontal = 3.dp, vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
                 Text(
                     text = tab.label,
                     color = if (isSelected) NavigationWhite else NavigationWhite.copy(alpha = 0.32f),
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 )
                 Box(

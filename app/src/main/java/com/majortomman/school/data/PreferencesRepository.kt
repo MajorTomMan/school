@@ -189,6 +189,9 @@ class PreferencesRepository(
     suspend fun clearLearningProgress() {
         learningDao.clearAttempts()
         learningDao.clearReviewSchedules()
+        learningDao.clearMathAttempts()
+        learningDao.clearMathMastery()
+        learningDao.clearMathMistakes()
         context.schoolDataStore.edit { preferences ->
             SampleContent.lessons.forEach { lesson -> preferences.remove(lessonStatusKey(lesson.id)) }
             preferences.remove(Keys.attempts)

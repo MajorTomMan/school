@@ -32,11 +32,82 @@ interface LearningDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertReviewSchedule(schedule: ReviewScheduleEntity)
 
+    @Insert
+    suspend fun insertMathAttempt(attempt: MathPracticeAttemptEntity): Long
+
+    @Query(
+        """
+        SELECT * FROM math_practice_attempts
+        WHERE textbookKey = :textbookKey
+        ORDER BY createdAt DESC
+        LIMIT :limit
+        """,
+    )
+    fun observeMathAttempts(textbookKey: String, limit: Int = 30): Flow<List<MathPracticeAttemptEntity>>
+
+    @Query(
+        """
+        SELECT templateId FROM math_practice_attempts
+        WHERE textbookKey = :textbookKey
+        ORDER BY createdAt DESC
+        LIMIT :limit
+        """,
+    )
+    suspend fun recentMathTemplateIds(textbookKey: String, limit: Int = 8): List<String>
+
+    @Query(
+        """
+        SELECT * FROM math_knowledge_mastery
+        WHERE textbookKey = :textbookKey
+        ORDER BY score ASC, dueAt ASC
+        """,
+    )
+    fun observeMathMastery(textbookKey: String): Flow<List<MathKnowledgeMasteryEntity>>
+
+    @Query(
+        """
+        SELECT * FROM math_knowledge_mastery
+        WHERE textbookKey = :textbookKey AND knowledgePointId = :knowledgePointId
+        LIMIT 1
+        """,
+    )
+    suspend fun getMathMastery(textbookKey: String, knowledgePointId: String): MathKnowledgeMasteryEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMathMastery(mastery: MathKnowledgeMasteryEntity)
+
+    @Query(
+        """
+        SELECT * FROM math_mistakes
+        WHERE textbookKey = :textbookKey
+        ORDER BY dueAt ASC, wrongCount DESC, updatedAt DESC
+        """,
+    )
+    fun observeMathMistakes(textbookKey: String): Flow<List<MathMistakeEntity>>
+
+    @Query("SELECT * FROM math_mistakes WHERE mistakeKey = :mistakeKey LIMIT 1")
+    suspend fun getMathMistake(mistakeKey: String): MathMistakeEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMathMistake(mistake: MathMistakeEntity)
+
+    @Query("DELETE FROM math_mistakes WHERE mistakeKey = :mistakeKey")
+    suspend fun deleteMathMistake(mistakeKey: String)
+
     @Query("DELETE FROM practice_attempts")
     suspend fun clearAttempts()
 
     @Query("DELETE FROM review_schedules")
     suspend fun clearReviewSchedules()
+
+    @Query("DELETE FROM math_practice_attempts")
+    suspend fun clearMathAttempts()
+
+    @Query("DELETE FROM math_knowledge_mastery")
+    suspend fun clearMathMastery()
+
+    @Query("DELETE FROM math_mistakes")
+    suspend fun clearMathMistakes()
 }
 
 data class AttemptStatsRow(
