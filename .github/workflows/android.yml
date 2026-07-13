@@ -116,7 +116,7 @@ jobs:
 
           changelog="$(git log --no-merges --pretty=format:'- %s (`%h`)' "${diff_base}..${GITHUB_SHA}" || true)"
           if [ -z "$changelog" ]; then
-            changelog="- $(git log -1 --pretty=%s "$GITHUB_SHA") (`${SHORT_SHA}`)"
+            changelog="- $(git log -1 --pretty=%s "$GITHUB_SHA") (${SHORT_SHA})"
           fi
 
           files_changed="$(git diff --name-only "$diff_base" "$GITHUB_SHA" | sed '/^$/d' | wc -l | tr -d ' ')"
