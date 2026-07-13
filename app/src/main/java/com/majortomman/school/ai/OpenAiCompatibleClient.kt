@@ -1,5 +1,6 @@
 package com.majortomman.school.ai
 
+import android.util.Base64
 import com.majortomman.school.data.AiSettings
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -49,24 +50,95 @@ class OpenAiCompatibleClient(
         return parseEvaluation(raw)
     }
 
-    private suspend fun chat(system: String, user: String): String = withContext(Dispatchers.IO) {
-        require(settings.model.isNotBlank()) { "模型名称不能为空" }
+    suspend fun analyzeTextbookLesson(
+        subject: String,
+        lessonTitle: String,
+        pageStart: Int,
+        pageEnd: Int,
+        pageImages: List<ByteArray>,
+    ): String = withContext(Dispatchers.IO) {
+        require(pageImages.isNotEmpty()) { "没有可分析的教材页面" }
+        val system = """
+            你是教材课程编译器。你会看到同一课程的教材页面截图。
+            只依据截图中能确认的内容生成课程，不要补写教材没有表达的事实。
+            返回一个 JSON 对象，不要使用 Markdown、代码围栏或额外说明。
+            JSON 格式：
+            {
+              "summary":"课程核心直觉，中文，1到3句",
+              "objectives":["目标1","目标2","目标3"],
+              "misconception":"最典型的一个误区以及纠正方式",
+              "scene":{
+                "type":"NUMBER_LINE/MIRROR/DISTANCE/COMPARISON/PROCESS/TEXT 六选一",
+                "title":"动画标题",
+                "prompt":"进入动画前的问题",
+                "values":[最多8个数字],
+                "labels":[与数字或对象对应的短标签],
+                "expression":"需要展示的短公式或关系，可为空",
+                "conclusion":"动画揭示的结论",
+                "steps":["动画步骤1","动画步骤2","动画步骤3"],
+                "sourcePage":教材印刷页码
+              },
+              "exercise":{
+                "question":"一道直接检验本课核心理解的题目",
+                "acceptedAnswers":["可接受的短答案或关键词"],
+                "hints":["一级提示","二级提示","三级提示"],
+                "explanation":"标准解释"
+              }
+            }
+            数学中涉及数轴、相反数、绝对值和大小关系时优先使用对应动画类型；
+            其他内容使用 PROCESS 或 TEXT。不要输出无法从页面确认的专有名词、数据或结论。
+        """.trimIndent()
+        val content = JSONArray().put(
+            JSONObject()
+                .put("type", "text")
+                .put(
+                    "text",
+                    "科目：$subject\n课程：$lessonTitle\n教材页码：$pageStart—$pageEnd\n请分析这些页面并生成课程 JSON。",
+                ),
+        )
+        pageImages.forEach { bytes ->
+            val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
+            content.put(
+                JSONObject()
+                    .put("type", "image_url")
+                    .put(
+                        "image_url",
+                        JSONObject().put("url", "data:image/jpeg;base64,$encoded"),
+                    ),
+            )
+        }
+        val messages = JSONArray()
+            .put(JSONObject().put("role", "system").put("content", system))
+            .put(JSONObject().put("role", "user").put("content", content))
+        sendChat(messages, temperature = 0.1, maxTokens = 1_800)
+    }
 
+    private suspend fun chat(system: String, user: String): String = withContext(Dispatchers.IO) {
         val messages = JSONArray()
             .put(JSONObject().put("role", "system").put("content", system))
             .put(JSONObject().put("role", "user").put("content", user))
+        sendChat(messages, temperature = 0.2)
+    }
+
+    private fun sendChat(
+        messages: JSONArray,
+        temperature: Double,
+        maxTokens: Int? = null,
+    ): String {
+        require(settings.model.isNotBlank()) { "模型名称不能为空" }
         val request = JSONObject()
             .put("model", settings.model)
             .put("messages", messages)
-            .put("temperature", 0.2)
+            .put("temperature", temperature)
             .put("stream", false)
+        if (maxTokens != null) request.put("max_tokens", maxTokens)
 
         val connection = openConnection("chat/completions", method = "POST")
         connection.outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
             writer.write(request.toString())
         }
         val response = JSONObject(connection.readResponse())
-        response.getJSONArray("choices")
+        return response.getJSONArray("choices")
             .getJSONObject(0)
             .getJSONObject("message")
             .getString("content")
@@ -105,7 +177,7 @@ class OpenAiCompatibleClient(
         return (URL("$apiBase/$path").openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 10_000
-            readTimeout = 90_000
+            readTimeout = 120_000
             setRequestProperty("Accept", "application/json")
             if (method == "POST") {
                 doOutput = true
