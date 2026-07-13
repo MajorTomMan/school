@@ -103,10 +103,11 @@ class TextbookAnalysisWorker(
                         } else {
                             null
                         }
+                        val textAnalysis = generatedByText?.getOrNull()
 
-                        if (generatedByText?.isSuccess == true) {
+                        if (textAnalysis != null) {
                             textAiCount += 1
-                            generatedByText.getOrThrow()
+                            textAnalysis
                         } else {
                             val generatedByVision = if (aiEnabled) {
                                 runCatching {
@@ -127,10 +128,11 @@ class TextbookAnalysisWorker(
                             } else {
                                 null
                             }
+                            val visionAnalysis = generatedByVision?.getOrNull()
 
-                            if (generatedByVision?.isSuccess == true) {
+                            if (visionAnalysis != null) {
                                 visionAiCount += 1
-                                generatedByVision.getOrThrow()
+                                visionAnalysis
                             } else {
                                 if (generatedByText?.isFailure == true && generatedByVision?.isFailure == true) {
                                     aiEnabled = false
@@ -207,29 +209,31 @@ class TextbookAnalysisWorker(
             PdfRenderer(descriptor).use { renderer ->
                 for (printedPage in printedPages) {
                     checkStopped()
-                    TextbookOcrStore.read(root, printedPage)?.let { cached ->
+                    val cached = TextbookOcrStore.read(root, printedPage)
+                    if (cached != null) {
                         results += cached
-                        continue
-                    }
-                    val index = pack.printedPageToPdfIndex(printedPage)
-                    if (index !in 0 until renderer.pageCount) continue
-                    val result = renderer.openPage(index).use { page ->
-                        val widthScale = MAX_OCR_WIDTH.toFloat() / page.width.coerceAtLeast(1)
-                        val heightScale = MAX_OCR_HEIGHT.toFloat() / page.height.coerceAtLeast(1)
-                        val scale = minOf(widthScale, heightScale, MAX_OCR_SCALE).coerceAtLeast(MIN_OCR_SCALE)
-                        val width = (page.width * scale).toInt().coerceAtLeast(1)
-                        val height = (page.height * scale).toInt().coerceAtLeast(1)
-                        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                        try {
-                            bitmap.eraseColor(Color.WHITE)
-                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                            ocrEngine.recognize(bitmap, printedPage, index)
-                        } finally {
-                            bitmap.recycle()
+                    } else {
+                        val index = pack.printedPageToPdfIndex(printedPage)
+                        if (index !in 0 until renderer.pageCount) continue
+                        val result = renderer.openPage(index).use { page ->
+                            val widthScale = MAX_OCR_WIDTH.toFloat() / page.width.coerceAtLeast(1)
+                            val heightScale = MAX_OCR_HEIGHT.toFloat() / page.height.coerceAtLeast(1)
+                            val scale = minOf(widthScale, heightScale, MAX_OCR_SCALE)
+                                .coerceAtLeast(MIN_OCR_SCALE)
+                            val width = (page.width * scale).toInt().coerceAtLeast(1)
+                            val height = (page.height * scale).toInt().coerceAtLeast(1)
+                            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            try {
+                                bitmap.eraseColor(Color.WHITE)
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                ocrEngine.recognize(bitmap, printedPage, index)
+                            } finally {
+                                bitmap.recycle()
+                            }
                         }
+                        TextbookOcrStore.write(root, result)
+                        results += result
                     }
-                    TextbookOcrStore.write(root, result)
-                    results += result
                 }
             }
         }
