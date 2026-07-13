@@ -43,7 +43,6 @@ import com.majortomman.school.data.LearningProgress
 import com.majortomman.school.data.MasteryStatus
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.ScheduledReview
-import com.majortomman.school.data.material.InstalledTextbook
 import com.majortomman.school.data.material.MaterialPackRepository
 import com.majortomman.school.data.recordAttempt
 import kotlinx.coroutines.launch
@@ -83,10 +82,7 @@ fun SchoolApp(
     val activeTextbook = libraryState.installedTextbooks.firstOrNull { it.key == activeTextbookKey }
     val lessons = activeTextbook?.lessons.orEmpty().mapIndexed { index, generated ->
         val stored = progress.lessonStatuses[generated.id]
-        val fallback = when {
-            index == 0 -> MasteryStatus.LEARNING
-            else -> MasteryStatus.NOT_STARTED
-        }
+        val fallback = if (index == 0) MasteryStatus.LEARNING else MasteryStatus.NOT_STARTED
         generated.toLesson(stored ?: fallback)
     }
     val currentLesson = lessons.firstOrNull { it.status == MasteryStatus.LEARNING }
@@ -102,6 +98,12 @@ fun SchoolApp(
     }
     val selectedTab = MainTab.valueOf(selectedTabName)
     val openedLesson = lessons.firstOrNull { it.id == openedLessonId }
+    val openedGeneratedLesson = activeTextbook?.lessons?.firstOrNull { it.id == openedLessonId }
+    val openedAnalysis = if (activeTextbook != null && openedGeneratedLesson != null) {
+        materialRepository.loadLessonAnalysis(activeTextbook, openedGeneratedLesson.sourceId)
+    } else {
+        null
+    }
     val openedTextbook = libraryState.installedTextbooks.firstOrNull { it.key == openedTextbookKey }
 
     LaunchedEffect(libraryState.installedTextbooks.map { it.key }) {
@@ -142,22 +144,35 @@ fun SchoolApp(
         label = "appNavigation",
     ) { lesson ->
         if (lesson != null && activeTextbook != null) {
-            SceneLearningScreen(
-                lesson = lesson,
-                aiSettings = aiSettings,
-                progress = progress,
-                installedMaterial = activeTextbook.pack,
-                onOpenTextbook = { printedPage ->
-                    openedTextbookKey = activeTextbook.key
-                    openedTextbookPage = printedPage
-                },
-                onBack = { openedLessonId = null },
-                onRecordAttempt = { answer, correct, feedback ->
-                    scope.launch {
-                        repository.recordAttempt(lesson.id, answer, correct, feedback)
-                    }
-                },
-            )
+            val openTextbook: (Int) -> Unit = { printedPage ->
+                openedTextbookKey = activeTextbook.key
+                openedTextbookPage = printedPage
+            }
+            val recordAttempt: (String, Boolean, String) -> Unit = { answer, correct, feedback ->
+                scope.launch { repository.recordAttempt(lesson.id, answer, correct, feedback) }
+            }
+            if (openedAnalysis != null) {
+                GeneratedLearningScreen(
+                    lesson = lesson,
+                    analysis = openedAnalysis,
+                    aiSettings = aiSettings,
+                    progress = progress,
+                    installedMaterial = activeTextbook.pack,
+                    onOpenTextbook = openTextbook,
+                    onBack = { openedLessonId = null },
+                    onRecordAttempt = recordAttempt,
+                )
+            } else {
+                SceneLearningScreen(
+                    lesson = lesson,
+                    aiSettings = aiSettings,
+                    progress = progress,
+                    installedMaterial = activeTextbook.pack,
+                    onOpenTextbook = openTextbook,
+                    onBack = { openedLessonId = null },
+                    onRecordAttempt = recordAttempt,
+                )
+            }
         } else {
             Scaffold(
                 containerColor = NavigationBlack,
@@ -200,9 +215,7 @@ fun SchoolApp(
 
                             MainTab.TODAY -> {
                                 if (activeTextbook == null || dailyPlan == null || lessons.isEmpty()) {
-                                    NoActiveTextbookScreen {
-                                        selectedTabName = MainTab.SUBJECTS.name
-                                    }
+                                    NoActiveTextbookScreen { selectedTabName = MainTab.SUBJECTS.name }
                                 } else {
                                     SceneTodayScreen(
                                         plan = dailyPlan,
@@ -216,9 +229,7 @@ fun SchoolApp(
 
                             MainTab.PATH -> {
                                 if (activeTextbook == null || lessons.isEmpty()) {
-                                    NoActiveTextbookScreen {
-                                        selectedTabName = MainTab.SUBJECTS.name
-                                    }
+                                    NoActiveTextbookScreen { selectedTabName = MainTab.SUBJECTS.name }
                                 } else {
                                     SceneCoursePathScreen(
                                         lessons = lessons,

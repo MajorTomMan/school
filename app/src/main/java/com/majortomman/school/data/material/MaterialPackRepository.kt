@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,17 +46,16 @@ class MaterialPackRepository(
                 Intent.FLAG_GRANT_READ_URI_PERMISSION,
             )
         }
-        val request = OneTimeWorkRequestBuilder<TextbookProcessingWorker>()
-            .setInputData(
-                workDataOf(
-                    TextbookProcessingContract.KEY_SOURCE_URI to uri.toString(),
-                    TextbookProcessingContract.KEY_SUBJECT_ID to slot.subjectId,
-                    TextbookProcessingContract.KEY_SUBJECT_TITLE to slot.subjectTitle,
-                    TextbookProcessingContract.KEY_GRADE to slot.grade,
-                    TextbookProcessingContract.KEY_VOLUME to slot.volume.id,
-                    TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
-                ),
-            )
+        val input = workDataOf(
+            TextbookProcessingContract.KEY_SOURCE_URI to uri.toString(),
+            TextbookProcessingContract.KEY_SUBJECT_ID to slot.subjectId,
+            TextbookProcessingContract.KEY_SUBJECT_TITLE to slot.subjectTitle,
+            TextbookProcessingContract.KEY_GRADE to slot.grade,
+            TextbookProcessingContract.KEY_VOLUME to slot.volume.id,
+            TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
+        )
+        val importRequest = OneTimeWorkRequestBuilder<TextbookProcessingWorker>()
+            .setInputData(input)
             .addTag(TextbookProcessingContract.TAG)
             .addTag(TextbookProcessingContract.slotTag(slot))
             .setBackoffCriteria(
@@ -64,21 +64,41 @@ class MaterialPackRepository(
                 TimeUnit.SECONDS,
             )
             .build()
-        workManager.enqueueUniqueWork(
+        val analysisRequest = analysisRequest(slot)
+        workManager.beginUniqueWork(
             TextbookProcessingContract.uniqueWorkName(slot),
             ExistingWorkPolicy.KEEP,
-            request,
+            importRequest,
+        ).then(analysisRequest).enqueue()
+    }
+
+    fun enqueueAnalysis(slot: TextbookSlot) {
+        val installed = MaterialLibraryStore.read(appContext).firstOrNull { it.slot.key == slot.key } ?: return
+        File(installed.pack.rootPath, "generated/analysis").deleteRecursively()
+        workManager.enqueueUniqueWork(
+            "textbook-analysis-${slot.key}",
+            ExistingWorkPolicy.REPLACE,
+            analysisRequest(slot),
         )
     }
 
     fun cancelProcessing(slot: TextbookSlot) {
         workManager.cancelUniqueWork(TextbookProcessingContract.uniqueWorkName(slot))
+        workManager.cancelUniqueWork("textbook-analysis-${slot.key}")
     }
+
+    fun loadLessonAnalysis(
+        textbook: InstalledTextbook,
+        lessonSourceId: String,
+    ): LessonAnalysis? = LessonAnalysisStore.read(File(textbook.pack.rootPath), lessonSourceId)
+
+    fun analyzedLessonCount(textbook: InstalledTextbook): Int =
+        LessonAnalysisStore.count(File(textbook.pack.rootPath), textbook.lessons)
 
     suspend fun removeInstalled(slot: TextbookSlot) = withContext(Dispatchers.IO) {
         cancelProcessing(slot)
         val removed = MaterialLibraryStore.remove(appContext, slot.key)
-        removed?.pack?.rootPath?.let { java.io.File(it).deleteRecursively() }
+        removed?.pack?.rootPath?.let { File(it).deleteRecursively() }
         MaterialLibraryStore.processingRoot(appContext, slot).deleteRecursively()
         refreshCurrent()
     }
@@ -87,6 +107,25 @@ class MaterialPackRepository(
         workManager.getWorkInfosByTag(TextbookProcessingContract.TAG).get()
             .let(::refresh)
     }
+
+    private fun analysisRequest(slot: TextbookSlot) = OneTimeWorkRequestBuilder<TextbookAnalysisWorker>()
+        .setInputData(slotInput(slot))
+        .addTag(TextbookProcessingContract.TAG)
+        .addTag(TextbookProcessingContract.slotTag(slot))
+        .setBackoffCriteria(
+            androidx.work.BackoffPolicy.EXPONENTIAL,
+            30,
+            TimeUnit.SECONDS,
+        )
+        .build()
+
+    private fun slotInput(slot: TextbookSlot) = workDataOf(
+        TextbookProcessingContract.KEY_SUBJECT_ID to slot.subjectId,
+        TextbookProcessingContract.KEY_SUBJECT_TITLE to slot.subjectTitle,
+        TextbookProcessingContract.KEY_GRADE to slot.grade,
+        TextbookProcessingContract.KEY_VOLUME to slot.volume.id,
+        TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
+    )
 
     private fun refresh(workInfos: List<WorkInfo>) {
         val installed = MaterialLibraryStore.read(appContext)
