@@ -31,3 +31,33 @@ data class DailyPlan(
     val reviewItems: List<ReviewItem>,
     val estimatedMinutes: Int,
 )
+
+data class AttemptDraft(
+    val questionId: String,
+    val questionText: String,
+    val answer: String,
+    val correct: Boolean,
+    val feedback: String,
+    val mistakeType: String? = null,
+)
+
+data class AttemptRecord(
+    val id: Long,
+    val lessonId: String,
+    val lessonTitle: String,
+    val questionText: String,
+    val answer: String,
+    val correct: Boolean,
+    val feedback: String,
+    val mistakeType: String?,
+    val createdLabel: String,
+)
+
+data class ScheduledReview(
+    val lessonId: String,
+    val lessonTitle: String,
+    val dueLabel: String,
+    val intervalDays: Int,
+    val repetitions: Int,
+    val lastCorrect: Boolean,
+)
