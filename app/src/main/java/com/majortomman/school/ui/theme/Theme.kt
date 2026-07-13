@@ -12,34 +12,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val TechBlack = Color(0xFF050608)
-private val TechWhite = Color(0xFFF5F7FA)
-private val TechBlue = Color(0xFF2D7BFF)
-private val TechRed = Color(0xFFFF3B30)
-private val TechYellow = Color(0xFFFFCC00)
+private val MinimalBlack = Color(0xFF000000)
+private val MinimalWhite = Color(0xFFF5F5F7)
+private val MinimalBlue = Color(0xFF0A84FF)
+private val MinimalRed = Color(0xFFFF453A)
+private val MinimalYellow = Color(0xFFFFD60A)
 
-private val TechColors = darkColorScheme(
-    primary = TechBlue,
-    onPrimary = TechWhite,
-    primaryContainer = Color(0xFF0A2552),
-    onPrimaryContainer = TechWhite,
-    secondary = TechYellow,
-    onSecondary = TechBlack,
-    secondaryContainer = Color(0xFF3A3000),
-    onSecondaryContainer = TechWhite,
-    tertiary = TechRed,
-    onTertiary = TechWhite,
-    tertiaryContainer = Color(0xFF48110E),
-    onTertiaryContainer = TechWhite,
-    background = TechBlack,
-    onBackground = TechWhite,
-    surface = Color(0xFF090B0F),
-    onSurface = TechWhite,
-    surfaceVariant = Color(0xFF11151C),
-    onSurfaceVariant = Color(0xFFB8C0CC),
-    outline = Color(0xFF56606E),
-    error = TechRed,
-    onError = TechWhite,
+private val MinimalColors = darkColorScheme(
+    primary = MinimalBlue,
+    onPrimary = MinimalWhite,
+    primaryContainer = Color(0xFF001D3A),
+    onPrimaryContainer = MinimalWhite,
+    secondary = MinimalYellow,
+    onSecondary = MinimalBlack,
+    secondaryContainer = Color(0xFF211C00),
+    onSecondaryContainer = MinimalWhite,
+    tertiary = MinimalRed,
+    onTertiary = MinimalWhite,
+    tertiaryContainer = Color(0xFF2B0806),
+    onTertiaryContainer = MinimalWhite,
+    background = MinimalBlack,
+    onBackground = MinimalWhite,
+    surface = MinimalBlack,
+    onSurface = MinimalWhite,
+    surfaceVariant = Color(0xFF0B0B0D),
+    onSurfaceVariant = Color(0xFFA1A1A6),
+    outline = Color(0xFF3A3A3C),
+    error = MinimalRed,
+    onError = MinimalWhite,
 )
 
 private val SchoolTypography = Typography(
@@ -47,18 +47,18 @@ private val SchoolTypography = Typography(
         fontSize = 32.sp,
         lineHeight = 38.sp,
         letterSpacing = (-0.5).sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
     ),
     headlineMedium = TextStyle(
         fontSize = 26.sp,
         lineHeight = 32.sp,
         letterSpacing = (-0.3).sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
     ),
     headlineSmall = TextStyle(
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
     ),
     titleLarge = TextStyle(
         fontSize = 19.sp,
@@ -68,7 +68,7 @@ private val SchoolTypography = Typography(
     titleMedium = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
     ),
     bodyLarge = TextStyle(
         fontSize = 16.sp,
@@ -81,17 +81,17 @@ private val SchoolTypography = Typography(
     labelMedium = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.2.sp,
+        letterSpacing = 0.1.sp,
         fontWeight = FontWeight.Medium,
     ),
 )
 
-private val SchoolShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(10.dp),
-    extraLarge = RoundedCornerShape(12.dp),
+private val MinimalShapes = Shapes(
+    extraSmall = RoundedCornerShape(2.dp),
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(6.dp),
+    large = RoundedCornerShape(8.dp),
+    extraLarge = RoundedCornerShape(10.dp),
 )
 
 @Composable
@@ -100,9 +100,9 @@ fun SchoolTheme(
     content: @Composable () -> Unit,
 ) {
     MaterialTheme(
-        colorScheme = TechColors,
+        colorScheme = MinimalColors,
         typography = SchoolTypography,
-        shapes = SchoolShapes,
+        shapes = MinimalShapes,
         content = content,
     )
 }
