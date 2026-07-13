@@ -1,7 +1,5 @@
 package com.majortomman.school.data.material
 
-import kotlin.math.roundToInt
-
 internal enum class KnowledgeCategory {
     DEFINITION,
     PROPERTY,
@@ -39,20 +37,71 @@ internal object LocalKnowledgeCompiler {
         pages: List<OcrPageResult>,
     ): LocalKnowledgeCompilation? {
         if (slot.subjectId != "math") return compileGenericDefinition(lesson, pages)
-        val corpus = buildCorpus(lesson, pages)
-        if (corpus.text.isBlank()) return null
+        val lines = pages.flatMap { page ->
+            page.lines.mapNotNull { line ->
+                line.text.trim().takeIf(String::isNotBlank)?.let { KnowledgeEvidence(page.printedPage, it) }
+            }
+        }
+        val corpus = (lesson.title + "\n" + lines.joinToString("\n") { it.text })
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (corpus.isBlank()) return null
 
-        val candidates = mathRules.mapNotNull { rule ->
-            val score = score(rule, lesson.title, corpus)
-            if (score < MIN_CONFIDENCE) null else rule.toPoint(score, corpus)
+        val candidates = rules.mapNotNull { rule ->
+            val confidence = score(rule, lesson.title, corpus, lines)
+            if (confidence < MIN_CONFIDENCE) null else rule.toPoint(confidence, lines, lesson.pageStart)
         }.sortedByDescending { it.confidence }
-
         val primary = candidates.firstOrNull() ?: return compileGenericDefinition(lesson, pages)
-        val related = candidates.drop(1).filter { it.confidence >= primary.confidence - 0.16f }.take(3)
-        return LocalKnowledgeCompilation(
-            primary = primary,
-            related = related,
-            analysis = buildAnalysis(lesson, primary, related),
+        val related = candidates.drop(1)
+            .filter { it.confidence >= primary.confidence - 0.16f }
+            .take(3)
+        return LocalKnowledgeCompilation(primary, related, buildAnalysis(lesson, primary, related))
+    }
+
+    private fun score(
+        rule: Rule,
+        lessonTitle: String,
+        corpus: String,
+        lines: List<KnowledgeEvidence>,
+    ): Float {
+        var score = 0f
+        if (rule.titleKeywords.any { it in lessonTitle }) score += 0.34f
+        score += (rule.keywords.count { it in corpus } * 0.09f).coerceAtMost(0.36f)
+        if (rule.required.isNotEmpty() && rule.required.all { it in corpus }) score += 0.16f
+        if (lines.any { line ->
+                definitionPatterns.any { it.containsMatchIn(line.text) } &&
+                    rule.keywords.any { it in line.text }
+            }
+        ) {
+            score += 0.12f
+        }
+        if (rule.formulas.any { it.containsMatchIn(corpus) }) score += 0.10f
+        return score.coerceAtMost(0.98f)
+    }
+
+    private fun Rule.toPoint(
+        confidence: Float,
+        lines: List<KnowledgeEvidence>,
+        fallbackPage: Int,
+    ): ExtractedKnowledgePoint {
+        val evidence = lines
+            .filter { line -> keywords.any { it in line.text } || formulas.any { it.containsMatchIn(line.text) } }
+            .sortedByDescending { line -> keywords.count { it in line.text } }
+            .distinctBy { it.page to it.text }
+            .take(4)
+            .ifEmpty { listOf(KnowledgeEvidence(fallbackPage, definition)) }
+        val extractedDefinition = evidence.firstOrNull { item ->
+            definitionPatterns.any { it.containsMatchIn(item.text) }
+        }?.text ?: definition
+        return ExtractedKnowledgePoint(
+            id = id,
+            title = title,
+            category = category,
+            definition = extractedDefinition,
+            conditions = conditions,
+            properties = properties,
+            confidence = confidence,
+            evidence = evidence,
         )
     }
 
@@ -61,8 +110,10 @@ internal object LocalKnowledgeCompiler {
         point: ExtractedKnowledgePoint,
         related: List<ExtractedKnowledgePoint>,
     ): LessonAnalysis {
-        val page = point.evidence.firstOrNull()?.page ?: lesson.pageStart
-        val scene = sceneFor(point.id, page)
+        val sourcePage = point.evidence.firstOrNull()?.page
+            ?.coerceIn(lesson.pageStart, lesson.pageEnd)
+            ?: lesson.pageStart
+        val scene = sceneFor(point.id, sourcePage)
         val relatedText = related.joinToString("、") { it.title }
         val summary = buildString {
             append(point.definition)
@@ -71,19 +122,18 @@ internal object LocalKnowledgeCompiler {
                 append(point.conditions.joinToString("、"))
                 append("。")
             }
-            if (relatedText.isNotBlank()) {
-                append(" 本节还关联：")
-                append(relatedText)
-                append("。")
-            }
+            if (relatedText.isNotBlank()) append(" 本节还关联：$relatedText。")
         }.trim()
         val objectives = buildList {
             add("理解${point.title}的核心含义")
-            point.conditions.take(2).forEach { add("能说明$it为什么不可缺少") }
-            if (point.properties.isNotEmpty()) add("能使用${point.properties.first()}解决基础问题")
-            add("能回到教材第 $page 页核对定义与例题")
+            point.conditions.take(2).forEach { condition ->
+                add("能说明${condition}为什么不可缺少")
+            }
+            point.properties.firstOrNull()?.let { property ->
+                add("能使用${property}解决基础问题")
+            }
+            add("能回到教材第 $sourcePage 页核对定义与例题")
         }.distinct().take(5)
-
         return LessonAnalysis(
             lessonSourceId = lesson.sourceId,
             summary = summary,
@@ -102,13 +152,12 @@ internal object LocalKnowledgeCompiler {
     ): LocalKnowledgeCompilation? {
         val evidence = pages.asSequence()
             .flatMap { page -> page.lines.asSequence().map { page.printedPage to it.text.trim() } }
-            .filter { (_, text) -> definitionPatterns.any { it.containsMatchIn(text) } }
-            .filter { (_, text) -> text.length in 12..220 }
-            .firstOrNull()
-            ?: return null
+            .firstOrNull { (_, text) ->
+                text.length in 12..220 && definitionPatterns.any { it.containsMatchIn(text) }
+            } ?: return null
         val title = extractDefinedTerm(evidence.second) ?: lesson.title
         val point = ExtractedKnowledgePoint(
-            id = "local-definition-${stableId(title)}",
+            id = "local-definition-${title.hashCode().toUInt().toString(16)}",
             title = title,
             category = KnowledgeCategory.DEFINITION,
             definition = evidence.second,
@@ -117,11 +166,12 @@ internal object LocalKnowledgeCompiler {
             confidence = 0.58f,
             evidence = listOf(KnowledgeEvidence(evidence.first, evidence.second)),
         )
+        val sourcePage = evidence.first.coerceIn(lesson.pageStart, lesson.pageEnd)
         val analysis = LessonAnalysis(
             lessonSourceId = lesson.sourceId,
             summary = "本节首先明确“$title”的定义，再结合教材例题观察它如何被使用。",
             objectives = listOf(
-                "能用自己的话说明$title",
+                "能用自己的话说明${title}的含义",
                 "能从教材中找到定义成立的条件",
                 "能区分定义、例子与结论",
             ),
@@ -133,10 +183,10 @@ internal object LocalKnowledgeCompiler {
                 prompt = "教材用哪些条件定义了$title？",
                 conclusion = evidence.second,
                 steps = listOf("找到被定义的对象", "标出必要条件", "观察例题如何使用定义", "用自己的话复述"),
-                sourcePage = evidence.first,
+                sourcePage = sourcePage,
             ),
             exercise = GeneratedExercise(
-                question = "请根据教材说明$title的含义，并写出至少一个必要条件。",
+                question = "请根据教材说明${title}的含义，并写出至少一个必要条件。",
                 acceptedAnswers = listOf(title),
                 hints = listOf("先找到“叫做、称为、是指”等词。", "定义前面的条件不能遗漏。"),
                 explanation = evidence.second,
@@ -144,55 +194,6 @@ internal object LocalKnowledgeCompiler {
             source = LessonAnalysisSource.OCR_FALLBACK,
         )
         return LocalKnowledgeCompilation(point, emptyList(), analysis)
-    }
-
-    private fun buildCorpus(lesson: GeneratedLesson, pages: List<OcrPageResult>): Corpus {
-        val lines = pages.flatMap { page ->
-            page.lines.mapNotNull { line ->
-                line.text.trim().takeIf { it.isNotBlank() }?.let { KnowledgeEvidence(page.printedPage, it) }
-            }
-        }
-        return Corpus(
-            text = (lesson.title + "\n" + lines.joinToString("\n") { it.text })
-                .replace(Regex("\\s+"), " ")
-                .trim(),
-            lines = lines,
-        )
-    }
-
-    private fun score(rule: KnowledgeRule, lessonTitle: String, corpus: Corpus): Float {
-        var score = 0f
-        if (rule.titleKeywords.any { it in lessonTitle }) score += 0.34f
-        val keywordHits = rule.keywords.count { it in corpus.text }
-        score += (keywordHits * 0.09f).coerceAtMost(0.36f)
-        if (rule.requiredKeywords.isNotEmpty() && rule.requiredKeywords.all { it in corpus.text }) score += 0.16f
-        if (corpus.lines.any { line -> definitionPatterns.any { it.containsMatchIn(line.text) } && rule.keywords.any { it in line.text } }) {
-            score += 0.12f
-        }
-        if (rule.formulaPatterns.any { it.containsMatchIn(corpus.text) }) score += 0.10f
-        return score.coerceAtMost(0.98f)
-    }
-
-    private fun KnowledgeRule.toPoint(score: Float, corpus: Corpus): ExtractedKnowledgePoint {
-        val evidence = corpus.lines
-            .filter { line -> keywords.any { it in line.text } || formulaPatterns.any { it.containsMatchIn(line.text) } }
-            .sortedByDescending { line -> keywords.count { it in line.text } }
-            .distinctBy { it.page to it.text }
-            .take(4)
-        val definition = evidence
-            .map { it.text }
-            .firstOrNull { text -> definitionPatterns.any { it.containsMatchIn(text) } }
-            ?: defaultDefinition
-        return ExtractedKnowledgePoint(
-            id = id,
-            title = title,
-            category = category,
-            definition = definition,
-            conditions = conditions,
-            properties = properties,
-            confidence = score,
-            evidence = evidence.ifEmpty { listOf(KnowledgeEvidence(1, defaultDefinition)) },
-        )
     }
 
     private fun sceneFor(id: String, page: Int): LessonSceneSpec = when (id) {
@@ -251,58 +252,64 @@ internal object LocalKnowledgeCompiler {
             steps = listOf("确定基准 0", "识别两种相反方向", "规定正方向", "用正负号记录"),
             sourcePage = page,
         )
-        "expression-transform" -> LessonSceneSpec(
-            type = LessonSceneType.PROCESS,
+        "expression-transform" -> processScene(
+            page = page,
             title = "保持式子的值不变",
             prompt = "去括号和合并同类项时，什么必须保持不变？",
             expression = "2(x + 3) = 2x + 6",
             conclusion = "等价变形改变写法，但不能改变表达式在相同取值下的值。",
             steps = listOf("识别运算结构", "按分配律去括号", "检查每一项的符号", "合并同类项", "代入数值复核"),
-            sourcePage = page,
         )
-        "linear-equation" -> LessonSceneSpec(
-            type = LessonSceneType.PROCESS,
+        "linear-equation" -> processScene(
+            page = page,
             title = "保持等式两边平衡",
             prompt = "解方程时，为什么等式两边必须做相同操作？",
             expression = "2x + 3 = 9 → 2x = 6 → x = 3",
             conclusion = "每一步都要保持方程的解不变，最终把未知数单独留下。",
             steps = listOf("确定未知数和常数项", "两边同时消去常数", "两边同除以系数", "代回原方程验证"),
-            sourcePage = page,
         )
-        else -> LessonSceneSpec(
-            type = LessonSceneType.PROCESS,
+        else -> processScene(
+            page = page,
             title = "从定义到结论",
             prompt = "哪些条件共同导向教材中的结论？",
             conclusion = "先识别对象与条件，再按照教材顺序建立关系。",
             steps = listOf("找到核心对象", "提取必要条件", "观察例题", "形成结论"),
-            sourcePage = page,
         )
     }
 
+    private fun processScene(
+        page: Int,
+        title: String,
+        prompt: String,
+        expression: String = "",
+        conclusion: String,
+        steps: List<String>,
+    ) = LessonSceneSpec(
+        type = LessonSceneType.PROCESS,
+        title = title,
+        prompt = prompt,
+        expression = expression,
+        conclusion = conclusion,
+        steps = steps,
+        sourcePage = page,
+    )
+
     private fun exerciseFor(id: String, scene: LessonSceneSpec): GeneratedExercise = when (id) {
-        "number-line" -> GeneratedExercise(
-            question = "一条直线已经画出箭头和刻度，但没有标出原点。它是完整的数轴吗？为什么？",
-            acceptedAnswers = listOf("不是", "没有原点", "缺少原点"),
-            hints = listOf("回忆数轴的三个必要要素。", "箭头只表示方向，不能替代原点。"),
-            explanation = "不是。数轴必须同时具有原点、正方向和统一的单位长度。",
+        "number-line" -> exercise(
+            "一条直线有箭头和刻度，但没有原点。它是完整的数轴吗？为什么？",
+            listOf("不是", "没有原点", "缺少原点"), scene,
         )
-        "opposite-number" -> GeneratedExercise(
-            question = "写出 -4 的相反数，并说明两者在数轴上的位置关系。",
-            acceptedAnswers = listOf("4", "关于原点对称", "到原点距离相等"),
-            hints = scene.steps.take(3),
-            explanation = scene.conclusion,
+        "opposite-number" -> exercise(
+            "写出 -4 的相反数，并说明两者在数轴上的位置关系。",
+            listOf("4", "关于原点对称", "到原点距离相等"), scene,
         )
-        "absolute-value" -> GeneratedExercise(
-            question = "|-5| 等于多少？为什么结果不是 -5？",
-            acceptedAnswers = listOf("5", "距离不能是负数", "到原点距离是5"),
-            hints = scene.steps.take(3),
-            explanation = scene.conclusion,
+        "absolute-value" -> exercise(
+            "|-5| 等于多少？为什么结果不是 -5？",
+            listOf("5", "距离不能是负数", "到原点距离是5"), scene,
         )
-        "rational-compare" -> GeneratedExercise(
-            question = "比较 -8 与 -3 的大小，并用数轴位置说明理由。",
-            acceptedAnswers = listOf("-8 < -3", "-3更大", "-3在右边"),
-            hints = scene.steps.take(3),
-            explanation = scene.conclusion,
+        "rational-compare" -> exercise(
+            "比较 -8 与 -3 的大小，并用数轴位置说明理由。",
+            listOf("-8 < -3", "-3更大", "-3在右边"), scene,
         )
         "positive-negative" -> GeneratedExercise(
             question = "若收入 20 元记作 +20，支出 20 元应记作什么？",
@@ -310,25 +317,27 @@ internal object LocalKnowledgeCompiler {
             hints = listOf("收入和支出是相反意义的量。", "已经规定收入为正。"),
             explanation = "支出与收入方向相反，因此记作 -20。",
         )
-        "expression-transform" -> GeneratedExercise(
-            question = "化简 2(x+3)，并说明使用了什么运算律。",
-            acceptedAnswers = listOf("2x+6", "分配律"),
-            hints = scene.steps.take(3),
-            explanation = "用分配律让 2 分别乘 x 和 3，得到 2x+6。",
+        "expression-transform" -> exercise(
+            "化简 2(x+3)，并说明使用了什么运算律。",
+            listOf("2x+6", "分配律"), scene,
         )
-        "linear-equation" -> GeneratedExercise(
-            question = "解方程 2x+3=9，并写出关键步骤。",
-            acceptedAnswers = listOf("x=3", "2x=6"),
-            hints = scene.steps.take(3),
-            explanation = "两边先同时减 3 得 2x=6，再同时除以 2 得 x=3。",
+        "linear-equation" -> exercise(
+            "解方程 2x+3=9，并写出关键步骤。",
+            listOf("x=3", "2x=6"), scene,
         )
-        else -> GeneratedExercise(
-            question = "请说明本节核心定义及其中不能遗漏的条件。",
-            acceptedAnswers = emptyList(),
-            hints = scene.steps.take(3),
-            explanation = scene.conclusion,
-        )
+        else -> exercise("请说明本节核心定义及其中不能遗漏的条件。", emptyList(), scene)
     }
+
+    private fun exercise(
+        question: String,
+        answers: List<String>,
+        scene: LessonSceneSpec,
+    ) = GeneratedExercise(
+        question = question,
+        acceptedAnswers = answers,
+        hints = scene.steps.take(3),
+        explanation = scene.conclusion,
+    )
 
     private fun misconceptionFor(id: String): String = when (id) {
         "number-line" -> "只有直线和箭头还不够；没有原点或统一单位长度，就不能确定每个数的位置。"
@@ -343,117 +352,81 @@ internal object LocalKnowledgeCompiler {
 
     private fun extractDefinedTerm(text: String): String? {
         val compact = text.replace(Regex("\\s+"), " ").trim()
-        val suffix = Regex("(?:叫做|称为|是指)([^，。；：]{2,24})")
+        return Regex("(?:叫做|称为|是指)([^，。；：]{2,24})")
             .find(compact)?.groupValues?.getOrNull(1)?.trim()
-        if (!suffix.isNullOrBlank()) return suffix
-        return Regex("([^，。；：]{2,24})(?:是|叫做|称为)")
-            .find(compact)?.groupValues?.getOrNull(1)?.trim()
+            ?: Regex("([^，。；：]{2,24})(?:是|叫做|称为)")
+                .find(compact)?.groupValues?.getOrNull(1)?.trim()
     }
 
-    private fun stableId(value: String): String = value.hashCode().toUInt().toString(16)
-
-    private data class Corpus(
-        val text: String,
-        val lines: List<KnowledgeEvidence>,
-    )
-
-    private data class KnowledgeRule(
+    private data class Rule(
         val id: String,
         val title: String,
         val category: KnowledgeCategory,
         val titleKeywords: List<String>,
         val keywords: List<String>,
-        val requiredKeywords: List<String>,
-        val formulaPatterns: List<Regex>,
-        val defaultDefinition: String,
+        val required: List<String>,
+        val formulas: List<Regex>,
+        val definition: String,
         val conditions: List<String>,
         val properties: List<String>,
     )
 
-    private val mathRules = listOf(
-        KnowledgeRule(
-            id = "number-line",
-            title = "数轴",
-            category = KnowledgeCategory.DEFINITION,
-            titleKeywords = listOf("数轴"),
-            keywords = listOf("数轴", "原点", "正方向", "单位长度", "直线"),
-            requiredKeywords = listOf("原点", "正方向", "单位长度"),
-            formulaPatterns = listOf(Regex("-?\\d+\\s*[<>]\\s*-?\\d+")),
-            defaultDefinition = "规定了原点、正方向和单位长度的直线叫做数轴。",
-            conditions = listOf("有原点", "有明确的正方向", "刻度使用统一的单位长度"),
-            properties = listOf("数轴上的点可以表示数", "右边的数大于左边的数"),
+    private val rules = listOf(
+        Rule(
+            "number-line", "数轴", KnowledgeCategory.DEFINITION,
+            listOf("数轴"), listOf("数轴", "原点", "正方向", "单位长度", "直线"),
+            listOf("原点", "正方向", "单位长度"), listOf(Regex("-?\\d+\\s*[<>]\\s*-?\\d+")),
+            "规定了原点、正方向和单位长度的直线叫做数轴。",
+            listOf("有原点", "有明确的正方向", "刻度使用统一的单位长度"),
+            listOf("数轴上的点可以表示数", "右边的数大于左边的数"),
         ),
-        KnowledgeRule(
-            id = "opposite-number",
-            title = "相反数",
-            category = KnowledgeCategory.DEFINITION,
-            titleKeywords = listOf("相反数", "相反"),
-            keywords = listOf("相反数", "互为相反数", "原点对称", "距离相等", "和为0", "和为 0"),
-            requiredKeywords = emptyList(),
-            formulaPatterns = listOf(Regex("-?\\d+\\s*\\+\\s*-?\\d+\\s*=\\s*0")),
-            defaultDefinition = "只有符号不同的两个数互为相反数，它们在数轴上关于原点对称。",
-            conditions = listOf("到原点的距离相等", "位于原点两侧或都为 0"),
-            properties = listOf("互为相反数的两个数之和为 0"),
+        Rule(
+            "opposite-number", "相反数", KnowledgeCategory.DEFINITION,
+            listOf("相反数", "相反"), listOf("相反数", "互为相反数", "原点对称", "距离相等", "和为0", "和为 0"),
+            emptyList(), listOf(Regex("-?\\d+\\s*\\+\\s*-?\\d+\\s*=\\s*0")),
+            "只有符号不同的两个数互为相反数，它们在数轴上关于原点对称。",
+            listOf("到原点的距离相等", "位于原点两侧或都为 0"),
+            listOf("互为相反数的两个数之和为 0"),
         ),
-        KnowledgeRule(
-            id = "absolute-value",
-            title = "绝对值",
-            category = KnowledgeCategory.DEFINITION,
-            titleKeywords = listOf("绝对值"),
-            keywords = listOf("绝对值", "到原点的距离", "距离", "非负"),
-            requiredKeywords = listOf("绝对值"),
-            formulaPatterns = listOf(Regex("\\|[^|]{1,20}\\|"), Regex("≥\\s*0")),
-            defaultDefinition = "一个数的绝对值表示这个数在数轴上对应的点到原点的距离。",
-            conditions = listOf("先确定数在数轴上的位置", "只计算到原点的距离，不保留方向"),
-            properties = listOf("任意数的绝对值都大于或等于 0"),
+        Rule(
+            "absolute-value", "绝对值", KnowledgeCategory.DEFINITION,
+            listOf("绝对值"), listOf("绝对值", "到原点的距离", "距离", "非负"),
+            listOf("绝对值"), listOf(Regex("\\|[^|]{1,20}\\|"), Regex("≥\\s*0")),
+            "一个数的绝对值表示这个数在数轴上对应的点到原点的距离。",
+            listOf("先确定数在数轴上的位置", "只计算到原点的距离，不保留方向"),
+            listOf("任意数的绝对值都大于或等于 0"),
         ),
-        KnowledgeRule(
-            id = "rational-compare",
-            title = "有理数大小比较",
-            category = KnowledgeCategory.METHOD,
-            titleKeywords = listOf("大小比较", "比较"),
-            keywords = listOf("比较大小", "大小比较", "大于", "小于", "越靠右", "从小到大", "从大到小"),
-            requiredKeywords = emptyList(),
-            formulaPatterns = listOf(Regex("-?\\d+\\s*[<>]\\s*-?\\d+")),
-            defaultDefinition = "数轴上右边的数总比左边的数大。两个负数比较时，绝对值大的数反而小。",
-            conditions = listOf("先判断正负", "必要时把数放到同一条数轴上"),
-            properties = listOf("正数大于 0，0 大于负数", "两个负数绝对值大的反而小"),
+        Rule(
+            "rational-compare", "有理数大小比较", KnowledgeCategory.METHOD,
+            listOf("大小比较", "比较"), listOf("比较大小", "大小比较", "大于", "小于", "越靠右", "从小到大", "从大到小"),
+            emptyList(), listOf(Regex("-?\\d+\\s*[<>]\\s*-?\\d+")),
+            "数轴上右边的数总比左边的数大。两个负数比较时，绝对值大的数反而小。",
+            listOf("先判断正负", "必要时把数放到同一条数轴上"),
+            listOf("正数大于 0，0 大于负数", "两个负数绝对值大的反而小"),
         ),
-        KnowledgeRule(
-            id = "positive-negative",
-            title = "正数和负数",
-            category = KnowledgeCategory.DEFINITION,
-            titleKeywords = listOf("正数", "负数"),
-            keywords = listOf("正数", "负数", "相反意义", "大于0", "小于0", "收入", "支出", "上升", "下降"),
-            requiredKeywords = emptyList(),
-            formulaPatterns = listOf(Regex("[+-]\\d+")),
-            defaultDefinition = "正数和负数可以表示具有相反意义的量，0 是正负数之间的分界。",
-            conditions = listOf("先确定基准", "规定其中一个方向为正方向"),
-            properties = listOf("正数大于 0，负数小于 0"),
+        Rule(
+            "positive-negative", "正数和负数", KnowledgeCategory.DEFINITION,
+            listOf("正数", "负数"), listOf("正数", "负数", "相反意义", "大于0", "小于0", "收入", "支出", "上升", "下降"),
+            emptyList(), listOf(Regex("[+-]\\d+")),
+            "正数和负数可以表示具有相反意义的量，0 是正负数之间的分界。",
+            listOf("先确定基准", "规定其中一个方向为正方向"),
+            listOf("正数大于 0，负数小于 0"),
         ),
-        KnowledgeRule(
-            id = "expression-transform",
-            title = "整式等价变形",
-            category = KnowledgeCategory.METHOD,
-            titleKeywords = listOf("整式", "化简", "去括号", "合并同类项"),
-            keywords = listOf("整式", "化简", "去括号", "合并同类项", "分配律", "同类项"),
-            requiredKeywords = emptyList(),
-            formulaPatterns = listOf(Regex("\\d*\\s*[a-zA-Z]\\s*[+-]"), Regex("\\([^)]{1,30}\\)")),
-            defaultDefinition = "整式化简通过去括号和合并同类项改变写法，但保持表达式的值不变。",
-            conditions = listOf("遵守运算顺序", "去括号时处理每一项", "只合并同类项"),
-            properties = listOf("等价变形前后在相同取值下结果相同"),
+        Rule(
+            "expression-transform", "整式等价变形", KnowledgeCategory.METHOD,
+            listOf("整式", "化简", "去括号", "合并同类项"), listOf("整式", "化简", "去括号", "合并同类项", "分配律", "同类项"),
+            emptyList(), listOf(Regex("\\d*\\s*[a-zA-Z]\\s*[+-]"), Regex("\\([^)]{1,30}\\)")),
+            "整式化简通过去括号和合并同类项改变写法，但保持表达式的值不变。",
+            listOf("遵守运算顺序", "去括号时处理每一项", "只合并同类项"),
+            listOf("等价变形前后在相同取值下结果相同"),
         ),
-        KnowledgeRule(
-            id = "linear-equation",
-            title = "一元一次方程",
-            category = KnowledgeCategory.METHOD,
-            titleKeywords = listOf("一元一次方程", "解方程", "方程"),
-            keywords = listOf("一元一次方程", "方程", "解方程", "移项", "等式两边", "未知数"),
-            requiredKeywords = emptyList(),
-            formulaPatterns = listOf(Regex("[a-zA-Z].*=.*\\d"), Regex("\\d+[a-zA-Z].*=.*")),
-            defaultDefinition = "解一元一次方程的过程，是通过等价变形把未知数单独留下，同时保持方程的解不变。",
-            conditions = listOf("等式两边进行相同的有效操作", "每一步都保持原方程的解"),
-            properties = listOf("得到结果后可以代回原方程检验"),
+        Rule(
+            "linear-equation", "一元一次方程", KnowledgeCategory.METHOD,
+            listOf("一元一次方程", "解方程", "方程"), listOf("一元一次方程", "方程", "解方程", "移项", "等式两边", "未知数"),
+            emptyList(), listOf(Regex("[a-zA-Z].*=.*\\d"), Regex("\\d+[a-zA-Z].*=")),
+            "解一元一次方程的过程，是通过等价变形把未知数单独留下，同时保持方程的解不变。",
+            listOf("等式两边进行相同的有效操作", "每一步都保持原方程的解"),
+            listOf("得到结果后可以代回原方程检验"),
         ),
     )
 
