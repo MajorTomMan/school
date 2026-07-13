@@ -38,12 +38,10 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.setExcludes(
-                setOf(
-                    "**/PersistentScreens.kt",
-                    "**/RoomReviewScreen.kt",
-                ),
-            )
+            java {
+                exclude("**/PersistentScreens.kt")
+                exclude("**/RoomReviewScreen.kt")
+            }
         }
     }
 
