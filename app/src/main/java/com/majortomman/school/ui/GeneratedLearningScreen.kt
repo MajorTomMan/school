@@ -92,8 +92,10 @@ fun GeneratedLearningScreen(
     aiSettings: AiSettings,
     progress: LearningProgress,
     installedMaterial: InstalledMaterialPack,
+    nextLessonTitle: String?,
     onOpenTextbook: (Int) -> Unit,
     onBack: () -> Unit,
+    onComplete: () -> Unit,
     onRecordAttempt: (answer: String, correct: Boolean, feedback: String) -> Unit,
 ) {
     var pageIndex by rememberSaveable(lesson.id) { mutableIntStateOf(0) }
@@ -113,7 +115,7 @@ fun GeneratedLearningScreen(
 
     fun goForward() {
         helpVisible = false
-        if (pageIndex == pages.lastIndex) onBack() else pageIndex += 1
+        if (pageIndex == pages.lastIndex) onComplete() else pageIndex += 1
     }
 
     Column(
@@ -182,7 +184,7 @@ fun GeneratedLearningScreen(
                         progress = progress,
                         onRecordAttempt = onRecordAttempt,
                     )
-                    GeneratedPage.SUMMARY -> GeneratedSummary(lesson, analysis, progress)
+                    GeneratedPage.SUMMARY -> GeneratedSummary(lesson, analysis, progress, nextLessonTitle)
                 }
             }
         }
@@ -225,7 +227,11 @@ fun GeneratedLearningScreen(
                     modifier = Modifier.weight(1f),
                 ) { helpVisible = !helpVisible }
                 GeneratedOutlinedAction(
-                    label = if (currentPage == GeneratedPage.SUMMARY) "完成" else "继续",
+                    label = when {
+                        currentPage != GeneratedPage.SUMMARY -> "继续"
+                        nextLessonTitle != null -> "下一章"
+                        else -> "完成课程"
+                    },
                     color = GeneratedBlue,
                     modifier = Modifier.weight(1f),
                     onClick = ::goForward,
@@ -624,6 +630,7 @@ private fun GeneratedSummary(
     lesson: Lesson,
     analysis: LessonAnalysis,
     progress: LearningProgress,
+    nextLessonTitle: String?,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 26.dp),
@@ -637,6 +644,13 @@ private fun GeneratedSummary(
         Text(analysis.scene.conclusion, color = GeneratedWhite.copy(alpha = 0.68f), fontSize = 18.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(22.dp))
         Text("累计完成 ${progress.attempts} 次练习", color = GeneratedMuted, fontSize = 13.sp)
+        Spacer(Modifier.height(28.dp))
+        Text(
+            nextLessonTitle?.let { "下一章 · $it" } ?: "本册课程已经完成",
+            color = if (nextLessonTitle == null) GeneratedYellow else GeneratedBlue,
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
