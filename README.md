@@ -56,7 +56,18 @@ API Key：局域网服务未启用鉴权时留空
 gradle :app:testDebugUnitTest :app:assembleDebug
 ```
 
-仓库暂未提交 Gradle Wrapper 二进制文件，CI 会显式安装 Gradle 9.4.1，并上传测试报告和 debug APK。
+仓库暂未提交 Gradle Wrapper 二进制文件，CI 会显式安装 Gradle 9.4.1。
+
+## CI/CD 与自动 APK
+
+每次 pull request 都会自动运行单元测试并编译 Debug APK。每次代码进入 `master` 且测试、编译成功后，工作流还会：
+
+1. 生成 `school-debug.apk` 和 SHA-256 校验文件。
+2. 上传为 GitHub Actions 构建产物。
+3. 更新名为 `dev-latest` 的滚动预发布 Release。
+4. 替换 Release 中的旧 APK，并在说明中记录版本、Commit 和构建链接。
+
+采用单个滚动预发布而不是为每次提交创建一个新 Release，避免 Releases 页面快速堆满。正式版本以后使用独立的版本标签和正式签名 APK。
 
 ## 接下来
 
