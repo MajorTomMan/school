@@ -69,7 +69,7 @@ fun TodayScreen(
                     Text(lesson.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text(lesson.subtitle)
                     Text("${lesson.estimatedMinutes} 分钟 · 教材 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页")
-                    Button(Modifier.fillMaxWidth(), onClick = { onStartLesson(lesson.id) }) { Text("继续学习") }
+                    Button(onClick = { onStartLesson(lesson.id) }, modifier = Modifier.fillMaxWidth()) { Text("继续学习") }
                 }
             }
         }
@@ -218,9 +218,9 @@ private fun TextbookLesson(lesson: Lesson) = ScrollColumn {
 @Composable
 private fun ExampleLesson() = ScrollColumn {
     Text("例题", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    Text("在数轴上表示 -3、0、2，并比较 -3 和 2 的大小。")
+    Text("在数轘上表示 -3、0、2，并比较 -3 和 2 的大小。")
     InfoCard("第一步：确定位置") { Text("-3 在原点左侧 3 个单位；2 在原点右侧 2 个单位。") }
-    InfoCard("第二步：利用数轴比较") { Text("数轴上右边的数更大，所以 2 > -3。") }
+    InfoCard("第二步：利用数轴比较") { Text("数轘上右边的数更大，所以 2 > -3。") }
 }
 
 @Composable
@@ -229,7 +229,7 @@ private fun PracticeLesson() {
     var result by rememberSaveable { mutableStateOf<String?>(null) }
     var hint by rememberSaveable { mutableIntStateOf(0) }
     val hints = listOf(
-        "先想：数轴上越靠左的数更大还是更小？",
+        "先想：数轘上越靠左的数更大还是更小？",
         "-3 在原点左边，2 在原点右边。",
         "数轴右边的数更大，因此 2 > -3。",
     )

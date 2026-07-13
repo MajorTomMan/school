@@ -21,4 +21,23 @@ jobs:
         with:
           gradle-version: "9.4.1"
       - name: Assemble debug APK
-        run: gradle :app:assembleDebug --stacktrace
+        id: assemble
+        shell: bash
+        run: |
+          set +e
+          gradle :app:assembleDebug --stacktrace > build.log 2>&1
+          status=$?
+          tail -n 200 build.log
+          exit $status
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: build.log
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
