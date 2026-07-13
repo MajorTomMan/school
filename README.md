@@ -3,22 +3,25 @@
 一个只服务个人学习过程的 Android 原生 App。它不是网课平台，也不是简单的 PDF 阅读器；目标是把教材变成可以真正走完的学习路径：
 
 ```text
-教材定位 → 动态讲解 → 独立练习 → 错因诊断 → 到期复习
+教材定位 → 动态讲解 → 自适应练习 → 错因诊断 → 到期复习
 ```
 
-## 当前版本：0.7.0
+## 当前版本：0.14.0
 
-首期范围仍聚焦七年级数学上册第一章「有理数」。当前版本已经具备极简场景式学习界面、本地学习闭环、AI 批改、复习数据库，以及独立教材资源包导入：
+当前版本已经建立从教材导入、本地 OCR、动态课程到数学题库的完整基础闭环：
 
 - 黑、白、红、蓝、黄五色极简场景式 UI
-- 动态数轴、知识推导和逐页学习过渡
-- OpenAI-compatible 客户端，可连接局域网 llama.cpp
-- `/v1/models` 连接测试、AI 结构化批改与本地检查兜底
-- Room 保存题目、答案、正确性、反馈、错误类型和时间
-- 自动维护每个知识点的复习队列与间隔
-- School Material Pack v1 ZIP 导入、替换、移除和版本校验
-- PDF SHA-256 完整性校验与 ZIP 路径穿越防护
-- 从学习页直接打开教材对应页，并在原生 PDF 阅读器中前后翻页
+- 多学科、多年级、上下册教材独立管理
+- WorkManager 持久后台导入、OCR、课程分析和原题线索提取
+- ML Kit 中文 OCR，本地保存文字、行位置和页面坐标
+- OpenAI-compatible 客户端，可连接局域网 llama.cpp 生成课程解释和动画参数
+- 数学题库提供教材同步、薄弱强化、错题重练和综合练习
+- 参数化题目支持正负数、数轴、相反数、绝对值、大小比较、整式和方程
+- 支持选择、数值、表达式、排序、数轴点选和分步解题
+- 精确分数、表达式等价和一元一次方程确定性判题
+- Room 保存作答、错误类型、知识点掌握度、错题和复习计划
+- 自动根据薄弱程度、提示使用、连续表现和到期时间安排下一题
+- 教材 OCR 中的例题、练习和习题会生成带页码来源的教材变式线索
 - Android CI 自动测试、构建 APK，并更新 `dev-latest` 预发布版本
 
 教材 PDF 不进入 APK，而是通过独立教材包安装到 App 私有目录。资源包规范见 [`docs/MATERIAL_PACK_V1.md`](docs/MATERIAL_PACK_V1.md)。
@@ -40,10 +43,10 @@ python scripts/build_material_pack.py \
 生成后在 App 中进入：
 
 ```text
-设置 → 教材 → 导入教材包
+学科 → 数学 → 年级与册次 → 导入教科书
 ```
 
-导入成功后，学习流程中的「教材定位」会出现“打开第 N 页”。
+导入成功后，课程与题库都可以返回教材对应印刷页核对原文。
 
 ## llama.cpp 配置
 
@@ -55,7 +58,7 @@ python scripts/build_material_pack.py \
 API Key：局域网服务未启用鉴权时留空
 ```
 
-手机和电脑需要处于可互访的网络中。测试版为了局域网 llama.cpp 允许 HTTP 明文请求，因此不要把未鉴权接口直接暴露到公网。
+手机和电脑需要处于可互访的网络中。测试版为了局域网 llama.cpp 允许 HTTP 明文请求，因此不要把未鉴权接口直接暴露到公网。数学题库的基础判题不依赖模型，即使模型不可用仍能练习和记录错题。
 
 ## 技术栈
 
@@ -66,7 +69,9 @@ API Key：局域网服务未启用鉴权时留空
 - Jetpack Compose + Compose Animation + Canvas
 - Room 2.8.4 + KSP 2.3.10
 - Preferences DataStore
+- WorkManager
 - Android Storage Access Framework、`ZipInputStream`、`PdfRenderer`
+- ML Kit 中文文字识别
 - `HttpURLConnection` + OpenAI-compatible JSON API
 - JUnit 4 单元测试
 - compileSdk / targetSdk 36，minSdk 26
@@ -88,13 +93,3 @@ gradle :app:testDebugUnitTest :app:assembleDebug
 1. 生成 `school-debug.apk` 和 SHA-256 校验文件。
 2. 上传为 GitHub Actions 构建产物。
 3. 更新名为 `dev-latest` 的滚动预发布 Release。
-4. Release 正文只记录本次中文修改点与修复点。
-
-## 接下来
-
-1. 读取 `catalog.json`，用真实教材目录替换示例课程数据。
-2. 从真实教材中导出「有理数」的知识点、场景和练习。
-3. 让 AI 分层提示和错因诊断直接驱动复习质量分数。
-4. 加入数学公式渲染、手写和拍题。
-
-架构约束见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)，实施顺序见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
