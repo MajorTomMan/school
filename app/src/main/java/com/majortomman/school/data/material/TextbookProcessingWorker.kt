@@ -23,14 +23,11 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.FilterInputStream
 import java.io.IOException
-import java.io.InputStream
 import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.CancellationException
-import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -67,7 +64,7 @@ class TextbookProcessingWorker(
         val source = inputData.getString(TextbookProcessingContract.KEY_SOURCE_URI)
             ?.let(Uri::parse)
             ?: return@withContext Result.failure(
-                workDataOf(TextbookProcessingContract.KEY_MESSAGE to "没有可读取的教材文件"),
+                workDataOf(TextbookProcessingContract.KEY_MESSAGE to "没有可读取的教材 PDF"),
             )
 
         createNotificationChannels()
@@ -80,10 +77,10 @@ class TextbookProcessingWorker(
                 channel.lock().use {
                     val installed = process(slot, source)
                     showCompletionNotification(
-                        slot,
-                        "教材处理完成",
-                        "${installed.slot.displayTitle}已生成 ${installed.lessons.size} 个课程",
-                        true,
+                        slot = slot,
+                        title = "教材 PDF 处理完成",
+                        body = "${installed.slot.displayTitle}已扫描 ${installed.pageCount} 页并生成 ${installed.lessons.size} 个课程",
+                        success = true,
                     )
                 }
             }
@@ -92,18 +89,18 @@ class TextbookProcessingWorker(
                     TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
                     TextbookProcessingContract.KEY_STAGE to TextbookProcessingStage.COMPLETED.name,
                     TextbookProcessingContract.KEY_PROGRESS to 100,
-                    TextbookProcessingContract.KEY_MESSAGE to "教材处理完成",
+                    TextbookProcessingContract.KEY_MESSAGE to "教材 PDF 处理完成",
                 ),
             )
         } catch (error: CancellationException) {
             throw error
         } catch (error: IllegalArgumentException) {
             MaterialLibraryStore.processingRoot(applicationContext, slot).deleteRecursively()
-            val message = error.message ?: "教材格式不符合要求"
+            val message = error.message ?: "所选文件不是可用的教材 PDF"
             showCompletionNotification(slot, "教材处理失败", message, false)
             Result.failure(failureData(slot, message))
         } catch (error: IOException) {
-            val message = error.message ?: "教材文件读取失败"
+            val message = error.message ?: "教材 PDF 读取失败"
             if (runAttemptCount < MAX_RETRY_COUNT) {
                 report(slot, TextbookProcessingStage.PREPARING, 1, "$message，稍后自动继续")
                 Result.retry()
@@ -124,66 +121,120 @@ class TextbookProcessingWorker(
         materialRoot.mkdirs()
         val staging = MaterialLibraryStore.processingRoot(applicationContext, slot)
         prepareStaging(staging, source)
+        val sourceName = querySourceName(source).ifBlank { "${slot.displayTitle}.pdf" }
+        val pdfDirectory = File(staging, "books")
+        val pdfFile = File(pdfDirectory, "textbook.pdf")
+        val copiedMarker = File(staging, ".pdf-copied")
 
-        val extractedMarker = File(staging, ".extracted")
-        if (!extractedMarker.isFile) {
-            report(slot, TextbookProcessingStage.EXTRACTING, 3, "正在导入教材文件")
+        if (!copiedMarker.isFile || !pdfFile.isFile) {
+            report(slot, TextbookProcessingStage.EXTRACTING, 3, "正在复制教材 PDF")
+            require(pdfDirectory.mkdirs() || pdfDirectory.isDirectory) { "无法创建 PDF 目录" }
             val sourceSize = querySourceSize(source)
             applicationContext.contentResolver.openInputStream(source)?.use { raw ->
-                val counting = CountingInputStream(BufferedInputStream(raw))
-                extractArchive(counting, staging) { bytes ->
-                    val fraction = if (sourceSize > 0L) bytes.toDouble() / sourceSize else 0.0
-                    val progress = (3 + fraction.coerceIn(0.0, 1.0) * 32).toInt()
-                    reportBlocking(slot, TextbookProcessingStage.EXTRACTING, progress, "正在导入教材文件")
+                BufferedInputStream(raw).use { input ->
+                    BufferedOutputStream(FileOutputStream(pdfFile)).use { output ->
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var copied = 0L
+                        while (true) {
+                            checkStopped()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            copied += read
+                            require(copied <= MAX_PDF_BYTES) { "PDF 文件过大，当前最多支持 2 GB" }
+                            if (copied % PROGRESS_BYTES_INTERVAL < read) {
+                                val fraction = if (sourceSize > 0L) copied.toDouble() / sourceSize else 0.0
+                                val progress = 3 + (fraction.coerceIn(0.0, 1.0) * 24).toInt()
+                                reportBlocking(slot, TextbookProcessingStage.EXTRACTING, progress, "复制 PDF ${formatBytes(copied)}")
+                            }
+                        }
+                    }
                 }
-            } ?: throw IOException("无法读取所选教材")
-            extractedMarker.writeText("ok")
+            } ?: throw IOException("无法读取所选 PDF")
+            copiedMarker.writeText(source.toString(), Charsets.UTF_8)
         } else {
-            report(slot, TextbookProcessingStage.EXTRACTING, 35, "已恢复教材导入进度")
+            report(slot, TextbookProcessingStage.EXTRACTING, 27, "已恢复 PDF 复制进度")
         }
 
         checkStopped()
-        val manifestFile = File(staging, "manifest.json")
-        require(manifestFile.isFile) { "教材包根目录缺少 manifest.json" }
-        val manifest = MaterialPackManifestParser.parse(manifestFile.readText(Charsets.UTF_8))
-        val pdfFile = resolveInside(staging, manifest.pdf.path)
-        val catalogFile = resolveInside(staging, manifest.catalogPath)
-        require(pdfFile.isFile) { "教材包缺少 PDF：${manifest.pdf.path}" }
-        require(catalogFile.isFile) { "教材包缺少目录：${manifest.catalogPath}" }
+        require(pdfFile.length() > 0L) { "所选 PDF 是空文件" }
+        require(hasPdfHeader(pdfFile)) { "所选文件不是 PDF：文件头缺少 %PDF-" }
+        val pageCount = readPageCount(pdfFile)
+        require(pageCount > 0) { "教材 PDF 没有可读取页面" }
+
+        report(slot, TextbookProcessingStage.VALIDATING, 29, "正在校验 PDF 完整性")
+        val expectedBytes = pdfFile.length().coerceAtLeast(1L)
+        val sha256 = sha256(pdfFile) { processed ->
+            val progress = 29 + ((processed.toDouble() / expectedBytes) * 12).toInt().coerceIn(0, 12)
+            reportBlocking(slot, TextbookProcessingStage.VALIDATING, progress, "校验 PDF ${formatBytes(processed)}")
+        }
+
+        checkStopped()
+        report(slot, TextbookProcessingStage.IDENTIFYING, 42, "正在识别文件名、封面和目录")
+        val scanResult = DirectPdfImportScanner.scan(
+            pdfFile = pdfFile,
+            displayName = sourceName,
+            slot = slot,
+            cacheRoot = staging,
+        ) { completed, total, message ->
+            val fraction = completed.toDouble() / total.coerceAtLeast(1)
+            val progress = 42 + (fraction.coerceIn(0.0, 1.0) * 20).toInt()
+            report(slot, TextbookProcessingStage.IDENTIFYING, progress, message)
+        }
+
+        val manifest = MaterialPackManifest(
+            schemaVersion = MATERIAL_PACK_SCHEMA_VERSION,
+            packId = "pdf-${sha256.take(24)}",
+            version = "direct-pdf-1",
+            title = scanResult.title,
+            subject = slot.subjectTitle,
+            catalogPath = "catalog.json",
+            pdf = MaterialPdfAsset(
+                path = "books/textbook.pdf",
+                sha256 = sha256,
+                pageIndexOffset = scanResult.pageIndexOffset,
+            ),
+        )
+        File(staging, "manifest.json").writeText(
+            MaterialPackManifestParser.toJson(manifest).toString(2),
+            Charsets.UTF_8,
+        )
+        File(staging, manifest.catalogPath).writeText(
+            DirectPdfImportScanner.catalogToJson(scanResult.catalog).toString(2),
+            Charsets.UTF_8,
+        )
+        File(staging, "generated/identity.json").apply {
+            parentFile?.mkdirs()
+            writeText(
+                JSONObject()
+                    .put("sourceName", sourceName)
+                    .put("stage", slot.stage.id)
+                    .put("subject", slot.subjectTitle)
+                    .put("grade", slot.grade)
+                    .put("volume", slot.volume.id)
+                    .put("title", scanResult.title)
+                    .put("pageIndexOffset", scanResult.pageIndexOffset)
+                    .put("scannedPages", scanResult.scannedPages)
+                    .put("evidence", scanResult.evidence)
+                    .toString(2),
+                Charsets.UTF_8,
+            )
+        }
+
         val catalog = TextbookCatalogParser.parse(
-            catalogFile.readText(Charsets.UTF_8),
+            File(staging, manifest.catalogPath).readText(Charsets.UTF_8),
             manifest,
             slot,
         )
-
-        val validatedMarker = File(staging, ".validated")
-        if (!validatedMarker.isFile) {
-            report(slot, TextbookProcessingStage.VALIDATING, 37, "正在校验教材完整性")
-            val expectedBytes = pdfFile.length().coerceAtLeast(1L)
-            val actualSha256 = sha256(pdfFile) { processed ->
-                val progress = 37 + ((processed.toDouble() / expectedBytes) * 18).toInt().coerceIn(0, 18)
-                reportBlocking(slot, TextbookProcessingStage.VALIDATING, progress, "正在校验教材完整性")
-            }
-            require(actualSha256.equals(manifest.pdf.sha256, ignoreCase = true)) {
-                "PDF 校验失败，文件可能损坏或版本不一致"
-            }
-            validatedMarker.writeText(actualSha256)
-        } else {
-            report(slot, TextbookProcessingStage.VALIDATING, 55, "教材完整性校验已恢复")
-        }
-
-        checkStopped()
-        val pageCount = readPageCount(pdfFile)
-        require(pageCount > 0) { "教材 PDF 没有可读取页面" }
         catalog.lessons.forEach { lesson ->
             val startIndex = lesson.pageStart - 1 + manifest.pdf.pageIndexOffset
             val endIndex = lesson.pageEnd - 1 + manifest.pdf.pageIndexOffset
             require(startIndex in 0 until pageCount && endIndex in 0 until pageCount) {
-                "课程 ${lesson.title} 的页码超出 PDF 范围，请检查 pageIndexOffset"
+                "课程 ${lesson.title} 的页码超出 PDF 范围"
             }
         }
 
-        report(slot, TextbookProcessingStage.INDEXING, 57, "正在建立 $pageCount 页教材索引")
+        report(slot, TextbookProcessingStage.INDEXING, 64, "正在建立 $pageCount 页 PDF 索引")
         val generatedDirectory = File(staging, "generated")
         generatedDirectory.mkdirs()
         val pageArray = JSONArray()
@@ -195,7 +246,7 @@ class TextbookProcessingWorker(
                     .put("printedPage", pageIndex - manifest.pdf.pageIndexOffset + 1),
             )
             if (pageIndex % PAGE_PROGRESS_INTERVAL == 0 || pageIndex == pageCount - 1) {
-                val progress = 57 + (((pageIndex + 1).toDouble() / pageCount) * 16).toInt()
+                val progress = 64 + (((pageIndex + 1).toDouble() / pageCount) * 12).toInt()
                 report(slot, TextbookProcessingStage.INDEXING, progress, "建立页面索引 ${pageIndex + 1} / $pageCount")
             }
         }
@@ -212,7 +263,7 @@ class TextbookProcessingWorker(
                 slot,
                 TextbookCatalog(catalog.book, listOf(sourceLesson)),
             ).single()
-            val progress = 74 + (((index + 1).toDouble() / lessonCount) * 20).toInt()
+            val progress = 77 + (((index + 1).toDouble() / lessonCount) * 18).toInt()
             report(
                 slot,
                 TextbookProcessingStage.GENERATING_COURSES,
@@ -222,10 +273,9 @@ class TextbookProcessingWorker(
             writeGeneratedLessons(File(generatedDirectory, "lessons.json"), generatedLessons)
         }
 
-        report(slot, TextbookProcessingStage.FINALIZING, 96, "正在保存课程和教材")
+        report(slot, TextbookProcessingStage.FINALIZING, 96, "正在保存 PDF、课程和识别结果")
+        copiedMarker.delete()
         File(staging, ".source").delete()
-        extractedMarker.delete()
-        validatedMarker.delete()
 
         val finalDirectory = MaterialLibraryStore.finalRoot(applicationContext, slot)
         val backup = File(materialRoot, ".backup-${slot.key}-${UUID.randomUUID()}")
@@ -246,7 +296,7 @@ class TextbookProcessingWorker(
         )
         return InstalledTextbook(slot, pack, pageCount, generatedLessons).also {
             MaterialLibraryStore.upsert(applicationContext, it)
-            report(slot, TextbookProcessingStage.COMPLETED, 100, "教材处理完成")
+            report(slot, TextbookProcessingStage.COMPLETED, 100, "教材 PDF 处理完成")
         }
     }
 
@@ -258,52 +308,9 @@ class TextbookProcessingWorker(
         sourceMarker.writeText(sourceValue, Charsets.UTF_8)
     }
 
-    private fun extractArchive(
-        input: CountingInputStream,
-        destination: File,
-        onProgress: (Long) -> Unit,
-    ) {
-        var fileCount = 0
-        var totalBytes = 0L
-        ZipInputStream(input).use { zip ->
-            while (true) {
-                checkStopped()
-                val entry = zip.nextEntry ?: break
-                fileCount += 1
-                require(fileCount <= MAX_FILE_COUNT) { "教材包文件数量过多" }
-                val safePath = MaterialPackManifestParser.safeRelativePath(entry.name, "ZIP 条目")
-                if (safePath.startsWith(".")) {
-                    zip.closeEntry()
-                    continue
-                }
-                val output = resolveInside(destination, safePath)
-                if (entry.isDirectory) {
-                    require(output.mkdirs() || output.isDirectory) { "无法创建目录：$safePath" }
-                } else {
-                    output.parentFile?.let { parent ->
-                        require(parent.mkdirs() || parent.isDirectory) { "无法创建目录：${parent.name}" }
-                    }
-                    BufferedOutputStream(FileOutputStream(output)).use { target ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var entryBytes = 0L
-                        while (true) {
-                            checkStopped()
-                            val read = zip.read(buffer)
-                            if (read < 0) break
-                            entryBytes += read
-                            totalBytes += read
-                            require(entryBytes <= MAX_SINGLE_FILE_BYTES) { "教材包内单个文件过大" }
-                            require(totalBytes <= MAX_TOTAL_UNCOMPRESSED_BYTES) { "教材包解压后体积过大" }
-                            target.write(buffer, 0, read)
-                            if (totalBytes % PROGRESS_BYTES_INTERVAL < read) onProgress(input.count)
-                        }
-                    }
-                }
-                zip.closeEntry()
-                onProgress(input.count)
-            }
-        }
-        require(fileCount > 0) { "教材包是空文件" }
+    private fun hasPdfHeader(file: File): Boolean = FileInputStream(file).use { input ->
+        val header = ByteArray(5)
+        input.read(header) == header.size && header.toString(Charsets.US_ASCII) == "%PDF-"
     }
 
     private fun sha256(file: File, onProgress: (Long) -> Unit): String {
@@ -345,18 +352,21 @@ class TextbookProcessingWorker(
         require(temporary.renameTo(file)) { "无法保存生成课程" }
     }
 
-    private fun resolveInside(root: File, relativePath: String): File {
-        val file = File(root, relativePath)
-        val rootPath = root.canonicalFile.path + File.separator
-        require(file.canonicalFile.path.startsWith(rootPath)) { "教材包包含越界路径" }
-        return file
-    }
+    private fun querySourceSize(uri: Uri): Long = queryOpenable(uri, OpenableColumns.SIZE) { cursor, index ->
+        if (cursor.isNull(index)) 0L else cursor.getLong(index)
+    } ?: 0L
 
-    private fun querySourceSize(uri: Uri): Long = runCatching {
-        applicationContext.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.longOrZero(OpenableColumns.SIZE) else 0L
-        } ?: 0L
-    }.getOrDefault(0L)
+    private fun querySourceName(uri: Uri): String = queryOpenable(uri, OpenableColumns.DISPLAY_NAME) { cursor, index ->
+        cursor.getString(index)
+    }.orEmpty()
+
+    private fun <T> queryOpenable(uri: Uri, column: String, read: (Cursor, Int) -> T): T? = runCatching {
+        applicationContext.contentResolver.query(uri, arrayOf(column), null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            val index = cursor.getColumnIndex(column)
+            if (index < 0) null else read(cursor, index)
+        }
+    }.getOrNull()
 
     private suspend fun report(
         slot: TextbookSlot,
@@ -395,7 +405,7 @@ class TextbookProcessingWorker(
     private fun createForegroundInfo(slot: TextbookSlot, progress: Int, message: String): ForegroundInfo {
         val notification = Notification.Builder(applicationContext, CHANNEL_PROGRESS)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("正在处理${slot.displayTitle}")
+            .setContentTitle("正在扫描${slot.displayTitle}")
             .setContentText(message)
             .setProgress(100, progress, false)
             .setOnlyAlertOnce(true)
@@ -441,13 +451,13 @@ class TextbookProcessingWorker(
     private fun createNotificationChannels() {
         notificationManager.createNotificationChannel(
             NotificationChannel(CHANNEL_PROGRESS, "教材处理进度", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "显示教材导入、校验和课程生成进度"
+                description = "显示 PDF 复制、校验、身份识别、目录扫描和课程生成进度"
                 setSound(null, null)
             },
         )
         notificationManager.createNotificationChannel(
             NotificationChannel(CHANNEL_RESULT, "教材处理结果", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "教材处理完成或失败时发送提醒"
+                description = "教材 PDF 处理完成或失败时发送提醒"
             },
         )
     }
@@ -458,7 +468,13 @@ class TextbookProcessingWorker(
         val grade = inputData.getInt(TextbookProcessingContract.KEY_GRADE, 0)
         val volume = inputData.getInt(TextbookProcessingContract.KEY_VOLUME, 0)
         if (grade <= 0 || volume <= 0) return null
-        return TextbookSlot(subjectId, subjectTitle, grade, TextbookVolume.fromId(volume))
+        return TextbookSlot(
+            subjectId = subjectId,
+            subjectTitle = subjectTitle,
+            grade = grade,
+            volume = TextbookVolume.fromId(volume),
+            stage = EducationStage.fromGrade(grade),
+        )
     }
 
     private fun failureData(slot: TextbookSlot, message: String): Data = workDataOf(
@@ -471,40 +487,22 @@ class TextbookProcessingWorker(
     private fun progressNotificationId(slot: TextbookSlot): Int = 20_000 + (slot.key.hashCode() and 0x0FFF)
     private fun resultNotificationId(slot: TextbookSlot): Int = 30_000 + (slot.key.hashCode() and 0x0FFF)
 
+    private fun formatBytes(bytes: Long): String = when {
+        bytes >= 1024L * 1024L * 1024L -> "%.1f GB".format(bytes / (1024.0 * 1024.0 * 1024.0))
+        bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+        else -> "%.1f KB".format(bytes / 1024.0)
+    }
+
     private companion object {
         const val CHANNEL_PROGRESS = "textbook_processing_progress"
         const val CHANNEL_RESULT = "textbook_processing_result"
         const val MAX_RETRY_COUNT = 3
-        const val MAX_FILE_COUNT = 10_000
-        const val MAX_SINGLE_FILE_BYTES = 1_600L * 1024L * 1024L
-        const val MAX_TOTAL_UNCOMPRESSED_BYTES = 2_200L * 1024L * 1024L
+        const val MAX_PDF_BYTES = 2_000L * 1024L * 1024L
         const val PROGRESS_BYTES_INTERVAL = 4L * 1024L * 1024L
-        const val PAGE_PROGRESS_INTERVAL = 10
-    }
-}
-
-private class CountingInputStream(input: InputStream) : FilterInputStream(input) {
-    var count: Long = 0
-        private set
-
-    override fun read(): Int {
-        val value = super.read()
-        if (value >= 0) count += 1
-        return value
-    }
-
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        val value = super.read(buffer, offset, length)
-        if (value > 0) count += value
-        return value
+        const val PAGE_PROGRESS_INTERVAL = 20
     }
 }
 
 private fun File.readTextOrNull(): String? = runCatching {
     if (isFile) readText(Charsets.UTF_8) else null
 }.getOrNull()
-
-private fun Cursor.longOrZero(columnName: String): Long {
-    val index = getColumnIndex(columnName)
-    return if (index >= 0 && !isNull(index)) getLong(index) else 0L
-}

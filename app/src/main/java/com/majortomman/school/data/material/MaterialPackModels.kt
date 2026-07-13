@@ -7,7 +7,30 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 const val MATERIAL_PACK_SCHEMA_VERSION = 1
-const val IMPORT_TUTORIAL_VERSION = 1
+const val IMPORT_TUTORIAL_VERSION = 2
+
+enum class EducationStage(
+    val id: String,
+    val label: String,
+    val grades: IntRange,
+) {
+    PRIMARY("primary", "小学", 1..6),
+    JUNIOR_HIGH("junior-high", "初中", 7..9),
+    SENIOR_HIGH("senior-high", "高中", 10..12),
+    UNIVERSITY("university", "大学", 13..16);
+
+    companion object {
+        fun fromId(id: String?): EducationStage? = entries.firstOrNull { it.id == id }
+
+        fun fromGrade(grade: Int): EducationStage = entries.firstOrNull { grade in it.grades }
+            ?: when {
+                grade <= 6 -> PRIMARY
+                grade <= 9 -> JUNIOR_HIGH
+                grade <= 12 -> SENIOR_HIGH
+                else -> UNIVERSITY
+            }
+    }
+}
 
 enum class TextbookVolume(
     val id: Int,
@@ -15,6 +38,11 @@ enum class TextbookVolume(
 ) {
     FIRST(1, "上册"),
     SECOND(2, "下册");
+
+    fun labelFor(stage: EducationStage): String = when (stage) {
+        EducationStage.PRIMARY, EducationStage.JUNIOR_HIGH -> label
+        EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY -> if (this == FIRST) "上学期" else "下学期"
+    }
 
     companion object {
         fun fromId(id: Int): TextbookVolume = entries.firstOrNull { it.id == id } ?: FIRST
@@ -24,20 +52,29 @@ enum class TextbookVolume(
 data class SubjectTemplate(
     val id: String,
     val title: String,
-    val grades: IntRange,
-)
+    val stages: Set<EducationStage>,
+) {
+    fun gradesFor(stage: EducationStage): IntRange = stage.grades
+}
 
 object SubjectTemplates {
     val all = listOf(
-        SubjectTemplate("math", "数学", 1..9),
-        SubjectTemplate("chinese", "语文", 1..9),
-        SubjectTemplate("english", "英语", 1..9),
-        SubjectTemplate("physics", "物理", 8..9),
-        SubjectTemplate("chemistry", "化学", 9..9),
-        SubjectTemplate("biology", "生物", 7..8),
-        SubjectTemplate("history", "历史", 7..9),
-        SubjectTemplate("geography", "地理", 7..8),
+        SubjectTemplate("chinese", "语文", setOf(EducationStage.PRIMARY, EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH)),
+        SubjectTemplate("math", "数学", EducationStage.entries.toSet()),
+        SubjectTemplate("english", "英语", setOf(EducationStage.PRIMARY, EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("science", "科学", setOf(EducationStage.PRIMARY)),
+        SubjectTemplate("physics", "物理", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("chemistry", "化学", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("biology", "生物", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("history", "历史", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("geography", "地理", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("politics", "思想政治", setOf(EducationStage.JUNIOR_HIGH, EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("computer", "计算机", setOf(EducationStage.SENIOR_HIGH, EducationStage.UNIVERSITY)),
+        SubjectTemplate("economics", "经济学", setOf(EducationStage.UNIVERSITY)),
+        SubjectTemplate("law", "法学", setOf(EducationStage.UNIVERSITY)),
     )
+
+    fun forStage(stage: EducationStage): List<SubjectTemplate> = all.filter { stage in it.stages }
 
     fun find(id: String): SubjectTemplate? = all.firstOrNull { it.id == id }
 
@@ -49,26 +86,38 @@ data class TextbookSlot(
     val subjectTitle: String,
     val grade: Int,
     val volume: TextbookVolume,
+    val stage: EducationStage = EducationStage.fromGrade(grade),
 ) {
     val key: String
         get() = "$subjectId-$grade-${volume.id}"
 
+    val levelLabel: String
+        get() = gradeLabel(grade)
+
+    val volumeLabel: String
+        get() = volume.labelFor(stage)
+
     val displayTitle: String
-        get() = "${gradeLabel(grade)}${subjectTitle}${volume.label}"
+        get() = "$levelLabel$subjectTitle$volumeLabel"
 
     fun toJson(): JSONObject = JSONObject()
         .put("subjectId", subjectId)
         .put("subjectTitle", subjectTitle)
         .put("grade", grade)
         .put("volume", volume.id)
+        .put("stage", stage.id)
 
     companion object {
-        fun fromJson(root: JSONObject): TextbookSlot = TextbookSlot(
-            subjectId = root.getString("subjectId"),
-            subjectTitle = root.getString("subjectTitle"),
-            grade = root.getInt("grade"),
-            volume = TextbookVolume.fromId(root.getInt("volume")),
-        )
+        fun fromJson(root: JSONObject): TextbookSlot {
+            val grade = root.getInt("grade")
+            return TextbookSlot(
+                subjectId = root.getString("subjectId"),
+                subjectTitle = root.getString("subjectTitle"),
+                grade = grade,
+                volume = TextbookVolume.fromId(root.getInt("volume")),
+                stage = EducationStage.fromId(root.optString("stage")) ?: EducationStage.fromGrade(grade),
+            )
+        }
 
         fun fromKey(key: String): TextbookSlot? {
             val parts = key.split('-')
@@ -77,7 +126,13 @@ data class TextbookSlot(
             val grade = parts[parts.lastIndex - 1].toIntOrNull() ?: return null
             val volume = parts.last().toIntOrNull()?.let(TextbookVolume::fromId) ?: return null
             val subject = SubjectTemplates.find(subjectId) ?: return null
-            return TextbookSlot(subject.id, subject.title, grade, volume)
+            return TextbookSlot(
+                subjectId = subject.id,
+                subjectTitle = subject.title,
+                grade = grade,
+                volume = volume,
+                stage = EducationStage.fromGrade(grade),
+            )
         }
     }
 }
@@ -92,7 +147,14 @@ fun gradeLabel(grade: Int): String = when (grade) {
     7 -> "七年级"
     8 -> "八年级"
     9 -> "九年级"
-    else -> "${grade}年级"
+    10 -> "高一"
+    11 -> "高二"
+    12 -> "高三"
+    13 -> "大一"
+    14 -> "大二"
+    15 -> "大三"
+    16 -> "大四"
+    else -> "第${grade}学年"
 }
 
 data class MaterialPdfAsset(
@@ -216,8 +278,9 @@ data class InstalledTextbook(
 
 enum class TextbookProcessingStage(val label: String) {
     PREPARING("准备教材"),
-    EXTRACTING("导入教材文件"),
-    VALIDATING("校验教材"),
+    EXTRACTING("复制 PDF"),
+    VALIDATING("校验 PDF"),
+    IDENTIFYING("识别教材信息"),
     INDEXING("建立页面索引"),
     GENERATING_COURSES("生成课程"),
     FINALIZING("完成安装"),
@@ -277,7 +340,7 @@ object TextbookCatalogParser {
             "所选教材属于${gradeLabel(book.grade)}，与当前${gradeLabel(selectedSlot.grade)}不一致"
         }
         require(book.volume == selectedSlot.volume) {
-            "所选教材为${book.volume.label}，与当前${selectedSlot.volume.label}不一致"
+            "所选教材为${book.volume.labelFor(selectedSlot.stage)}，与当前${selectedSlot.volumeLabel}不一致"
         }
         require(book.subject == selectedSlot.subjectTitle || manifest.subject == selectedSlot.subjectTitle) {
             "所选教材科目为${book.subject}，与当前${selectedSlot.subjectTitle}不一致"

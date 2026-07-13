@@ -6,13 +6,19 @@
 教材定位 → 动态讲解 → 自适应练习 → 错因诊断 → 到期复习
 ```
 
-## 当前版本：0.14.0
+## 当前版本：0.15.0
 
-当前版本已经建立从教材导入、本地 OCR、动态课程到数学题库的完整基础闭环：
+当前版本已经建立从 PDF 直导、本地 OCR、动态课程到数学题库的完整基础闭环：
 
 - 黑、白、红、蓝、黄五色极简场景式 UI
-- 多学科、多年级、上下册教材独立管理
-- WorkManager 持久后台导入、OCR、课程分析和原题线索提取
+- 小学、初中、高中、大学四级教育阶段
+- 多学科、多年级、学期教材独立管理
+- 文件选择器只允许选择 PDF，不要求用户制作教材压缩包
+- 自动校验 PDF 文件头、页数与可读性
+- 文件名、封面、版权页和目录 OCR 联合识别教材身份
+- 自动推断教材印刷页与 PDF 索引偏移
+- 自动提取目录课程；识别不足时按阶段建立可继续分析的课程区段
+- WorkManager 持久后台复制、校验、目录扫描、OCR、课程分析和原题线索提取
 - ML Kit 中文 OCR，本地保存文字、行位置和页面坐标
 - OpenAI-compatible 客户端，可连接局域网 llama.cpp 生成课程解释和动画参数
 - 数学题库提供教材同步、薄弱强化、错题重练和综合练习
@@ -20,33 +26,33 @@
 - 支持选择、数值、表达式、排序、数轴点选和分步解题
 - 精确分数、表达式等价和一元一次方程确定性判题
 - Room 保存作答、错误类型、知识点掌握度、错题和复习计划
-- 自动根据薄弱程度、提示使用、连续表现和到期时间安排下一题
-- 教材 OCR 中的例题、练习和习题会生成带页码来源的教材变式线索
 - Android CI 自动测试、构建 APK，并更新 `dev-latest` 预发布版本
 
-教材 PDF 不进入 APK，而是通过独立教材包安装到 App 私有目录。资源包规范见 [`docs/MATERIAL_PACK_V1.md`](docs/MATERIAL_PACK_V1.md)。
+## 导入教材 PDF
 
-## 构建教材包
-
-```bash
-python scripts/build_material_pack.py \
-  --pdf "/path/to/数学七年级上册.pdf" \
-  --catalog app/src/main/assets/catalog/math-grade7-volume1.json \
-  --output math-grade7-volume1.school.zip \
-  --pack-id math-grade7-volume1 \
-  --version 1.0.0 \
-  --title "七年级数学上册" \
-  --subject "数学" \
-  --page-index-offset 0
-```
-
-生成后在 App 中进入：
+在 App 中进入：
 
 ```text
-学科 → 数学 → 年级与册次 → 导入教科书
+学习阶段 → 学科 → 年级或学年 → 册次或学期 → 选择 PDF
 ```
 
-导入成功后，课程与题库都可以返回教材对应印刷页核对原文。
+导入时会依次执行：
+
+```text
+复制 PDF
+→ 校验文件头与页数
+→ OCR 封面和目录
+→ 检查学科、年级与册次
+→ 推断印刷页偏移
+→ 生成目录、课程和页面索引
+→ 后台分析正文与题目线索
+```
+
+所选文件必须是真实 PDF。仅修改扩展名不会通过 `%PDF-` 文件头和 `PdfRenderer` 可读性校验。识别到明确的学科、年级或册次冲突时，导入会停止，避免覆盖错误教材。
+
+导入成功后，课程与题库都可以返回教材对应印刷页核对原文。PDF 和生成结果保存在 App 私有目录中，不会进入 APK。
+
+仓库仍保留 [`docs/MATERIAL_PACK_V1.md`](docs/MATERIAL_PACK_V1.md) 与教材包构建脚本，供开发和离线预处理使用；普通 App 导入入口只接受 PDF。
 
 ## llama.cpp 配置
 
@@ -70,7 +76,7 @@ API Key：局域网服务未启用鉴权时留空
 - Room 2.8.4 + KSP 2.3.10
 - Preferences DataStore
 - WorkManager
-- Android Storage Access Framework、`ZipInputStream`、`PdfRenderer`
+- Android Storage Access Framework、`PdfRenderer`
 - ML Kit 中文文字识别
 - `HttpURLConnection` + OpenAI-compatible JSON API
 - JUnit 4 单元测试
