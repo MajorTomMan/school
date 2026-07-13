@@ -6,14 +6,17 @@
 - [x] 今日学习、课程路径、学习、练习、复习、设置
 - [x] 七年级数学上册「有理数」示例数据
 - [x] AI Provider 抽象
-- [x] Android CI
+- [x] Android CI 与 APK 产物
 
 ## Milestone 1 — 真正可用的本地学习闭环
 
-- [ ] Room：学习进度、作答、错题和复习记录
-- [ ] DataStore：AI 接口与界面偏好
-- [ ] OpenAI-compatible 客户端，优先支持 llama.cpp
-- [ ] 分层提示、结构化批改和错因诊断
+- [x] DataStore：AI 接口、学习概况与掌握状态
+- [x] OpenAI-compatible 客户端，优先支持 llama.cpp
+- [x] `/v1/models` 连接测试
+- [x] AI 结构化批改和错误类型反馈
+- [x] 本地检查作为离线兜底
+- [ ] Room：作答、错题和复习记录明细
+- [ ] 分层 AI 提示与追问式讲解
 - [ ] SM-2 风格的到期复习调度
 
 ## Milestone 2 — 教材资源包
