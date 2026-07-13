@@ -12,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -213,8 +214,8 @@ private fun ReaderAction(
         modifier = modifier
             .height(45.dp)
             .border(1.dp, effective, RoundedCornerShape(9.dp))
-            .background(Color.Transparent, RoundedCornerShape(9.dp))
-            .then(if (enabled) Modifier.padding(vertical = 12.dp) else Modifier.padding(vertical = 12.dp)),
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 12.dp),
         color = effective,
         textAlign = TextAlign.Center,
         fontWeight = FontWeight.SemiBold,
@@ -232,7 +233,12 @@ private fun ReaderError(message: String, onBack: () -> Unit) {
         Spacer(Modifier.height(14.dp))
         Text(message, color = ReaderMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
-        Text("返回", modifier = Modifier.padding(14.dp), color = ReaderBlue, fontWeight = FontWeight.Bold)
+        Text(
+            "返回",
+            modifier = Modifier.clickable(onClick = onBack).padding(14.dp),
+            color = ReaderBlue,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
