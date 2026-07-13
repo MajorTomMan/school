@@ -1,0 +1,34 @@
+name: Fix guided UI imports once
+
+on:
+  push:
+    branches: ["feat/guided-learning-ui"]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-imports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/guided-learning-ui
+      - name: Remove invalid weight imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            app/src/main/java/com/majortomman/school/ui/PersistentScreens.kt
+            app/src/main/java/com/majortomman/school/ui/RoomReviewScreen.kt
+            app/src/main/java/com/majortomman/school/ui/Screens.kt
+          )
+          for file in "${files[@]}"; do
+            sed -i '/^import androidx\.compose\.foundation\.layout\.weight$/d' "$file"
+          done
+          rm .github/workflows/fix-guided-ui-imports-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${files[@]}" .github/workflows/fix-guided-ui-imports-once.yml
+          git commit -m "修复：移除无效的布局扩展导入"
+          git push origin HEAD:feat/guided-learning-ui
