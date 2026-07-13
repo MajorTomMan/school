@@ -70,6 +70,8 @@ private enum class CenterPage {
     GRADES,
     SLOT,
     TUTORIAL,
+    BROWSER,
+    OCR_LOG,
 }
 
 @Composable
@@ -89,29 +91,47 @@ fun SubjectTextbookCenterScreen(
     var selectedSlotKey by rememberSaveable { mutableStateOf<String?>(null) }
     var tutorialPage by rememberSaveable { mutableIntStateOf(0) }
     var pendingImportSlotKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmRemove by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val documentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val slot = pendingImportSlotKey?.let(TextbookSlot::fromKey)
-        if (uri != null && slot != null) onImport(slot, uri)
-        pendingImportSlotKey = null
-    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
-        documentLauncher.launch(arrayOf("application/pdf"))
+        val slot = pendingImportSlotKey?.let(TextbookSlot::fromKey)
+        val uri = pendingImportUri?.let(Uri::parse)
+        if (slot != null && uri != null) onImport(slot, uri)
+        pendingImportSlotKey = null
+        pendingImportUri = null
     }
 
-    fun launchImport(slot: TextbookSlot) {
-        pendingImportSlotKey = slot.key
+    fun beginImport(slot: TextbookSlot, uri: Uri) {
         val needsPermission = Build.VERSION.SDK_INT >= 33 &&
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         if (needsPermission) {
+            pendingImportSlotKey = slot.key
+            pendingImportUri = uri.toString()
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            documentLauncher.launch(arrayOf("application/pdf"))
+            onImport(slot, uri)
+            pendingImportSlotKey = null
+            pendingImportUri = null
         }
+    }
+
+    val documentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val slot = pendingImportSlotKey?.let(TextbookSlot::fromKey)
+        if (uri != null && slot != null) beginImport(slot, uri)
+        else {
+            pendingImportSlotKey = null
+            pendingImportUri = null
+        }
+    }
+
+    fun launchSystemImport(slot: TextbookSlot) {
+        pendingImportSlotKey = slot.key
+        pendingImportUri = null
+        documentLauncher.launch(arrayOf("application/pdf"))
     }
 
     val selectedStage = selectedStageId?.let(EducationStage::fromId)
@@ -171,8 +191,11 @@ fun SubjectTextbookCenterScreen(
                             val installed = libraryState.installed(slot)
                             val processing = libraryState.processing(slot)
                             pageName = if (installed == null && processing == null) {
-                                tutorialPage = 0
-                                CenterPage.TUTORIAL.name
+                                val token = "${slot.subjectId}:$IMPORT_TUTORIAL_VERSION"
+                                if (token in completedTutorials) CenterPage.BROWSER.name else {
+                                    tutorialPage = 0
+                                    CenterPage.TUTORIAL.name
+                                }
                             } else {
                                 CenterPage.SLOT.name
                             }
@@ -192,9 +215,15 @@ fun SubjectTextbookCenterScreen(
                         confirmRemove = confirmRemove,
                         onBack = { pageName = CenterPage.GRADES.name },
                         onImport = {
-                            tutorialPage = 0
-                            pageName = CenterPage.TUTORIAL.name
+                            val token = "${selectedSlot.subjectId}:$IMPORT_TUTORIAL_VERSION"
+                            if (token in completedTutorials) {
+                                pageName = CenterPage.BROWSER.name
+                            } else {
+                                tutorialPage = 0
+                                pageName = CenterPage.TUTORIAL.name
+                            }
                         },
+                        onOpenOcrLog = { pageName = CenterPage.OCR_LOG.name },
                         onCancel = { onCancelProcessing(selectedSlot) },
                         onRemove = {
                             if (confirmRemove) {
@@ -229,18 +258,51 @@ fun SubjectTextbookCenterScreen(
                         },
                         onSkip = {
                             onTutorialCompleted(selectedSubject.id, IMPORT_TUTORIAL_VERSION)
-                            pageName = CenterPage.SLOT.name
-                            launchImport(selectedSlot)
+                            pageName = CenterPage.BROWSER.name
                         },
                         onContinue = {
                             if (tutorialPage < tutorialPages.lastIndex) {
                                 tutorialPage += 1
                             } else {
                                 onTutorialCompleted(selectedSubject.id, IMPORT_TUTORIAL_VERSION)
-                                pageName = CenterPage.SLOT.name
-                                launchImport(selectedSlot)
+                                pageName = CenterPage.BROWSER.name
                             }
                         },
+                    )
+                }
+            }
+
+            CenterPage.BROWSER -> {
+                if (selectedSlot == null) {
+                    pageName = CenterPage.GRADES.name
+                } else {
+                    InternalPdfBrowserScreen(
+                        slot = selectedSlot,
+                        installedTitles = libraryState.installedTextbooks.map { it.pack.manifest.title }.toSet(),
+                        onSelect = { uri ->
+                            beginImport(selectedSlot, uri)
+                            pageName = CenterPage.SLOT.name
+                        },
+                        onOtherLocation = { launchSystemImport(selectedSlot) },
+                        onBack = {
+                            pageName = if (libraryState.installed(selectedSlot) == null) {
+                                CenterPage.GRADES.name
+                            } else {
+                                CenterPage.SLOT.name
+                            }
+                        },
+                    )
+                }
+            }
+
+            CenterPage.OCR_LOG -> {
+                val installed = selectedSlot?.let(libraryState::installed)
+                if (installed == null) {
+                    pageName = CenterPage.SLOT.name
+                } else {
+                    OcrDiagnosticsScreen(
+                        textbook = installed,
+                        onBack = { pageName = CenterPage.SLOT.name },
                     )
                 }
             }
@@ -423,6 +485,7 @@ private fun SlotPage(
     confirmRemove: Boolean,
     onBack: () -> Unit,
     onImport: () -> Unit,
+    onOpenOcrLog: () -> Unit,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
     onEnterCourse: (InstalledTextbook) -> Unit,
@@ -439,7 +502,7 @@ private fun SlotPage(
         Spacer(Modifier.height(46.dp))
         Text(slot.displayTitle, color = CenterWhite, fontSize = 42.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
-        Text("${slot.stage.label} · 仅支持 PDF", color = CenterMuted, fontSize = 13.sp)
+        Text("${slot.stage.label} · 内置教材库 · PDF", color = CenterMuted, fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
 
         if (processing != null) {
@@ -495,6 +558,11 @@ private fun SlotPage(
                     color = CenterWhite.copy(alpha = 0.68f),
                 )
                 Text(
+                    "OCR 日志",
+                    modifier = Modifier.clickable(onClick = onOpenOcrLog),
+                    color = CenterYellow,
+                )
+                Text(
                     if (confirmRemove) "再次点击确认移除" else "移除教材",
                     modifier = Modifier.clickable(onClick = onRemove),
                     color = CenterRed,
@@ -503,7 +571,7 @@ private fun SlotPage(
         } else if (processing == null) {
             Text("尚未导入教材 PDF", color = CenterMuted, fontSize = 18.sp)
             Spacer(Modifier.height(30.dp))
-            CenterOutlinedButton("选择 PDF", CenterBlue, onClick = onImport)
+            CenterOutlinedButton("打开内置教材库", CenterBlue, onClick = onImport)
         }
     }
 }
@@ -579,7 +647,7 @@ private fun ImportTutorialPage(
         Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
             ProgressLine(((pageIndex + 1) * 100) / tutorialPages.size, tutorial.color)
             CenterOutlinedButton(
-                label = if (pageIndex == tutorialPages.lastIndex) "选择 PDF" else "继续",
+                label = if (pageIndex == tutorialPages.lastIndex) "打开教材库" else "继续",
                 color = tutorial.color,
                 onClick = onContinue,
             )
@@ -677,9 +745,9 @@ private data class TutorialContent(
 
 private val tutorialPages = listOf(
     TutorialContent(
-        title = "只选择 PDF",
+        title = "先授权教材目录",
         body = { slot ->
-            "当前正在为${slot.displayTitle}导入教材。文件选择器只会显示 PDF，压缩包、图片和其他文档无法被选中。"
+            "当前正在为${slot.displayTitle}导入教材。第一次只需通过系统界面授权一个目录，以后都在内置教材库里搜索 PDF。"
         },
         color = CenterBlue,
     ),
@@ -693,7 +761,7 @@ private val tutorialPages = listOf(
     TutorialContent(
         title = "正文在本机识别",
         body = {
-            "普通文字优先使用本地中文 OCR。公式、复杂图形或识别不足的页面才按设置使用模型补充理解。"
+            "普通文字优先使用本地中文 OCR。原始文字、清洗结果、过滤行和可疑数字都会保存在应用内 OCR 日志。"
         },
         color = CenterWhite,
     ),
