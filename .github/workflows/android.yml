@@ -100,18 +100,50 @@ jobs:
           set -euo pipefail
 
           tag="dev-latest"
-          title="School ${VERSION_NAME} development build (${SHORT_SHA})"
+          title="School ${VERSION_NAME} (${SHORT_SHA})"
+
+          git fetch origin --tags --force
+          previous_sha="$(git rev-list -n 1 "$tag" 2>/dev/null || true)"
+
+          if [ -n "$previous_sha" ] && [ "$previous_sha" != "$GITHUB_SHA" ]; then
+            diff_base="$previous_sha"
+          else
+            diff_base="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || true)"
+            if [ -z "$diff_base" ]; then
+              diff_base="$(git hash-object -t tree /dev/null)"
+            fi
+          fi
+
+          changelog="$(git log --no-merges --pretty=format:'- %s (`%h`)' "${diff_base}..${GITHUB_SHA}" || true)"
+          if [ -z "$changelog" ]; then
+            changelog="- $(git log -1 --pretty=%s "$GITHUB_SHA") (${SHORT_SHA})"
+          fi
+
+          files_changed="$(git diff --name-only "$diff_base" "$GITHUB_SHA" | sed '/^$/d' | wc -l | tr -d ' ')"
+          read -r additions deletions < <(
+            git diff --numstat "$diff_base" "$GITHUB_SHA" |
+              awk '{ if ($1 ~ /^[0-9]+$/) add += $1; if ($2 ~ /^[0-9]+$/) del += $2 } END { print add + 0, del + 0 }'
+          )
+
+          if [ -n "$previous_sha" ] && [ "$previous_sha" != "$GITHUB_SHA" ]; then
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/compare/${previous_sha}...${GITHUB_SHA}"
+          else
+            compare_url="https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          fi
 
           cat > release-notes.md <<EOF
-          自动构建自 \`master\` 分支。
+          ## 版本
 
-          - App 版本：\`${VERSION_NAME}\`
-          - Commit：[`${SHORT_SHA}`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})
-          - Workflow：[查看构建记录](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
-          - APK：\`school-debug.apk\`
-          - 校验文件：\`school-debug.apk.sha256\`
+          \`${VERSION_NAME}\` · [\`${SHORT_SHA}\`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})
 
-          这是自动生成的 Debug 测试版本，不是正式签名发布版。下一次 \`master\` 提交构建成功后，本 Release 会自动更新。
+          ## 修改内容
+
+          ${changelog}
+
+          ## 差异
+
+          - [查看完整差异](${compare_url})
+          - 修改 \`${files_changed}\` 个文件，新增 \`${additions}\` 行，删除 \`${deletions}\` 行
           EOF
 
           git config user.name "github-actions[bot]"
