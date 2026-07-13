@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 private val Context.schoolDataStore by preferencesDataStore(name = "school_preferences")
+private const val LESSON_STATUS_PREFIX = "lesson_status_"
 
 data class AiSettings(
     val endpoint: String = "http://192.168.1.2:7777/v1",
@@ -73,11 +74,15 @@ class PreferencesRepository(
         preferencesFlow,
         learningDao.observeAttemptStats(),
     ) { preferences, roomStats ->
-        val statuses = SampleContent.lessons.mapNotNull { lesson ->
-            val stored = preferences[lessonStatusKey(lesson.id)] ?: return@mapNotNull null
-            val status = runCatching { MasteryStatus.valueOf(stored) }.getOrNull()
+        val statuses = preferences.asMap().mapNotNull { (key, value) ->
+            val keyName = key.name
+            if (!keyName.startsWith(LESSON_STATUS_PREFIX)) return@mapNotNull null
+            val lessonId = keyName.removePrefix(LESSON_STATUS_PREFIX)
+            if (lessonId.isBlank()) return@mapNotNull null
+            val statusName = value as? String ?: return@mapNotNull null
+            val status = runCatching { MasteryStatus.valueOf(statusName) }.getOrNull()
                 ?: return@mapNotNull null
-            lesson.id to status
+            lessonId to status
         }.toMap()
 
         LearningProgress(
@@ -146,6 +151,29 @@ class PreferencesRepository(
         }
     }
 
+    suspend fun finishLessonAndStartNext(
+        currentLessonId: String,
+        nextLessonId: String?,
+    ) {
+        context.schoolDataStore.edit { preferences ->
+            val currentKey = lessonStatusKey(currentLessonId)
+            val currentStatus = preferences[currentKey]
+                ?.let { stored -> runCatching { MasteryStatus.valueOf(stored) }.getOrNull() }
+            if (currentStatus != MasteryStatus.NEEDS_REVIEW) {
+                preferences[currentKey] = MasteryStatus.MASTERED.name
+            }
+            if (nextLessonId != null) {
+                val nextKey = lessonStatusKey(nextLessonId)
+                val nextStatus = preferences[nextKey]
+                    ?.let { stored -> runCatching { MasteryStatus.valueOf(stored) }.getOrNull() }
+                if (nextStatus != MasteryStatus.MASTERED) {
+                    preferences[nextKey] = MasteryStatus.LEARNING.name
+                }
+            }
+            preferences[Keys.lastLessonId] = nextLessonId ?: currentLessonId
+        }
+    }
+
     suspend fun recordAttempt(
         lessonId: String,
         draft: AttemptDraft,
@@ -193,7 +221,10 @@ class PreferencesRepository(
         learningDao.clearMathMastery()
         learningDao.clearMathMistakes()
         context.schoolDataStore.edit { preferences ->
-            SampleContent.lessons.forEach { lesson -> preferences.remove(lessonStatusKey(lesson.id)) }
+            preferences.asMap().keys
+                .map(Preferences.Key<*>::name)
+                .filter { it.startsWith(LESSON_STATUS_PREFIX) }
+                .forEach { keyName -> preferences.remove(stringPreferencesKey(keyName)) }
             preferences.remove(Keys.attempts)
             preferences.remove(Keys.correctAttempts)
             preferences.remove(Keys.lastLessonId)
@@ -205,7 +236,7 @@ class PreferencesRepository(
     private fun lessonTitle(lessonId: String): String =
         SampleContent.lessons.firstOrNull { it.id == lessonId }?.title ?: lessonId
 
-    private fun lessonStatusKey(lessonId: String) = stringPreferencesKey("lesson_status_$lessonId")
+    private fun lessonStatusKey(lessonId: String) = stringPreferencesKey("$LESSON_STATUS_PREFIX$lessonId")
 
     private fun Flow<Preferences>.safeData(): Flow<Preferences> = catch { error ->
         if (error is IOException) emit(emptyPreferences()) else throw error
