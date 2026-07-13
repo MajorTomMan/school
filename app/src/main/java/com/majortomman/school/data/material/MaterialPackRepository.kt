@@ -34,6 +34,7 @@ class MaterialPackRepository(
     init {
         workManager.getWorkInfosByTagLiveData(TextbookProcessingContract.TAG)
             .observeForever(workObserver)
+        scheduleMissingAnalyses()
     }
 
     fun enqueueImport(
@@ -106,6 +107,20 @@ class MaterialPackRepository(
     fun refreshCurrent() {
         workManager.getWorkInfosByTag(TextbookProcessingContract.TAG).get()
             .let(::refresh)
+    }
+
+    private fun scheduleMissingAnalyses() {
+        MaterialLibraryStore.read(appContext).forEach { textbook ->
+            val root = File(textbook.pack.rootPath)
+            val completed = LessonAnalysisStore.count(root, textbook.lessons)
+            if (completed < textbook.lessons.size) {
+                workManager.enqueueUniqueWork(
+                    TextbookProcessingContract.uniqueWorkName(textbook.slot),
+                    ExistingWorkPolicy.KEEP,
+                    analysisRequest(textbook.slot),
+                )
+            }
+        }
     }
 
     private fun analysisRequest(slot: TextbookSlot) = OneTimeWorkRequestBuilder<TextbookAnalysisWorker>()
