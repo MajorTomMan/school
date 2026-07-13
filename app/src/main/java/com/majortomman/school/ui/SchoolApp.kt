@@ -128,7 +128,7 @@ fun SchoolApp(repository: PreferencesRepository) {
                                 onOpenLesson = { openedLessonId = it },
                             )
 
-                            MainTab.REVIEW -> RoomReviewScreen(
+                            MainTab.REVIEW -> MinimalRoomReviewScreen(
                                 fallbackItems = SampleContent.reviews,
                                 progress = progress,
                                 scheduledReviews = reviewQueue,
@@ -136,7 +136,7 @@ fun SchoolApp(repository: PreferencesRepository) {
                                 onOpenLesson = { openedLessonId = it },
                             )
 
-                            MainTab.SETTINGS -> SettingsScreen(
+                            MainTab.SETTINGS -> MinimalSettingsScreen(
                                 settings = aiSettings,
                                 onSave = { updated -> scope.launch { repository.saveAiSettings(updated) } },
                                 onClearProgress = { scope.launch { repository.clearLearningProgress() } },
