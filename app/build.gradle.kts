@@ -12,8 +12,8 @@ android {
         applicationId = "com.majortomman.school"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.16.0"
+        versionCode = 16
+        versionName = "0.17.0"
     }
 
     buildTypes {
