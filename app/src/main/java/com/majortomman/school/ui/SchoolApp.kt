@@ -24,9 +24,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.majortomman.school.data.AiSettings
+import com.majortomman.school.data.AttemptRecord
 import com.majortomman.school.data.LearningProgress
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.SampleContent
+import com.majortomman.school.data.ScheduledReview
 import kotlinx.coroutines.launch
 
 private enum class MainTab(
@@ -46,6 +48,8 @@ fun SchoolApp(repository: PreferencesRepository) {
     val scope = rememberCoroutineScope()
     val progress by repository.learningProgress.collectAsState(initial = LearningProgress())
     val aiSettings by repository.aiSettings.collectAsState(initial = AiSettings())
+    val recentAttempts by repository.recentAttempts.collectAsState(initial = emptyList<AttemptRecord>())
+    val reviewQueue by repository.reviewQueue.collectAsState(initial = emptyList<ScheduledReview>())
 
     val lessons = SampleContent.lessons.map { lesson ->
         lesson.copy(status = progress.lessonStatuses[lesson.id] ?: lesson.status)
@@ -72,9 +76,9 @@ fun SchoolApp(repository: PreferencesRepository) {
                 aiSettings = aiSettings,
                 progress = progress,
                 onBack = { openedLessonId = null },
-                onRecordAttempt = { answer, correct, feedback ->
+                onRecordAttempt = { draft ->
                     scope.launch {
-                        repository.recordAttempt(lesson.id, answer, correct, feedback)
+                        repository.recordAttempt(lesson.id, draft)
                     }
                 },
             )
@@ -119,8 +123,11 @@ fun SchoolApp(repository: PreferencesRepository) {
                             )
 
                             MainTab.REVIEW -> ReviewScreen(
-                                items = SampleContent.reviews,
+                                fallbackItems = SampleContent.reviews,
                                 progress = progress,
+                                scheduledReviews = reviewQueue,
+                                recentAttempts = recentAttempts,
+                                onOpenLesson = { openedLessonId = it },
                             )
 
                             MainTab.SETTINGS -> SettingsScreen(
