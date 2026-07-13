@@ -4,9 +4,9 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.ServiceInfo
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.database.Cursor
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
@@ -29,9 +29,9 @@ import java.io.InputStream
 import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -72,18 +72,18 @@ class TextbookProcessingWorker(
 
         createNotificationChannels()
         report(slot, TextbookProcessingStage.PREPARING, 1, "正在准备${slot.displayTitle}")
-
         val lockFile = File(MaterialLibraryStore.materialRoot(applicationContext), "processing.lock")
         lockFile.parentFile?.mkdirs()
+
         try {
             RandomAccessFile(lockFile, "rw").channel.use { channel ->
                 channel.lock().use {
                     val installed = process(slot, source)
                     showCompletionNotification(
-                        slot = slot,
-                        title = "教材处理完成",
-                        body = "${installed.slot.displayTitle}已生成 ${installed.lessons.size} 个课程",
-                        success = true,
+                        slot,
+                        "教材处理完成",
+                        "${installed.slot.displayTitle}已生成 ${installed.lessons.size} 个课程",
+                        true,
                     )
                 }
             }
@@ -95,10 +95,12 @@ class TextbookProcessingWorker(
                     TextbookProcessingContract.KEY_MESSAGE to "教材处理完成",
                 ),
             )
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: IllegalArgumentException) {
             MaterialLibraryStore.processingRoot(applicationContext, slot).deleteRecursively()
             val message = error.message ?: "教材格式不符合要求"
-            showCompletionNotification(slot, "教材处理失败", message, success = false)
+            showCompletionNotification(slot, "教材处理失败", message, false)
             Result.failure(failureData(slot, message))
         } catch (error: IOException) {
             val message = error.message ?: "教材文件读取失败"
@@ -106,21 +108,20 @@ class TextbookProcessingWorker(
                 report(slot, TextbookProcessingStage.PREPARING, 1, "$message，稍后自动继续")
                 Result.retry()
             } else {
-                showCompletionNotification(slot, "教材处理未完成", message, success = false)
+                showCompletionNotification(slot, "教材处理未完成", message, false)
                 Result.failure(failureData(slot, message))
             }
         } catch (error: Throwable) {
             val message = error.message ?: error::class.java.simpleName
-            showCompletionNotification(slot, "教材处理未完成", message, success = false)
+            showCompletionNotification(slot, "教材处理未完成", message, false)
             Result.failure(failureData(slot, message))
         }
     }
 
     private suspend fun process(slot: TextbookSlot, source: Uri): InstalledTextbook {
         val materialRoot = MaterialLibraryStore.materialRoot(applicationContext)
-        val packsRoot = MaterialLibraryStore.packsRoot(applicationContext)
+        MaterialLibraryStore.packsRoot(applicationContext).mkdirs()
         materialRoot.mkdirs()
-        packsRoot.mkdirs()
         val staging = MaterialLibraryStore.processingRoot(applicationContext, slot)
         prepareStaging(staging, source)
 
@@ -141,7 +142,7 @@ class TextbookProcessingWorker(
             report(slot, TextbookProcessingStage.EXTRACTING, 35, "已恢复教材导入进度")
         }
 
-        ensureActive()
+        checkStopped()
         val manifestFile = File(staging, "manifest.json")
         require(manifestFile.isFile) { "教材包根目录缺少 manifest.json" }
         val manifest = MaterialPackManifestParser.parse(manifestFile.readText(Charsets.UTF_8))
@@ -171,7 +172,7 @@ class TextbookProcessingWorker(
             report(slot, TextbookProcessingStage.VALIDATING, 55, "教材完整性校验已恢复")
         }
 
-        ensureActive()
+        checkStopped()
         val pageCount = readPageCount(pdfFile)
         require(pageCount > 0) { "教材 PDF 没有可读取页面" }
         catalog.lessons.forEach { lesson ->
@@ -185,10 +186,9 @@ class TextbookProcessingWorker(
         report(slot, TextbookProcessingStage.INDEXING, 57, "正在建立 $pageCount 页教材索引")
         val generatedDirectory = File(staging, "generated")
         generatedDirectory.mkdirs()
-        val pagesFile = File(generatedDirectory, "pages.json")
         val pageArray = JSONArray()
         for (pageIndex in 0 until pageCount) {
-            ensureActive()
+            checkStopped()
             pageArray.put(
                 JSONObject()
                     .put("pdfIndex", pageIndex)
@@ -199,7 +199,7 @@ class TextbookProcessingWorker(
                 report(slot, TextbookProcessingStage.INDEXING, progress, "建立页面索引 ${pageIndex + 1} / $pageCount")
             }
         }
-        pagesFile.writeText(
+        File(generatedDirectory, "pages.json").writeText(
             JSONObject().put("pageCount", pageCount).put("pages", pageArray).toString(),
             Charsets.UTF_8,
         )
@@ -207,12 +207,11 @@ class TextbookProcessingWorker(
         val generatedLessons = mutableListOf<GeneratedLesson>()
         val lessonCount = catalog.lessons.size.coerceAtLeast(1)
         catalog.lessons.forEachIndexed { index, sourceLesson ->
-            ensureActive()
-            val generated = TextbookCatalogParser.generateLessons(
+            checkStopped()
+            generatedLessons += TextbookCatalogParser.generateLessons(
                 slot,
                 TextbookCatalog(catalog.book, listOf(sourceLesson)),
             ).single()
-            generatedLessons += generated
             val progress = 74 + (((index + 1).toDouble() / lessonCount) * 20).toInt()
             report(
                 slot,
@@ -230,9 +229,7 @@ class TextbookProcessingWorker(
 
         val finalDirectory = MaterialLibraryStore.finalRoot(applicationContext, slot)
         val backup = File(materialRoot, ".backup-${slot.key}-${UUID.randomUUID()}")
-        if (finalDirectory.exists()) {
-            require(finalDirectory.renameTo(backup)) { "无法替换旧教材" }
-        }
+        if (finalDirectory.exists()) require(finalDirectory.renameTo(backup)) { "无法替换旧教材" }
         try {
             require(staging.renameTo(finalDirectory)) { "无法保存教材" }
             backup.deleteRecursively()
@@ -247,23 +244,16 @@ class TextbookProcessingWorker(
             installedAt = System.currentTimeMillis(),
             sizeBytes = MaterialLibraryStore.directorySize(finalDirectory),
         )
-        val installed = InstalledTextbook(
-            slot = slot,
-            pack = pack,
-            pageCount = pageCount,
-            lessons = generatedLessons,
-        )
-        MaterialLibraryStore.upsert(applicationContext, installed)
-        report(slot, TextbookProcessingStage.COMPLETED, 100, "教材处理完成")
-        return installed
+        return InstalledTextbook(slot, pack, pageCount, generatedLessons).also {
+            MaterialLibraryStore.upsert(applicationContext, it)
+            report(slot, TextbookProcessingStage.COMPLETED, 100, "教材处理完成")
+        }
     }
 
     private fun prepareStaging(staging: File, source: Uri) {
         val sourceMarker = File(staging, ".source")
         val sourceValue = source.toString()
-        if (staging.exists() && sourceMarker.readTextOrNull() != sourceValue) {
-            staging.deleteRecursively()
-        }
+        if (staging.exists() && sourceMarker.readTextOrNull() != sourceValue) staging.deleteRecursively()
         if (!staging.exists()) require(staging.mkdirs()) { "无法创建教材处理目录" }
         sourceMarker.writeText(sourceValue, Charsets.UTF_8)
     }
@@ -277,6 +267,7 @@ class TextbookProcessingWorker(
         var totalBytes = 0L
         ZipInputStream(input).use { zip ->
             while (true) {
+                checkStopped()
                 val entry = zip.nextEntry ?: break
                 fileCount += 1
                 require(fileCount <= MAX_FILE_COUNT) { "教材包文件数量过多" }
@@ -296,7 +287,7 @@ class TextbookProcessingWorker(
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         var entryBytes = 0L
                         while (true) {
-                            ensureActive()
+                            checkStopped()
                             val read = zip.read(buffer)
                             if (read < 0) break
                             entryBytes += read
@@ -321,7 +312,7 @@ class TextbookProcessingWorker(
         FileInputStream(file).use { input ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
-                ensureActive()
+                checkStopped()
                 val read = input.read(buffer)
                 if (read < 0) break
                 digest.update(buffer, 0, read)
@@ -333,11 +324,13 @@ class TextbookProcessingWorker(
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
+    private fun checkStopped() {
+        if (isStopped) throw CancellationException("教材处理已取消")
+    }
+
     private fun readPageCount(pdfFile: File): Int {
         ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
-            PdfRenderer(descriptor).use { renderer ->
-                return renderer.pageCount
-            }
+            PdfRenderer(descriptor).use { renderer -> return renderer.pageCount }
         }
     }
 
@@ -355,8 +348,7 @@ class TextbookProcessingWorker(
     private fun resolveInside(root: File, relativePath: String): File {
         val file = File(root, relativePath)
         val rootPath = root.canonicalFile.path + File.separator
-        val filePath = file.canonicalFile.path
-        require(filePath.startsWith(rootPath)) { "教材包包含越界路径" }
+        require(file.canonicalFile.path.startsWith(rootPath)) { "教材包包含越界路径" }
         return file
     }
 
@@ -373,14 +365,7 @@ class TextbookProcessingWorker(
         message: String,
     ) {
         val safeProgress = progress.coerceIn(0, 100)
-        setProgress(
-            workDataOf(
-                TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
-                TextbookProcessingContract.KEY_STAGE to stage.name,
-                TextbookProcessingContract.KEY_PROGRESS to safeProgress,
-                TextbookProcessingContract.KEY_MESSAGE to message,
-            ),
-        )
+        setProgress(progressData(slot, stage, safeProgress, message))
         setForeground(createForegroundInfo(slot, safeProgress, message))
     }
 
@@ -390,22 +375,24 @@ class TextbookProcessingWorker(
         progress: Int,
         message: String,
     ) {
-        setProgressAsync(
-            workDataOf(
-                TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
-                TextbookProcessingContract.KEY_STAGE to stage.name,
-                TextbookProcessingContract.KEY_PROGRESS to progress.coerceIn(0, 100),
-                TextbookProcessingContract.KEY_MESSAGE to message,
-            ),
-        )
-        setForegroundAsync(createForegroundInfo(slot, progress.coerceIn(0, 100), message))
+        val safeProgress = progress.coerceIn(0, 100)
+        setProgressAsync(progressData(slot, stage, safeProgress, message))
+        setForegroundAsync(createForegroundInfo(slot, safeProgress, message))
     }
 
-    private fun createForegroundInfo(
+    private fun progressData(
         slot: TextbookSlot,
+        stage: TextbookProcessingStage,
         progress: Int,
         message: String,
-    ): ForegroundInfo {
+    ): Data = workDataOf(
+        TextbookProcessingContract.KEY_SLOT_KEY to slot.key,
+        TextbookProcessingContract.KEY_STAGE to stage.name,
+        TextbookProcessingContract.KEY_PROGRESS to progress,
+        TextbookProcessingContract.KEY_MESSAGE to message,
+    )
+
+    private fun createForegroundInfo(slot: TextbookSlot, progress: Int, message: String): ForegroundInfo {
         val notification = Notification.Builder(applicationContext, CHANNEL_PROGRESS)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("正在处理${slot.displayTitle}")
@@ -429,10 +416,7 @@ class TextbookProcessingWorker(
         success: Boolean,
     ) {
         val notification = Notification.Builder(applicationContext, CHANNEL_RESULT)
-            .setSmallIcon(
-                if (success) android.R.drawable.stat_sys_download_done
-                else android.R.drawable.stat_notify_error,
-            )
+            .setSmallIcon(if (success) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(Notification.BigTextStyle().bigText(body))
@@ -456,21 +440,13 @@ class TextbookProcessingWorker(
 
     private fun createNotificationChannels() {
         notificationManager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_PROGRESS,
-                "教材处理进度",
-                NotificationManager.IMPORTANCE_LOW,
-            ).apply {
+            NotificationChannel(CHANNEL_PROGRESS, "教材处理进度", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "显示教材导入、校验和课程生成进度"
                 setSound(null, null)
             },
         )
         notificationManager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_RESULT,
-                "教材处理结果",
-                NotificationManager.IMPORTANCE_DEFAULT,
-            ).apply {
+            NotificationChannel(CHANNEL_RESULT, "教材处理结果", NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = "教材处理完成或失败时发送提醒"
             },
         )
@@ -492,11 +468,8 @@ class TextbookProcessingWorker(
         TextbookProcessingContract.KEY_MESSAGE to message,
     )
 
-    private fun progressNotificationId(slot: TextbookSlot): Int =
-        20_000 + (slot.key.hashCode() and 0x0FFF)
-
-    private fun resultNotificationId(slot: TextbookSlot): Int =
-        30_000 + (slot.key.hashCode() and 0x0FFF)
+    private fun progressNotificationId(slot: TextbookSlot): Int = 20_000 + (slot.key.hashCode() and 0x0FFF)
+    private fun resultNotificationId(slot: TextbookSlot): Int = 30_000 + (slot.key.hashCode() and 0x0FFF)
 
     private companion object {
         const val CHANNEL_PROGRESS = "textbook_processing_progress"
