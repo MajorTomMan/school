@@ -65,27 +65,33 @@ class MaterialPackRepository(
                 TimeUnit.SECONDS,
             )
             .build()
-        val analysisRequest = analysisRequest(slot)
         workManager.beginUniqueWork(
             TextbookProcessingContract.uniqueWorkName(slot),
             ExistingWorkPolicy.KEEP,
             importRequest,
-        ).then(analysisRequest).enqueue()
+        )
+            .then(analysisRequest(slot))
+            .then(questionExtractionRequest(slot))
+            .enqueue()
     }
 
     fun enqueueAnalysis(slot: TextbookSlot) {
         val installed = MaterialLibraryStore.read(appContext).firstOrNull { it.slot.key == slot.key } ?: return
         File(installed.pack.rootPath, "generated/analysis").deleteRecursively()
-        workManager.enqueueUniqueWork(
-            "textbook-analysis-${slot.key}",
+        File(installed.pack.rootPath, "generated/questions").deleteRecursively()
+        workManager.beginUniqueWork(
+            analysisWorkName(slot),
             ExistingWorkPolicy.REPLACE,
             analysisRequest(slot),
         )
+            .then(questionExtractionRequest(slot))
+            .enqueue()
     }
 
     fun cancelProcessing(slot: TextbookSlot) {
         workManager.cancelUniqueWork(TextbookProcessingContract.uniqueWorkName(slot))
-        workManager.cancelUniqueWork("textbook-analysis-${slot.key}")
+        workManager.cancelUniqueWork(analysisWorkName(slot))
+        workManager.cancelUniqueWork(questionWorkName(slot))
     }
 
     fun loadLessonAnalysis(
@@ -113,11 +119,23 @@ class MaterialPackRepository(
         MaterialLibraryStore.read(appContext).forEach { textbook ->
             val root = File(textbook.pack.rootPath)
             val completed = LessonAnalysisStore.count(root, textbook.lessons)
-            if (completed < textbook.lessons.size) {
-                workManager.enqueueUniqueWork(
+            val needsAnalysis = completed < textbook.lessons.size
+            val needsQuestions = textbook.slot.subjectId == "math" && textbook.lessons.any { lesson ->
+                !TextbookQuestionDraftStore.hasDrafts(root, lesson.sourceId)
+            }
+            when {
+                needsAnalysis -> workManager.beginUniqueWork(
                     TextbookProcessingContract.uniqueWorkName(textbook.slot),
                     ExistingWorkPolicy.KEEP,
                     analysisRequest(textbook.slot),
+                )
+                    .then(questionExtractionRequest(textbook.slot))
+                    .enqueue()
+
+                needsQuestions -> workManager.enqueueUniqueWork(
+                    questionWorkName(textbook.slot),
+                    ExistingWorkPolicy.KEEP,
+                    questionExtractionRequest(textbook.slot),
                 )
             }
         }
@@ -133,6 +151,16 @@ class MaterialPackRepository(
             TimeUnit.SECONDS,
         )
         .build()
+
+    private fun questionExtractionRequest(slot: TextbookSlot) =
+        OneTimeWorkRequestBuilder<TextbookQuestionExtractionWorker>()
+            .setInputData(slotInput(slot))
+            .setBackoffCriteria(
+                androidx.work.BackoffPolicy.EXPONENTIAL,
+                30,
+                TimeUnit.SECONDS,
+            )
+            .build()
 
     private fun slotInput(slot: TextbookSlot) = workDataOf(
         TextbookProcessingContract.KEY_SUBJECT_ID to slot.subjectId,
@@ -195,4 +223,7 @@ class MaterialPackRepository(
         TextbookProcessingStatus.QUEUED -> 2
         TextbookProcessingStatus.FAILED -> 1
     }
+
+    private fun analysisWorkName(slot: TextbookSlot): String = "textbook-analysis-${slot.key}"
+    private fun questionWorkName(slot: TextbookSlot): String = "textbook-question-extraction-${slot.key}"
 }
