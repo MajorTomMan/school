@@ -36,6 +36,13 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        getByName("main") {
+            java.exclude("**/PersistentScreens.kt")
+            java.exclude("**/RoomReviewScreen.kt")
+        }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
