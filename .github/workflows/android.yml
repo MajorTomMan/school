@@ -1,25 +1,39 @@
-name: Android CI
+name: Android CI/CD
 
 on:
   push:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  assemble-debug:
+  test-build-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - uses: android-actions/setup-android@v3
+
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.4.1"
+
       - name: Test and assemble debug APK
         id: assemble
         shell: bash
@@ -29,12 +43,35 @@ jobs:
           status=$?
           tail -n 240 build.log
           exit $status
+
+      - name: Prepare APK and checksum
+        id: package
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
+          short_sha="${GITHUB_SHA::7}"
+
+          if [ -z "$version_name" ]; then
+            echo "Unable to read versionName from app/build.gradle.kts" >&2
+            exit 1
+          fi
+
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/school-debug.apk
+          sha256sum dist/school-debug.apk > dist/school-debug.apk.sha256
+
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+
       - name: Upload build diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-build-diagnostics
           path: build.log
+
       - name: Upload unit test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -42,9 +79,64 @@ jobs:
           name: android-unit-test-reports
           path: app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: ignore
-      - name: Upload debug APK
+
+      - name: Upload debug APK artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: school-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            dist/school-debug.apk
+            dist/school-debug.apk.sha256
+
+      - name: Publish rolling development release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.package.outputs.version_name }}
+          SHORT_SHA: ${{ steps.package.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+
+          tag="dev-latest"
+          title="School ${VERSION_NAME} development build (${SHORT_SHA})"
+
+          cat > release-notes.md <<EOF
+          自动构建自 \`master\` 分支。
+
+          - App 版本：\`${VERSION_NAME}\`
+          - Commit：[`${SHORT_SHA}`](https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA})
+          - Workflow：[查看构建记录](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
+          - APK：\`school-debug.apk\`
+          - 校验文件：\`school-debug.apk.sha256\`
+
+          这是自动生成的 Debug 测试版本，不是正式签名发布版。下一次 \`master\` 提交构建成功后，本 Release 会自动更新。
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "$tag" "$GITHUB_SHA"
+          git push origin "refs/tags/$tag" --force
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --notes-file release-notes.md \
+              --prerelease
+            gh release upload "$tag" \
+              dist/school-debug.apk \
+              dist/school-debug.apk.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$tag" \
+              dist/school-debug.apk \
+              dist/school-debug.apk.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$title" \
+              --notes-file release-notes.md \
+              --prerelease
+          fi
