@@ -15,7 +15,11 @@ internal object LessonAnalysisStore {
     ): LessonAnalysis? = runCatching {
         val file = generatedFile(textbookRoot, lessonSourceId)
         if (!file.isFile) return@runCatching null
-        LessonAnalysis.fromJson(JSONObject(file.readText(Charsets.UTF_8)))
+        val root = JSONObject(file.readText(Charsets.UTF_8))
+        if (root.optInt("schemaVersion", 1) != LESSON_ANALYSIS_SCHEMA_VERSION) {
+            return@runCatching null
+        }
+        LessonAnalysis.fromJson(root)
     }.getOrNull()
 
     fun readPackProvided(
@@ -28,6 +32,7 @@ internal object LessonAnalysisStore {
         )
         val file = candidates.firstOrNull { it.isFile } ?: return@runCatching null
         val root = JSONObject(file.readText(Charsets.UTF_8))
+            .put("schemaVersion", LESSON_ANALYSIS_SCHEMA_VERSION)
             .put("lessonSourceId", lesson.sourceId)
             .put("pageStart", lesson.pageStart)
             .put("pageEnd", lesson.pageEnd)
