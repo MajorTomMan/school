@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.majortomman.school.data.material.EducationStage
 import com.majortomman.school.data.material.IMPORT_TUTORIAL_VERSION
 import com.majortomman.school.data.material.InstalledTextbook
 import com.majortomman.school.data.material.MaterialLibraryState
@@ -64,6 +65,7 @@ private val CenterMuted = CenterWhite.copy(alpha = 0.46f)
 private val CenterLine = CenterWhite.copy(alpha = 0.13f)
 
 private enum class CenterPage {
+    STAGES,
     SUBJECTS,
     GRADES,
     SLOT,
@@ -81,7 +83,8 @@ fun SubjectTextbookCenterScreen(
     onEnterCourse: (InstalledTextbook) -> Unit,
     onOpenTextbook: (InstalledTextbook, Int) -> Unit,
 ) {
-    var pageName by rememberSaveable { mutableStateOf(CenterPage.SUBJECTS.name) }
+    var pageName by rememberSaveable { mutableStateOf(CenterPage.STAGES.name) }
+    var selectedStageId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSubjectId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSlotKey by rememberSaveable { mutableStateOf<String?>(null) }
     var tutorialPage by rememberSaveable { mutableIntStateOf(0) }
@@ -97,7 +100,7 @@ fun SubjectTextbookCenterScreen(
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
-        documentLauncher.launch(materialMimeTypes())
+        documentLauncher.launch(arrayOf("application/pdf"))
     }
 
     fun launchImport(slot: TextbookSlot) {
@@ -107,10 +110,11 @@ fun SubjectTextbookCenterScreen(
         if (needsPermission) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            documentLauncher.launch(materialMimeTypes())
+            documentLauncher.launch(arrayOf("application/pdf"))
         }
     }
 
+    val selectedStage = selectedStageId?.let(EducationStage::fromId)
     val selectedSubject = selectedSubjectId?.let(SubjectTemplates::find)
     val selectedSlot = selectedSlotKey?.let(TextbookSlot::fromKey)
     val page = CenterPage.valueOf(pageName)
@@ -125,20 +129,39 @@ fun SubjectTextbookCenterScreen(
         label = "subjectCenterNavigation",
     ) { currentPage ->
         when (currentPage) {
-            CenterPage.SUBJECTS -> SubjectListPage(
+            CenterPage.STAGES -> StageListPage(
                 libraryState = libraryState,
-                onSelect = { subject ->
-                    selectedSubjectId = subject.id
+                onSelect = { stage ->
+                    selectedStageId = stage.id
+                    selectedSubjectId = null
                     selectedSlotKey = null
-                    pageName = CenterPage.GRADES.name
+                    pageName = CenterPage.SUBJECTS.name
                 },
             )
 
+            CenterPage.SUBJECTS -> {
+                if (selectedStage == null) {
+                    pageName = CenterPage.STAGES.name
+                } else {
+                    SubjectListPage(
+                        stage = selectedStage,
+                        libraryState = libraryState,
+                        onBack = { pageName = CenterPage.STAGES.name },
+                        onSelect = { subject ->
+                            selectedSubjectId = subject.id
+                            selectedSlotKey = null
+                            pageName = CenterPage.GRADES.name
+                        },
+                    )
+                }
+            }
+
             CenterPage.GRADES -> {
-                if (selectedSubject == null) {
+                if (selectedStage == null || selectedSubject == null) {
                     pageName = CenterPage.SUBJECTS.name
                 } else {
                     GradeListPage(
+                        stage = selectedStage,
                         subject = selectedSubject,
                         libraryState = libraryState,
                         onBack = { pageName = CenterPage.SUBJECTS.name },
@@ -226,9 +249,9 @@ fun SubjectTextbookCenterScreen(
 }
 
 @Composable
-private fun SubjectListPage(
+private fun StageListPage(
     libraryState: MaterialLibraryState,
-    onSelect: (SubjectTemplate) -> Unit,
+    onSelect: (EducationStage) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -237,13 +260,69 @@ private fun SubjectListPage(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 26.dp, vertical = 28.dp),
     ) {
-        Text("学科", color = CenterWhite, fontSize = 48.sp, fontWeight = FontWeight.SemiBold)
+        Text("学习阶段", color = CenterWhite, fontSize = 48.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
-        Text("教材、课程和学习记录按学科与年级分别管理。", color = CenterMuted, lineHeight = 23.sp)
+        Text("教材、课程、题库和学习记录按教育阶段分别管理。", color = CenterMuted, lineHeight = 23.sp)
         Spacer(Modifier.height(42.dp))
-        SubjectTemplates.all.forEachIndexed { index, subject ->
-            val installedCount = libraryState.installedTextbooks.count { it.slot.subjectId == subject.id }
-            val processingCount = libraryState.processing.values.count { it.slot.subjectId == subject.id }
+        EducationStage.entries.forEachIndexed { index, stage ->
+            val installedCount = libraryState.installedTextbooks.count { it.slot.stage == stage }
+            val processingCount = libraryState.processing.values.count { it.slot.stage == stage }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(stage) }
+                    .padding(vertical = 21.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stage.label, color = CenterWhite, fontSize = 31.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    when {
+                        processingCount > 0 -> "$processingCount 本处理中"
+                        installedCount > 0 -> "$installedCount 本教材"
+                        else -> "尚未导入"
+                    },
+                    color = when {
+                        processingCount > 0 -> CenterYellow
+                        installedCount > 0 -> CenterBlue
+                        else -> CenterMuted
+                    },
+                    fontSize = 13.sp,
+                )
+            }
+            if (index != EducationStage.entries.lastIndex) ThinDivider()
+        }
+    }
+}
+
+@Composable
+private fun SubjectListPage(
+    stage: EducationStage,
+    libraryState: MaterialLibraryState,
+    onBack: () -> Unit,
+    onSelect: (SubjectTemplate) -> Unit,
+) {
+    val subjects = SubjectTemplates.forStage(stage)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 26.dp, vertical = 24.dp),
+    ) {
+        CenterBack("学习阶段", onBack)
+        Spacer(Modifier.height(30.dp))
+        Text(stage.label, color = CenterWhite, fontSize = 48.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Text("选择学科", color = CenterMuted)
+        Spacer(Modifier.height(38.dp))
+        subjects.forEachIndexed { index, subject ->
+            val installedCount = libraryState.installedTextbooks.count {
+                it.slot.stage == stage && it.slot.subjectId == subject.id
+            }
+            val processingCount = libraryState.processing.values.count {
+                it.slot.stage == stage && it.slot.subjectId == subject.id
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -267,7 +346,7 @@ private fun SubjectListPage(
                     fontSize = 13.sp,
                 )
             }
-            if (index != SubjectTemplates.all.lastIndex) ThinDivider()
+            if (index != subjects.lastIndex) ThinDivider()
         }
         Spacer(Modifier.height(40.dp))
     }
@@ -275,11 +354,13 @@ private fun SubjectListPage(
 
 @Composable
 private fun GradeListPage(
+    stage: EducationStage,
     subject: SubjectTemplate,
     libraryState: MaterialLibraryState,
     onBack: () -> Unit,
     onSelect: (TextbookSlot) -> Unit,
 ) {
+    val grades = subject.gradesFor(stage)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -287,13 +368,16 @@ private fun GradeListPage(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 26.dp, vertical = 24.dp),
     ) {
-        CenterBack("学科", onBack)
+        CenterBack(stage.label, onBack)
         Spacer(Modifier.height(30.dp))
         Text(subject.title, color = CenterWhite, fontSize = 48.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
-        Text("选择年级和册次", color = CenterMuted)
+        Text(
+            if (stage == EducationStage.UNIVERSITY) "选择学年和学期" else "选择年级和册次",
+            color = CenterMuted,
+        )
         Spacer(Modifier.height(38.dp))
-        subject.grades.forEach { grade ->
+        grades.forEach { grade ->
             Text(gradeLabel(grade), color = CenterWhite, fontSize = 23.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(14.dp))
             Row(
@@ -301,11 +385,11 @@ private fun GradeListPage(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TextbookVolume.entries.forEach { volume ->
-                    val slot = TextbookSlot(subject.id, subject.title, grade, volume)
+                    val slot = TextbookSlot(subject.id, subject.title, grade, volume, stage)
                     val installed = libraryState.installed(slot)
                     val job = libraryState.processing(slot)
                     SlotButton(
-                        label = volume.label,
+                        label = slot.volumeLabel,
                         status = when {
                             job?.status == TextbookProcessingStatus.RUNNING -> "${job.progress}%"
                             job?.status == TextbookProcessingStatus.QUEUED -> "等待中"
@@ -325,7 +409,7 @@ private fun GradeListPage(
                 }
             }
             Spacer(Modifier.height(27.dp))
-            if (grade != subject.grades.last) ThinDivider()
+            if (grade != grades.last) ThinDivider()
             Spacer(Modifier.height(27.dp))
         }
     }
@@ -354,6 +438,8 @@ private fun SlotPage(
         CenterBack(slot.subjectTitle, onBack)
         Spacer(Modifier.height(46.dp))
         Text(slot.displayTitle, color = CenterWhite, fontSize = 42.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Text("${slot.stage.label} · 仅支持 PDF", color = CenterMuted, fontSize = 13.sp)
         Spacer(Modifier.height(14.dp))
 
         if (processing != null) {
@@ -361,12 +447,12 @@ private fun SlotPage(
             Spacer(Modifier.height(32.dp))
             when (processing.status) {
                 TextbookProcessingStatus.FAILED -> {
-                    Text("已有处理结果会保留。重新选择教材后可以再次处理。", color = CenterMuted, lineHeight = 23.sp)
+                    Text("已有教材与识别结果会保留。重新选择 PDF 后可以再次处理。", color = CenterMuted, lineHeight = 23.sp)
                     Spacer(Modifier.height(24.dp))
-                    CenterOutlinedButton("重新导入", CenterBlue, onClick = onImport)
+                    CenterOutlinedButton("重新选择 PDF", CenterBlue, onClick = onImport)
                 }
                 TextbookProcessingStatus.QUEUED, TextbookProcessingStatus.RUNNING -> {
-                    Text("你可以离开此页面，后台任务会继续运行。", color = CenterMuted, lineHeight = 23.sp)
+                    Text("你可以离开此页面，PDF 扫描会在后台继续。", color = CenterMuted, lineHeight = 23.sp)
                     Spacer(Modifier.height(24.dp))
                     CenterOutlinedButton("取消处理", CenterRed, onClick = onCancel)
                 }
@@ -378,7 +464,7 @@ private fun SlotPage(
             Text(installed.pack.manifest.title, color = CenterWhite, fontSize = 25.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.height(8.dp))
             Text(
-                "${installed.lessons.size} 个课程 · ${installed.pageCount.takeIf { it > 0 } ?: "—"} 页 · ${installed.pack.manifest.version}",
+                "${installed.lessons.size} 个课程 · ${installed.pageCount.takeIf { it > 0 } ?: "—"} 页 · 自动扫描",
                 color = CenterMuted,
             )
             Spacer(Modifier.height(34.dp))
@@ -387,7 +473,7 @@ private fun SlotPage(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 CenterOutlinedButton(
-                    label = "导入教科书",
+                    label = "替换 PDF",
                     color = CenterYellow,
                     modifier = Modifier.weight(1f),
                     onClick = onImport,
@@ -415,9 +501,9 @@ private fun SlotPage(
                 )
             }
         } else if (processing == null) {
-            Text("尚未导入教材", color = CenterMuted, fontSize = 18.sp)
+            Text("尚未导入教材 PDF", color = CenterMuted, fontSize = 18.sp)
             Spacer(Modifier.height(30.dp))
-            CenterOutlinedButton("开始导入", CenterBlue, onClick = onImport)
+            CenterOutlinedButton("选择 PDF", CenterBlue, onClick = onImport)
         }
     }
 }
@@ -493,7 +579,7 @@ private fun ImportTutorialPage(
         Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
             ProgressLine(((pageIndex + 1) * 100) / tutorialPages.size, tutorial.color)
             CenterOutlinedButton(
-                label = if (pageIndex == tutorialPages.lastIndex) "选择教材" else "继续",
+                label = if (pageIndex == tutorialPages.lastIndex) "选择 PDF" else "继续",
                 color = tutorial.color,
                 onClick = onContinue,
             )
@@ -591,37 +677,31 @@ private data class TutorialContent(
 
 private val tutorialPages = listOf(
     TutorialContent(
-        title = "选择正确的教材",
+        title = "只选择 PDF",
         body = { slot ->
-            "当前正在为${slot.displayTitle}导入教材。系统会检查学科、年级与册次，错误教材不会覆盖其他年级。"
+            "当前正在为${slot.displayTitle}导入教材。文件选择器只会显示 PDF，压缩包、图片和其他文档无法被选中。"
         },
         color = CenterBlue,
     ),
     TutorialContent(
-        title = "处理会在后台继续",
+        title = "先识别，再扫描",
         body = {
-            "教材会依次完成导入、完整性校验、页面索引和课程生成。离开页面或锁屏后，任务仍由系统继续调度。"
+            "系统会先检查 PDF 文件头、页数、文件名、封面和目录，再建立课程结构。识别到明显不匹配的学科或年级时会停止处理。"
         },
         color = CenterYellow,
     ),
     TutorialContent(
-        title = "课程来自教材",
+        title = "正文在本机识别",
         body = {
-            "课程名称、页码范围和学习路径由教材目录与处理结果生成。每个课程都保留返回教材原页的入口。"
+            "普通文字优先使用本地中文 OCR。公式、复杂图形或识别不足的页面才按设置使用模型补充理解。"
         },
         color = CenterWhite,
     ),
     TutorialContent(
-        title = "完成后提醒你",
+        title = "后台完成后提醒",
         body = {
-            "允许通知后，处理完成或失败时会发送一条本地提醒。不会用于广告或无关消息。"
+            "复制、校验、目录扫描、课程生成和题目提取会在后台继续。处理完成或失败时会发送本地通知。"
         },
         color = CenterRed,
     ),
-)
-
-private fun materialMimeTypes(): Array<String> = arrayOf(
-    "application/zip",
-    "application/x-zip-compressed",
-    "application/octet-stream",
 )
