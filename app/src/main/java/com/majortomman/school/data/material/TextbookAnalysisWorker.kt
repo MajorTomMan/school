@@ -48,69 +48,126 @@ class TextbookAnalysisWorker(
             val lessons = textbook.lessons
             require(lessons.isNotEmpty()) { "教材没有可分析的课程" }
 
-            report(slot, 1, "正在准备教材页面扫描")
+            report(slot, 1, "正在准备本地文字识别")
             val settings = PreferencesRepository(applicationContext).aiSettings.first()
             val client = OpenAiCompatibleClient(settings)
             var aiEnabled = client.testConnection().isSuccess
-            var aiCount = 0
+            var textAiCount = 0
+            var visionAiCount = 0
+            var ocrFallbackCount = 0
             var packCount = 0
-            var fallbackCount = 0
+            var catalogFallbackCount = 0
+            var ocrPageCount = 0
 
-            lessons.forEachIndexed { index, lesson ->
-                checkStopped()
-                val existing = LessonAnalysisStore.read(root, lesson.sourceId)
-                if (existing != null) {
-                    reportLessonProgress(slot, index, lessons.size, "已恢复 ${lesson.title} 的扫描结果")
-                    when (existing.source) {
-                        LessonAnalysisSource.AI_VISION -> aiCount += 1
-                        LessonAnalysisSource.PACK -> packCount += 1
-                        LessonAnalysisSource.CATALOG_FALLBACK -> fallbackCount += 1
+            TextbookOcrEngine().use { ocrEngine ->
+                lessons.forEachIndexed { index, lesson ->
+                    checkStopped()
+                    val existing = LessonAnalysisStore.read(root, lesson.sourceId)
+                    if (existing != null) {
+                        reportLessonProgress(slot, index, lessons.size, "已恢复 ${lesson.title} 的课程结果")
+                        when (existing.source) {
+                            LessonAnalysisSource.AI_TEXT -> textAiCount += 1
+                            LessonAnalysisSource.AI_VISION -> visionAiCount += 1
+                            LessonAnalysisSource.OCR_FALLBACK -> ocrFallbackCount += 1
+                            LessonAnalysisSource.PACK -> packCount += 1
+                            LessonAnalysisSource.CATALOG_FALLBACK -> catalogFallbackCount += 1
+                        }
+                        return@forEachIndexed
                     }
-                    return@forEachIndexed
+
+                    val provided = LessonAnalysisStore.readPackProvided(root, lesson)
+                    val analysis = if (provided != null) {
+                        packCount += 1
+                        provided
+                    } else {
+                        reportLessonProgress(slot, index, lessons.size, "本地 OCR · ${lesson.title}")
+                        val ocrPages = recognizeRepresentativePages(textbook, lesson, ocrEngine)
+                        ocrPageCount += ocrPages.count { it.isUsable }
+                        val usablePages = ocrPages.filter { it.isUsable }
+
+                        val generatedByText = if (aiEnabled && usablePages.isNotEmpty()) {
+                            runCatching {
+                                val raw = client.analyzeTextbookLessonFromText(
+                                    subject = slot.subjectTitle,
+                                    lessonTitle = lesson.title,
+                                    pageStart = lesson.pageStart,
+                                    pageEnd = lesson.pageEnd,
+                                    pageTexts = usablePages.map { it.printedPage to it.text },
+                                )
+                                LessonAnalysis.fromModelResponse(
+                                    raw = raw,
+                                    lesson = lesson,
+                                    source = LessonAnalysisSource.AI_TEXT,
+                                )
+                            }
+                        } else {
+                            null
+                        }
+
+                        if (generatedByText?.isSuccess == true) {
+                            textAiCount += 1
+                            generatedByText.getOrThrow()
+                        } else {
+                            val generatedByVision = if (aiEnabled) {
+                                runCatching {
+                                    val images = renderRepresentativePages(textbook, lesson)
+                                    val raw = client.analyzeTextbookLesson(
+                                        subject = slot.subjectTitle,
+                                        lessonTitle = lesson.title,
+                                        pageStart = lesson.pageStart,
+                                        pageEnd = lesson.pageEnd,
+                                        pageImages = images,
+                                    )
+                                    LessonAnalysis.fromModelResponse(
+                                        raw = raw,
+                                        lesson = lesson,
+                                        source = LessonAnalysisSource.AI_VISION,
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+
+                            if (generatedByVision?.isSuccess == true) {
+                                visionAiCount += 1
+                                generatedByVision.getOrThrow()
+                            } else {
+                                if (generatedByText?.isFailure == true && generatedByVision?.isFailure == true) {
+                                    aiEnabled = false
+                                }
+                                val offline = LessonAnalysisFallback.generateFromOcr(slot, lesson, ocrPages)
+                                if (offline.source == LessonAnalysisSource.OCR_FALLBACK) {
+                                    ocrFallbackCount += 1
+                                } else {
+                                    catalogFallbackCount += 1
+                                }
+                                offline
+                            }
+                        }
+                    }
+
+                    LessonAnalysisStore.write(root, analysis)
+                    reportLessonProgress(
+                        slot,
+                        index + 1,
+                        lessons.size,
+                        "生成动态课程 ${index + 1} / ${lessons.size} · ${lesson.title}",
+                    )
                 }
-
-                val provided = LessonAnalysisStore.readPackProvided(root, lesson)
-                val analysis = if (provided != null) {
-                    packCount += 1
-                    provided
-                } else if (aiEnabled) {
-                    val result = runCatching {
-                        reportLessonProgress(slot, index, lessons.size, "扫描教材页 · ${lesson.title}")
-                        val images = renderRepresentativePages(textbook, lesson)
-                        val raw = client.analyzeTextbookLesson(
-                            subject = slot.subjectTitle,
-                            lessonTitle = lesson.title,
-                            pageStart = lesson.pageStart,
-                            pageEnd = lesson.pageEnd,
-                            pageImages = images,
-                        )
-                        LessonAnalysis.fromModelResponse(raw, lesson)
-                    }
-                    result.getOrElse {
-                        aiEnabled = false
-                        fallbackCount += 1
-                        LessonAnalysisFallback.generate(slot, lesson)
-                    }.also {
-                        if (result.isSuccess) aiCount += 1
-                    }
-                } else {
-                    fallbackCount += 1
-                    LessonAnalysisFallback.generate(slot, lesson)
-                }
-
-                LessonAnalysisStore.write(root, analysis)
-                reportLessonProgress(
-                    slot,
-                    index + 1,
-                    lessons.size,
-                    "生成动态课程 ${index + 1} / ${lessons.size} · ${lesson.title}",
-                )
             }
 
             val body = when {
-                aiCount > 0 -> "${slot.displayTitle}已扫描 $aiCount 个课程页面并生成动态课程"
+                textAiCount > 0 -> {
+                    "${slot.displayTitle}已本地识别 $ocrPageCount 个页面，并由文本模型生成 $textAiCount 个动态课程"
+                }
+                ocrFallbackCount > 0 -> {
+                    "${slot.displayTitle}已在设备上完成文字识别；连接文本模型后可继续生成更完整的动画和练习"
+                }
+                visionAiCount > 0 -> {
+                    "${slot.displayTitle}的本地 OCR 结果不足，已对必要页面使用视觉分析"
+                }
                 packCount > 0 -> "${slot.displayTitle}已读取教材包扫描结果并生成动态课程"
-                else -> "${slot.displayTitle}已生成 ${lessons.size} 个课程模板；连接支持图片的 AI 后可以重新扫描正文"
+                else -> "${slot.displayTitle}已生成 ${lessons.size} 个离线课程模板"
             }
             report(slot, 100, "教材分析完成")
             showResult(slot, "教材分析完成", body, success = true)
@@ -120,9 +177,12 @@ class TextbookAnalysisWorker(
                     TextbookProcessingContract.KEY_STAGE to TextbookProcessingStage.COMPLETED.name,
                     TextbookProcessingContract.KEY_PROGRESS to 100,
                     TextbookProcessingContract.KEY_MESSAGE to "教材分析完成",
-                    KEY_AI_COUNT to aiCount,
+                    KEY_TEXT_AI_COUNT to textAiCount,
+                    KEY_VISION_AI_COUNT to visionAiCount,
+                    KEY_OCR_FALLBACK_COUNT to ocrFallbackCount,
                     KEY_PACK_COUNT to packCount,
-                    KEY_FALLBACK_COUNT to fallbackCount,
+                    KEY_CATALOG_FALLBACK_COUNT to catalogFallbackCount,
+                    KEY_OCR_PAGE_COUNT to ocrPageCount,
                 ),
             )
         } catch (error: CancellationException) {
@@ -134,16 +194,54 @@ class TextbookAnalysisWorker(
         }
     }
 
+    private suspend fun recognizeRepresentativePages(
+        textbook: InstalledTextbook,
+        lesson: GeneratedLesson,
+        ocrEngine: TextbookOcrEngine,
+    ): List<OcrPageResult> {
+        val pack = textbook.pack
+        val root = File(pack.rootPath)
+        val printedPages = representativePages(lesson)
+        val results = mutableListOf<OcrPageResult>()
+        ParcelFileDescriptor.open(pack.pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+            PdfRenderer(descriptor).use { renderer ->
+                for (printedPage in printedPages) {
+                    checkStopped()
+                    TextbookOcrStore.read(root, printedPage)?.let { cached ->
+                        results += cached
+                        continue
+                    }
+                    val index = pack.printedPageToPdfIndex(printedPage)
+                    if (index !in 0 until renderer.pageCount) continue
+                    val result = renderer.openPage(index).use { page ->
+                        val widthScale = MAX_OCR_WIDTH.toFloat() / page.width.coerceAtLeast(1)
+                        val heightScale = MAX_OCR_HEIGHT.toFloat() / page.height.coerceAtLeast(1)
+                        val scale = minOf(widthScale, heightScale, MAX_OCR_SCALE).coerceAtLeast(MIN_OCR_SCALE)
+                        val width = (page.width * scale).toInt().coerceAtLeast(1)
+                        val height = (page.height * scale).toInt().coerceAtLeast(1)
+                        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        try {
+                            bitmap.eraseColor(Color.WHITE)
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            ocrEngine.recognize(bitmap, printedPage, index)
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    }
+                    TextbookOcrStore.write(root, result)
+                    results += result
+                }
+            }
+        }
+        return results
+    }
+
     private fun renderRepresentativePages(
         textbook: InstalledTextbook,
         lesson: GeneratedLesson,
     ): List<ByteArray> {
         val pack = textbook.pack
-        val printedPages = linkedSetOf(
-            lesson.pageStart,
-            (lesson.pageStart + lesson.pageEnd) / 2,
-            lesson.pageEnd,
-        )
+        val printedPages = representativePages(lesson)
         ParcelFileDescriptor.open(pack.pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
             PdfRenderer(descriptor).use { renderer ->
                 return printedPages.mapNotNull { printedPage ->
@@ -172,6 +270,12 @@ class TextbookAnalysisWorker(
             }
         }
     }
+
+    private fun representativePages(lesson: GeneratedLesson): Set<Int> = linkedSetOf(
+        lesson.pageStart,
+        (lesson.pageStart + lesson.pageEnd) / 2,
+        lesson.pageEnd,
+    )
 
     private suspend fun reportLessonProgress(
         slot: TextbookSlot,
@@ -257,7 +361,7 @@ class TextbookAnalysisWorker(
     private fun createNotificationChannels() {
         notificationManager.createNotificationChannel(
             NotificationChannel(CHANNEL_PROGRESS, "教材处理进度", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "显示教材导入、扫描和课程生成进度"
+                description = "显示教材导入、本地 OCR 和课程生成进度"
                 setSound(null, null)
             },
         )
@@ -294,10 +398,17 @@ class TextbookAnalysisWorker(
     private companion object {
         const val CHANNEL_PROGRESS = "textbook_processing_progress"
         const val CHANNEL_RESULT = "textbook_processing_result"
+        const val MAX_OCR_WIDTH = 1_600
+        const val MAX_OCR_HEIGHT = 2_400
+        const val MAX_OCR_SCALE = 3f
+        const val MIN_OCR_SCALE = 0.35f
         const val MAX_IMAGE_WIDTH = 900
         const val JPEG_QUALITY = 72
-        const val KEY_AI_COUNT = "ai_analysis_count"
+        const val KEY_TEXT_AI_COUNT = "text_ai_analysis_count"
+        const val KEY_VISION_AI_COUNT = "vision_ai_analysis_count"
+        const val KEY_OCR_FALLBACK_COUNT = "ocr_fallback_count"
         const val KEY_PACK_COUNT = "pack_analysis_count"
-        const val KEY_FALLBACK_COUNT = "fallback_analysis_count"
+        const val KEY_CATALOG_FALLBACK_COUNT = "catalog_fallback_count"
+        const val KEY_OCR_PAGE_COUNT = "ocr_page_count"
     }
 }
