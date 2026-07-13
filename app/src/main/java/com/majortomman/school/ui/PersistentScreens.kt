@@ -4,7 +4,6 @@ package com.majortomman.school.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -22,12 +21,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.majortomman.school.ai.OpenAiCompatibleClient
 import com.majortomman.school.data.AiSettings
@@ -73,171 +78,152 @@ fun TodayScreen(
     onOpenPath: () -> Unit,
 ) {
     val lesson = lessons.first { it.id == plan.newLessonId }
-    val accuracy = animateFloatAsState(
-        targetValue = progress.accuracyPercent / 100f,
-        animationSpec = tween(700),
-        label = "accuracy",
-    )
+    val lessonIndex = lessons.indexOfFirst { it.id == lesson.id }.coerceAtLeast(0)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         item {
             PageHeading(
-                eyebrow = "Today",
-                title = "今天，只学一小步",
-                subtitle = "先把一个知识点真正弄懂，再去碰下一个。",
+                eyebrow = "今日学习",
+                title = "继续上次的一小步",
+                subtitle = "不用挑内容。先把当前知识点完整走完，再决定下一步。",
             )
         }
         item {
             AnimatedCardItem(index = 0) {
-                MotionCard(tone = CardTone.ACCENT) {
+                FocusSurface(onClick = { onStartLesson(lesson.id) }) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
-                            LabelPill(
-                                text = "今日学习 · ${plan.estimatedMinutes} 分钟",
-                                background = MaterialTheme.colorScheme.surface.copy(alpha = 0.68f),
-                            )
-                            Text(
-                                text = lesson.title,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                text = lesson.subtitle,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                            )
-                        }
+                        LabelPill("预计 ${plan.estimatedMinutes} 分钟")
                         IconBubble("→")
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LabelPill("教材 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页")
-                        LabelPill(lesson.status.label)
-                    }
+                    Text(
+                        text = lesson.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = lesson.subtitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                    )
+                    StepProgressBar(
+                        currentStep = lessonIndex,
+                        totalSteps = lessons.size.coerceAtLeast(1),
+                    )
+                    Text(
+                        text = "第 ${lessonIndex + 1} / ${lessons.size} 个知识点 · 教材 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
+                    )
                     Button(
                         onClick = { onStartLesson(lesson.id) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
                     ) {
-                        Text(if (lesson.status == MasteryStatus.MASTERED) "重新练习" else "开始今天的学习")
+                        Text(if (lesson.status == MasteryStatus.MASTERED) "重新走一遍" else "继续学习")
                     }
                 }
             }
         }
+        item { SectionTitle("今天的节奏") }
         item {
             AnimatedCardItem(index = 1) {
-                MotionCard(tone = CardTone.SOFT) {
-                    SectionTitle("学习节奏")
-                    MetricRow {
-                        MetricTile(progress.attempts.toString(), "累计作答")
-                        MetricTile(progress.correctAttempts.toString(), "正确次数")
-                        MetricTile("${progress.accuracyPercent}%", "当前正确率")
-                    }
-                    LinearProgressIndicator(
-                        progress = { accuracy.value },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    )
-                    Text(
-                        text = if (progress.attempts == 0) "完成第一道练习后，这里会开始记录你的真实学习轨迹。"
-                        else "记录不会用来排名，只用于判断下一步该学什么。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TodayStepRow("1", "先理解", "数轴为什么能把抽象的数变成位置", active = true)
+                    TodayStepRow("2", "再判断", "用左右位置比较两个有理数", active = false)
+                    TodayStepRow("3", "最后练习", "独立写出判断和理由", active = false)
                 }
             }
         }
         item {
             SectionTitle(
-                title = "今天到期的复习",
-                action = { TextButton(onClick = onOpenPath) { Text("查看课程") } },
+                title = "到期复习",
+                action = { TextButton(onClick = onOpenPath) { Text("查看路径") } },
             )
         }
         itemsIndexed(plan.reviewItems, key = { _, item -> item.id }) { index, item ->
             AnimatedCardItem(index = index + 2) {
-                ReviewTaskCard(item)
+                CompactReviewRow(item)
+            }
+        }
+        item {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("本机已记录 ${progress.attempts} 次作答", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("正确率 ${progress.accuracyPercent}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
 @Composable
-fun ReviewScreen(
-    items: List<ReviewItem>,
-    progress: LearningProgress,
+private fun TodayStepRow(
+    number: String,
+    title: String,
+    description: String,
+    active: Boolean,
 ) {
-    val accuracy = animateFloatAsState(
-        targetValue = progress.accuracyPercent / 100f,
-        animationSpec = tween(700),
-        label = "reviewAccuracy",
-    )
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item {
-            PageHeading(
-                eyebrow = "Review",
-                title = "该忘的，轻轻碰一下",
-                subtitle = "复习不是重学整章，只把快要松动的部分重新接上。",
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                if (active) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surface,
             )
-        }
-        item {
-            AnimatedCardItem(index = 0) {
-                MotionCard(tone = CardTone.SOFT) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("练习概况", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("累计 ${progress.attempts} 次作答", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Text("${progress.accuracyPercent}%", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    }
-                    LinearProgressIndicator(
-                        progress = { accuracy.value },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (progress.lastFeedback.isNotBlank()) {
-                        Text(
-                            text = "最近反馈：${progress.lastFeedback}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+            .padding(15.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            modifier = Modifier.size(36.dp),
+            shape = CircleShape,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+            contentColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(number, fontWeight = FontWeight.Bold)
             }
         }
-        item { SectionTitle("待复习") }
-        itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-            AnimatedCardItem(index = index + 1) { ReviewTaskCard(item) }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        item {
-            AnimatedCardItem(index = items.size + 1) {
-                MotionCard(tone = CardTone.WARNING) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconBubble("!")
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("错因诊断", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                "作答与反馈已经保存在本机。下一步会按错误类型自动安排复习。",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
+    }
+}
+
+@Composable
+private fun CompactReviewRow(item: ReviewItem) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 1.dp,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconBubble("↻", background = MaterialTheme.colorScheme.primaryContainer)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(item.title, fontWeight = FontWeight.Bold)
+                Text(item.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            LabelPill(item.dueLabel)
         }
     }
 }
@@ -263,146 +249,118 @@ fun SettingsScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         PageHeading(
-            eyebrow = "Settings",
+            eyebrow = "设置",
             title = "把工具调成你的样子",
             subtitle = "AI、教材和学习记录都保持本地优先。",
         )
-        AnimatedCardItem(index = 0) {
-            MotionCard(tone = CardTone.SURFACE) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column {
-                        Text("AI 服务", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("OpenAI compatible", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconBubble("AI")
+        MotionCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text("AI 服务", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("OpenAI compatible", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = endpoint,
-                    onValueChange = { endpoint = it; connectionStatus = null },
-                    label = { Text("接口地址") },
-                    supportingText = { Text("例如 http://192.168.1.2:7777/v1") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    shape = RoundedCornerShape(18.dp),
-                )
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = model,
-                    onValueChange = { model = it; connectionStatus = null },
-                    label = { Text("模型名称") },
-                    supportingText = { Text("需要与 /v1/models 返回的 ID 一致") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                )
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text("API Key（局域网服务可留空）") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(18.dp),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        enabled = endpoint.isNotBlank() && model.isNotBlank(),
-                        onClick = {
-                            val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
-                            onSave(updated)
-                            connectionStatus = "已保存到本机"
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                    ) { Text("保存") }
-                    OutlinedButton(
-                        enabled = !isTesting && endpoint.isNotBlank(),
-                        onClick = {
-                            isTesting = true
-                            connectionStatus = "正在连接……"
-                            val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
-                            scope.launch {
-                                connectionStatus = OpenAiCompatibleClient(updated).testConnection().fold(
-                                    onSuccess = { it },
-                                    onFailure = { "连接失败：${it.message ?: it::class.java.simpleName}" },
-                                )
-                                isTesting = false
-                            }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                    ) { Text(if (isTesting) "测试中" else "测试连接") }
-                }
-                AnimatedVisibility(
-                    visible = connectionStatus != null,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(14.dp),
-                    ) {
-                        Text(connectionStatus.orEmpty())
-                    }
-                }
+                IconBubble("AI")
             }
-        }
-        AnimatedCardItem(index = 1) {
-            MotionCard(tone = CardTone.SOFT) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconBubble("⌁")
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("局域网连接", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            "测试版允许连接 HTTP llama.cpp。请只在可信局域网中使用，不要把未鉴权接口暴露到公网。",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-        AnimatedCardItem(index = 2) {
-            MotionCard(tone = CardTone.SURFACE) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("教材资源", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("七年级数学上册 · 示例目录", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconBubble("书")
-                }
-                Text("下一阶段从手机目录导入独立教材包，并直接打开真实 PDF 对应页。")
-                OutlinedButton(onClick = {}, shape = RoundedCornerShape(16.dp)) { Text("导入功能待接入") }
-            }
-        }
-        AnimatedCardItem(index = 3) {
-            MotionCard(tone = CardTone.WARNING) {
-                Text("学习数据", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("练习次数、最近答案、反馈和知识点掌握状态都保存在本机。")
-                AnimatedContent(
-                    targetState = confirmClear,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "clearConfirmation",
-                ) { confirming ->
-                    if (!confirming) {
-                        TextButton(onClick = { confirmClear = true }) { Text("清空学习记录") }
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { onClearProgress(); confirmClear = false }) { Text("确认清空") }
-                            TextButton(onClick = { confirmClear = false }) { Text("取消") }
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = endpoint,
+                onValueChange = { endpoint = it; connectionStatus = null },
+                label = { Text("接口地址") },
+                supportingText = { Text("例如 http://192.168.1.2:7777/v1") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                shape = RoundedCornerShape(18.dp),
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = model,
+                onValueChange = { model = it; connectionStatus = null },
+                label = { Text("模型名称") },
+                supportingText = { Text("需要与 /v1/models 返回的 ID 一致") },
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = apiKey,
+                onValueChange = { apiKey = it },
+                label = { Text("API Key（局域网服务可留空）") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                shape = RoundedCornerShape(18.dp),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    enabled = endpoint.isNotBlank() && model.isNotBlank(),
+                    onClick = {
+                        val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
+                        onSave(updated)
+                        connectionStatus = "已保存到本机"
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text("保存") }
+                OutlinedButton(
+                    enabled = !isTesting && endpoint.isNotBlank(),
+                    onClick = {
+                        isTesting = true
+                        connectionStatus = "正在连接……"
+                        val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
+                        scope.launch {
+                            connectionStatus = OpenAiCompatibleClient(updated).testConnection().fold(
+                                onSuccess = { it },
+                                onFailure = { "连接失败：${it.message ?: it::class.java.simpleName}" },
+                            )
+                            isTesting = false
                         }
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text(if (isTesting) "测试中" else "测试连接") }
+            }
+            AnimatedVisibility(
+                visible = connectionStatus != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(18.dp),
+                ) {
+                    Text(connectionStatus.orEmpty(), modifier = Modifier.padding(14.dp))
+                }
+            }
+        }
+        MotionCard(tone = CardTone.SOFT) {
+            Text("教材资源", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("七年级数学上册 · 示例目录")
+            Text("下一阶段从手机目录导入独立教材包，并直接打开真实 PDF 对应页。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = {}, shape = RoundedCornerShape(16.dp)) { Text("导入功能待接入") }
+        }
+        MotionCard(tone = CardTone.WARNING) {
+            Text("学习数据", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("练习记录、答案、反馈和掌握状态都保存在本机。")
+            AnimatedContent(
+                targetState = confirmClear,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "clearConfirmation",
+            ) { confirming ->
+                if (!confirming) {
+                    TextButton(onClick = { confirmClear = true }) { Text("清空学习记录") }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { onClearProgress(); confirmClear = false }) { Text("确认清空") }
+                        TextButton(onClick = { confirmClear = false }) { Text("取消") }
                     }
                 }
             }
@@ -410,11 +368,16 @@ fun SettingsScreen(
     }
 }
 
-private enum class PersistentLearningTab(val label: String) {
-    EXPLAIN("讲解"),
-    TEXTBOOK("教材"),
-    EXAMPLE("例题"),
-    PRACTICE("练习"),
+private enum class GuidedLearningStep(
+    val label: String,
+    val title: String,
+) {
+    INTUITION("第 1 步", "先建立直觉"),
+    EXAMPLE("第 2 步", "看一个例子"),
+    CHECK("第 3 步", "自己判断一下"),
+    TEXTBOOK("第 4 步", "回到教材"),
+    PRACTICE("第 5 步", "独立练习"),
+    SUMMARY("完成", "把这一节收好"),
 }
 
 @Composable
@@ -425,8 +388,11 @@ fun LearningScreen(
     onBack: () -> Unit,
     onRecordAttempt: (answer: String, correct: Boolean, feedback: String) -> Unit,
 ) {
-    var tabName by rememberSaveable { mutableStateOf(PersistentLearningTab.EXPLAIN.name) }
-    val tab = PersistentLearningTab.valueOf(tabName)
+    var stepIndex by rememberSaveable { mutableIntStateOf(0) }
+    var helpVisible by rememberSaveable { mutableStateOf(false) }
+    val steps = GuidedLearningStep.entries
+    val step = steps[stepIndex]
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -434,54 +400,99 @@ fun LearningScreen(
                 navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
             )
         },
+        bottomBar = {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AnimatedVisibility(
+                        visible = helpVisible,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Text(
+                                text = helpTextFor(step),
+                                modifier = Modifier.padding(14.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(
+                            onClick = { helpVisible = !helpVisible },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(if (helpVisible) "收起帮助" else "我没看懂")
+                        }
+                        Button(
+                            onClick = {
+                                helpVisible = false
+                                if (step == GuidedLearningStep.SUMMARY) {
+                                    onBack()
+                                } else {
+                                    stepIndex = (stepIndex + 1).coerceAtMost(steps.lastIndex)
+                                }
+                            },
+                            modifier = Modifier.weight(1.4f),
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Text(if (step == GuidedLearningStep.SUMMARY) "返回课程" else "继续")
+                        }
+                    }
+                }
+            }
+        },
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            MotionCard(
-                modifier = Modifier.padding(horizontal = 18.dp),
-                tone = CardTone.ACCENT,
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(lesson.subtitle, style = MaterialTheme.typography.bodyLarge)
-                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            LabelPill("${lesson.estimatedMinutes} 分钟")
-                            LabelPill("教材 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页")
-                        }
-                    }
-                    IconBubble("∴")
+                    Text(step.label, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text("${stepIndex + 1} / ${steps.size}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                StepProgressBar(currentStep = stepIndex, totalSteps = steps.size)
+                Text(step.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
-            LearningTabStrip(
-                selected = tab,
-                onSelected = { tabName = it.name },
-                modifier = Modifier.padding(horizontal = 18.dp),
-            )
             AnimatedContent(
-                targetState = tab,
+                targetState = step,
                 modifier = Modifier.weight(1f),
                 transitionSpec = {
-                    (fadeIn(tween(220)) + slideInHorizontally(tween(280)) { it / 8 }) togetherWith
-                        (fadeOut(tween(160)) + slideOutHorizontally(tween(220)) { -it / 8 })
+                    (fadeIn(tween(230)) + slideInHorizontally(tween(280)) { it / 7 }) togetherWith
+                        (fadeOut(tween(150)) + slideOutHorizontally(tween(220)) { -it / 8 })
                 },
-                label = "lessonTabContent",
-            ) { currentTab ->
-                when (currentTab) {
-                    PersistentLearningTab.EXPLAIN -> ExplainLessonCards(lesson)
-                    PersistentLearningTab.TEXTBOOK -> TextbookLessonCards(lesson)
-                    PersistentLearningTab.EXAMPLE -> ExampleLessonCards()
-                    PersistentLearningTab.PRACTICE -> PracticeLessonCards(
+                label = "guidedLessonStep",
+            ) { current ->
+                when (current) {
+                    GuidedLearningStep.INTUITION -> IntuitionStep(lesson)
+                    GuidedLearningStep.EXAMPLE -> ExampleStep()
+                    GuidedLearningStep.CHECK -> QuickCheckStep()
+                    GuidedLearningStep.TEXTBOOK -> TextbookStep(lesson)
+                    GuidedLearningStep.PRACTICE -> PracticeStep(
                         lesson = lesson,
                         settings = aiSettings,
                         progress = progress,
                         onRecordAttempt = onRecordAttempt,
                     )
+                    GuidedLearningStep.SUMMARY -> SummaryStep(lesson, progress)
                 }
             }
         }
@@ -489,129 +500,146 @@ fun LearningScreen(
 }
 
 @Composable
-private fun LearningTabStrip(
-    selected: PersistentLearningTab,
-    onSelected: (PersistentLearningTab) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        PersistentLearningTab.entries.forEach { tab ->
-            val background by animateColorAsState(
-                targetValue = if (tab == selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainer,
-                animationSpec = tween(180),
-                label = "tabBackground",
-            )
-            val foreground by animateColorAsState(
-                targetValue = if (tab == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                animationSpec = tween(180),
-                label = "tabForeground",
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(background)
-                    .clickable { onSelected(tab) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(tab.label, color = foreground, fontWeight = FontWeight.SemiBold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExplainLessonCards(lesson: Lesson) = LearningCardColumn {
-    MotionCard(tone = CardTone.SOFT) {
-        LabelPill("先建立直觉")
+private fun IntuitionStep(lesson: Lesson) = GuidedScrollColumn {
+    FocusSurface {
+        LabelPill("核心直觉")
         Text(lesson.explanation, style = MaterialTheme.typography.bodyLarge)
     }
-    MotionCard {
-        SectionTitle("本节目标")
-        lesson.objectives.forEachIndexed { index, text ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-                LabelPill((index + 1).toString(), background = MaterialTheme.colorScheme.primaryContainer)
-                Text(text, modifier = Modifier.weight(1f))
-            }
-        }
+    Text("这一节你只需要抓住三件事", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    lesson.objectives.forEachIndexed { index, objective ->
+        TodayStepRow((index + 1).toString(), "目标 ${index + 1}", objective, active = index == 0)
     }
     MotionCard(tone = CardTone.WARNING) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconBubble("!")
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("容易踩的坑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(lesson.commonMistake)
-            }
-        }
-    }
-    MotionCard(tone = CardTone.ACCENT) {
-        Text("AI 会怎么帮你", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("先定位你卡在概念、步骤还是前置知识，再逐层给提示，不直接甩出完整答案。")
+        Text("容易踩的坑", fontWeight = FontWeight.Bold)
+        Text(lesson.commonMistake)
     }
 }
 
 @Composable
-private fun TextbookLessonCards(lesson: Lesson) = LearningCardColumn {
-    MotionCard(tone = CardTone.SOFT) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                LabelPill("教材定位")
-                Text(
-                    "第 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text("接入教材资源包后，这里会直接显示对应 PDF 页面。")
-            }
-            IconBubble("书")
-        }
-    }
+private fun ExampleStep() = GuidedScrollColumn {
+    Text("在数轴上放入 -3、0 和 2", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    NumberLineDiagram()
     MotionCard {
-        Text("为什么保留原教材", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("AI 讲解负责帮你跨过卡点，教材原页负责保留定义、例题、图形和上下文。两者不会互相替代。")
-    }
-}
-
-@Composable
-private fun ExampleLessonCards() = LearningCardColumn {
-    MotionCard(tone = CardTone.ACCENT) {
-        LabelPill("例题")
-        Text("在数轴上表示 -3、0、2，并比较 -3 和 2 的大小。", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    }
-    MotionCard {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            IconBubble("1")
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("确定位置", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("-3 在原点左侧 3 个单位；2 在原点右侧 2 个单位。")
-            }
-        }
+        Text("第一步：找位置", fontWeight = FontWeight.Bold)
+        Text("-3 在原点左侧 3 个单位；2 在原点右侧 2 个单位。")
     }
     MotionCard(tone = CardTone.SUCCESS) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-            IconBubble("2")
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("利用数轴比较", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("数轴上右边的数更大，所以 2 > -3。")
+        Text("第二步：比较左右", fontWeight = FontWeight.Bold)
+        Text("数轴上越靠右的数越大，所以 2 > -3。")
+    }
+}
+
+@Composable
+private fun NumberLineDiagram() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                NumberPoint("-3", "左侧")
+                NumberPoint("0", "原点")
+                NumberPoint("2", "右侧")
             }
         }
     }
 }
 
 @Composable
-private fun PracticeLessonCards(
+private fun NumberPoint(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
+            Text(value, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontWeight = FontWeight.Bold)
+        }
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun QuickCheckStep() {
+    var choice by rememberSaveable { mutableStateOf<String?>(null) }
+    val correct = choice == "2"
+
+    GuidedScrollColumn {
+        FocusSurface {
+            LabelPill("先别计算")
+            Text("只看数轴位置：-3 和 2，哪个数更大？", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ChoiceButton("-3", selected = choice == "-3", modifier = Modifier.weight(1f)) { choice = "-3" }
+            ChoiceButton("2", selected = choice == "2", modifier = Modifier.weight(1f)) { choice = "2" }
+        }
+        AnimatedVisibility(
+            visible = choice != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            MotionCard(tone = if (correct) CardTone.SUCCESS else CardTone.WARNING) {
+                Text(if (correct) "判断正确" else "再看一次左右位置", fontWeight = FontWeight.Bold)
+                Text(if (correct) "2 位于 -3 的右侧，所以 2 更大。" else "-3 在原点左边，2 在原点右边。数轴上右边的数更大。")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChoiceButton(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        tonalElevation = if (selected) 0.dp else 1.dp,
+        shape = RoundedCornerShape(22.dp),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(vertical = 24.dp),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun TextbookStep(lesson: Lesson) = GuidedScrollColumn {
+    FocusSurface {
+        LabelPill("教材定位")
+        Text(
+            "第 ${lesson.textbookPages.first}-${lesson.textbookPages.last} 页",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text("真实教材包接入后，这里会直接打开对应页，不需要在整本 PDF 里翻找。")
+    }
+    MotionCard {
+        Text("为什么现在才看教材", fontWeight = FontWeight.Bold)
+        Text("先建立直觉，再回看定义和例题，会比一开始就啃原文更容易把上下文接起来。")
+    }
+}
+
+@Composable
+private fun PracticeStep(
     lesson: Lesson,
     settings: AiSettings,
     progress: LearningProgress,
@@ -637,65 +665,65 @@ private fun PracticeLessonCards(
         }
     }
 
-    LearningCardColumn {
-        MotionCard(tone = CardTone.ACCENT) {
+    GuidedScrollColumn {
+        FocusSurface {
             LabelPill("独立作答")
             Text(question, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
-        MotionCard {
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = answer,
-                onValueChange = { answer = it; result = null; mistakeType = null },
-                label = { Text("写下你的判断和理由") },
-                minLines = 4,
-                shape = RoundedCornerShape(18.dp),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = { hint = (hint + 1).coerceAtMost(hints.size) },
-                    shape = RoundedCornerShape(16.dp),
-                ) { Text("给一点提示") }
-                Button(
-                    enabled = answer.isNotBlank(),
-                    onClick = {
-                        val text = answer.replace(" ", "")
-                        val correct = text.contains("2") && (text.contains("大") || text.contains(">"))
-                        val feedback = if (correct) {
-                            "判断正确。更完整的理由是：2 位于 -3 的右侧。"
-                        } else {
-                            "再检查两个数在数轴上的左右位置。这里先不直接公布答案。"
-                        }
-                        result = feedback
-                        mistakeType = if (correct) null else "步骤或表达需要检查"
-                        onRecordAttempt(answer, correct, feedback)
-                    },
-                    shape = RoundedCornerShape(16.dp),
-                ) { Text("本地检查") }
-            }
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = answer,
+            onValueChange = { answer = it; result = null; mistakeType = null },
+            label = { Text("写下你的判断和理由") },
+            minLines = 4,
+            shape = RoundedCornerShape(20.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(
-                enabled = answer.isNotBlank() && !isEvaluating && settings.endpoint.isNotBlank() && settings.model.isNotBlank(),
+                onClick = { hint = (hint + 1).coerceAtMost(hints.size) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+            ) { Text("提示") }
+            Button(
+                enabled = answer.isNotBlank(),
                 onClick = {
-                    isEvaluating = true
-                    result = "AI 正在批改……"
-                    scope.launch {
-                        val evaluation = runCatching {
-                            OpenAiCompatibleClient(settings).evaluateAnswer(question, answer)
-                        }.getOrElse { error ->
-                            result = "AI 批改失败：${error.message ?: error::class.java.simpleName}"
-                            isEvaluating = false
-                            return@launch
-                        }
-                        result = evaluation.feedback
-                        mistakeType = evaluation.mistakeType
-                        onRecordAttempt(answer, evaluation.correct, evaluation.feedback)
-                        isEvaluating = false
+                    val text = answer.replace(" ", "")
+                    val correct = text.contains("2") && (text.contains("大") || text.contains(">"))
+                    val feedback = if (correct) {
+                        "判断正确。更完整的理由是：2 位于 -3 的右侧。"
+                    } else {
+                        "再检查两个数在数轴上的左右位置。这里先不直接公布答案。"
                     }
+                    result = feedback
+                    mistakeType = if (correct) null else "步骤或表达需要检查"
+                    onRecordAttempt(answer, correct, feedback)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-            ) { Text(if (isEvaluating) "批改中……" else "使用 AI 批改") }
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(18.dp),
+            ) { Text("本地检查") }
         }
+        OutlinedButton(
+            enabled = answer.isNotBlank() && !isEvaluating && settings.endpoint.isNotBlank() && settings.model.isNotBlank(),
+            onClick = {
+                isEvaluating = true
+                result = "AI 正在批改……"
+                scope.launch {
+                    val evaluation = runCatching {
+                        OpenAiCompatibleClient(settings).evaluateAnswer(question, answer)
+                    }.getOrElse { error ->
+                        result = "AI 批改失败：${error.message ?: error::class.java.simpleName}"
+                        isEvaluating = false
+                        return@launch
+                    }
+                    result = evaluation.feedback
+                    mistakeType = evaluation.mistakeType
+                    onRecordAttempt(answer, evaluation.correct, evaluation.feedback)
+                    isEvaluating = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+        ) { Text(if (isEvaluating) "批改中……" else "使用 AI 批改") }
         AnimatedVisibility(
             visible = hint > 0,
             enter = fadeIn() + expandVertically(),
@@ -717,39 +745,53 @@ private fun PracticeLessonCards(
                 Text(result.orEmpty())
             }
         }
-        if (progress.attempts > 0) {
-            MotionCard(tone = CardTone.SOFT) {
-                MetricRow {
-                    MetricTile(progress.attempts.toString(), "累计作答")
-                    MetricTile("${progress.accuracyPercent}%", "正确率")
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun ReviewTaskCard(item: ReviewItem) {
-    MotionCard(onClick = {}) {
+private fun SummaryStep(
+    lesson: Lesson,
+    progress: LearningProgress,
+) = GuidedScrollColumn {
+    FocusSurface {
+        LabelPill("完成一个学习回合")
+        Text(lesson.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("你已经依次经过直觉、例题、判断、教材和练习。下一次打开时，可以直接从薄弱点继续。")
+    }
+    MotionCard(tone = CardTone.SUCCESS) {
+        Text("这一节应该留下什么", fontWeight = FontWeight.Bold)
+        lesson.objectives.forEach { Text("• $it") }
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(20.dp),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            IconBubble("↻", background = MaterialTheme.colorScheme.primaryContainer)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(item.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(item.reason, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            LabelPill(item.dueLabel)
+            Text("累计作答 ${progress.attempts} 次")
+            Text("正确率 ${progress.accuracyPercent}%", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         }
     }
 }
 
+private fun helpTextFor(step: GuidedLearningStep): String = when (step) {
+    GuidedLearningStep.INTUITION -> "先不要记定义。把数轴想成一条有方向的尺子：右边更大，左边更小。"
+    GuidedLearningStep.EXAMPLE -> "只跟住两个动作：先找位置，再比较谁更靠右。"
+    GuidedLearningStep.CHECK -> "不用计算绝对值，也不用背规则。只看 -3 和 2 在原点的哪一边。"
+    GuidedLearningStep.TEXTBOOK -> "先看页码范围和例题标题，不必一次读完整页。遇到不懂的定义再停下来。"
+    GuidedLearningStep.PRACTICE -> "先写结论，再补一句理由。哪怕理由不完整，也比空着更容易定位卡点。"
+    GuidedLearningStep.SUMMARY -> "不用强迫自己记住全部内容。能说出‘数轴右边的数更大’，这一轮就有价值。"
+}
+
 @Composable
-private fun LearningCardColumn(content: @Composable ColumnScope.() -> Unit) {
+private fun GuidedScrollColumn(content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         content = content,
     )

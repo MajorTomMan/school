@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -34,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -60,7 +63,7 @@ internal fun PageHeading(
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Text(
-            text = eyebrow.uppercase(),
+            text = eyebrow,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
@@ -79,6 +82,46 @@ internal fun PageHeading(
 }
 
 @Composable
+internal fun FocusSurface(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.985f else 1f,
+        animationSpec = tween(120),
+        label = "focusSurfaceScale",
+    )
+    val clickModifier = if (onClick == null) Modifier else Modifier.clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        onClick = onClick,
+    )
+    val gradient = Brush.linearGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f),
+        ),
+    )
+
+    Column(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(30.dp))
+            .background(gradient)
+            .then(clickModifier)
+            .padding(22.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        content = content,
+    )
+}
+
+@Composable
 internal fun MotionCard(
     modifier: Modifier = Modifier,
     tone: CardTone = CardTone.SURFACE,
@@ -88,8 +131,8 @@ internal fun MotionCard(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.985f else 1f,
-        animationSpec = tween(130),
+        targetValue = if (pressed) 0.987f else 1f,
+        animationSpec = tween(120),
         label = "cardScale",
     )
     val containerColor = when (tone) {
@@ -99,15 +142,11 @@ internal fun MotionCard(
         CardTone.SUCCESS -> MaterialTheme.colorScheme.tertiaryContainer
         CardTone.WARNING -> MaterialTheme.colorScheme.secondaryContainer
     }
-    val clickModifier = if (onClick == null) {
-        Modifier
-    } else {
-        Modifier.clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick,
-        )
-    }
+    val clickModifier = if (onClick == null) Modifier else Modifier.clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        onClick = onClick,
+    )
 
     Card(
         modifier = modifier
@@ -117,13 +156,13 @@ internal fun MotionCard(
             }
             .then(clickModifier)
             .animateContentSize(),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (tone == CardTone.SURFACE) 2.dp else 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (tone == CardTone.SURFACE) 1.dp else 0.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(11.dp),
             content = content,
         )
     }
@@ -137,13 +176,13 @@ internal fun AnimatedCardItem(
 ) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay((index.coerceAtMost(8) * 55L))
+        delay(index.coerceAtMost(8) * 45L)
         visible = true
     }
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(tween(300)) + slideInVertically(tween(360)) { it / 5 },
+        enter = fadeIn(tween(280)) + slideInVertically(tween(320)) { it / 6 },
     ) {
         content()
     }
@@ -194,7 +233,7 @@ internal fun LabelPill(
 internal fun IconBubble(
     symbol: String,
     modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+    background: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.76f),
 ) {
     Box(
         modifier = modifier
@@ -203,8 +242,61 @@ internal fun IconBubble(
             .padding(11.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(symbol, style = MaterialTheme.typography.titleMedium)
+        Text(symbol, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
+}
+
+@Composable
+internal fun StepProgressBar(
+    currentStep: Int,
+    totalSteps: Int,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        repeat(totalSteps) { index ->
+            val target = if (index <= currentStep) 1f else 0f
+            val fill by animateFloatAsState(
+                targetValue = target,
+                animationSpec = tween(260),
+                label = "stepProgress$index",
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(5.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(fill)
+                        .height(5.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PathConnector(
+    active: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .width(3.dp)
+            .height(46.dp)
+            .clip(CircleShape)
+            .background(
+                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.48f)
+                else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f),
+            ),
+    )
 }
 
 @Composable
@@ -224,9 +316,9 @@ internal fun RowScope.MetricTile(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .clip(RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+            .padding(horizontal = 13.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
