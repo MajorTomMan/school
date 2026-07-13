@@ -6,9 +6,9 @@
 教材定位 → 直觉讲解 → 分层提示 → 独立练习 → 错因诊断 → 到期复习
 ```
 
-## 当前版本：0.2.0
+## 当前版本：0.3.0
 
-首期范围仍然刻意压小到七年级数学上册第一章「有理数」，但原型已经从纯展示推进到可保存、可连接 AI 的本地学习闭环：
+首期范围仍然刻意压小到七年级数学上册第一章「有理数」，当前版本已经具备可保存、可连接 AI 的本地学习闭环，并完成第一轮视觉重构：
 
 - 今日学习、课程路径、学习页、基础练习、复习和设置
 - 练习次数、正确率、最近答案、反馈和掌握状态持久保存
@@ -16,7 +16,10 @@
 - `/v1/models` 连接测试
 - AI 结构化批改与错误类型反馈
 - 本地检查作为离线兜底
-- 明暗主题和 Android CI 自动构建 APK
+- 卡片式首页、知识路径、学习内容和设置分组
+- 页面切换、标签切换、卡片入场、提示和反馈展开动画
+- 暖色纸张风明暗主题、统一圆角和信息层级
+- Android CI 自动构建 APK
 
 教材正文和练习目前仍使用示例数据；真实 PDF 教材不会塞进 APK，而会通过独立教材资源包导入。
 
@@ -38,7 +41,7 @@ API Key：局域网服务未启用鉴权时留空
 - Gradle 9.4.1
 - JDK 17
 - Kotlin built-in support + Compose compiler 2.3.10
-- Jetpack Compose + Material 3
+- Jetpack Compose + Material 3 + Compose Animation
 - Preferences DataStore
 - `HttpURLConnection` + OpenAI-compatible JSON API
 - compileSdk / targetSdk 36，minSdk 26
