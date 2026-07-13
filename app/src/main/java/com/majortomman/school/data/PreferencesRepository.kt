@@ -7,9 +7,18 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.majortomman.school.data.local.PracticeAttemptEntity
+import com.majortomman.school.data.local.SchoolDatabase
+import com.majortomman.school.data.review.ReviewScheduler
 import java.io.IOException
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 private val Context.schoolDataStore by preferencesDataStore(name = "school_preferences")
@@ -35,10 +44,16 @@ data class LearningProgress(
 class PreferencesRepository(
     private val context: Context,
 ) {
+    private val learningDao = SchoolDatabase.getInstance(context).learningDao()
+    private val preferencesFlow = context.schoolDataStore.data.safeData()
+
     private object Keys {
         val aiEndpoint = stringPreferencesKey("ai_endpoint")
         val aiModel = stringPreferencesKey("ai_model")
         val aiApiKey = stringPreferencesKey("ai_api_key")
+
+        // 0.2/0.3 used counters in DataStore. They remain as a legacy baseline so upgrades
+        // keep the visible totals while all new attempt details are stored in Room.
         val attempts = intPreferencesKey("practice_attempts")
         val correctAttempts = intPreferencesKey("practice_correct_attempts")
         val lastLessonId = stringPreferencesKey("last_lesson_id")
@@ -46,35 +61,76 @@ class PreferencesRepository(
         val lastFeedback = stringPreferencesKey("last_feedback")
     }
 
-    val aiSettings: Flow<AiSettings> = context.schoolDataStore.data
-        .safeData()
-        .map { preferences ->
-            AiSettings(
-                endpoint = preferences[Keys.aiEndpoint] ?: AiSettings().endpoint,
-                model = preferences[Keys.aiModel] ?: AiSettings().model,
-                apiKey = preferences[Keys.aiApiKey].orEmpty(),
+    val aiSettings: Flow<AiSettings> = preferencesFlow.map { preferences ->
+        AiSettings(
+            endpoint = preferences[Keys.aiEndpoint] ?: AiSettings().endpoint,
+            model = preferences[Keys.aiModel] ?: AiSettings().model,
+            apiKey = preferences[Keys.aiApiKey].orEmpty(),
+        )
+    }
+
+    val learningProgress: Flow<LearningProgress> = combine(
+        preferencesFlow,
+        learningDao.observeAttemptStats(),
+    ) { preferences, roomStats ->
+        val statuses = SampleContent.lessons.mapNotNull { lesson ->
+            val stored = preferences[lessonStatusKey(lesson.id)] ?: return@mapNotNull null
+            val status = runCatching { MasteryStatus.valueOf(stored) }.getOrNull()
+                ?: return@mapNotNull null
+            lesson.id to status
+        }.toMap()
+
+        LearningProgress(
+            lessonStatuses = statuses,
+            attempts = (preferences[Keys.attempts] ?: 0) + roomStats.attempts,
+            correctAttempts = (preferences[Keys.correctAttempts] ?: 0) + roomStats.correctAttempts,
+            lastLessonId = preferences[Keys.lastLessonId],
+            lastAnswer = preferences[Keys.lastAnswer].orEmpty(),
+            lastFeedback = preferences[Keys.lastFeedback].orEmpty(),
+        )
+    }
+
+    val recentAttempts: Flow<List<AttemptRecord>> = learningDao.observeRecentAttempts().map { attempts ->
+        val formatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+        val zoneId = ZoneId.systemDefault()
+        attempts.map { attempt ->
+            AttemptRecord(
+                id = attempt.id,
+                lessonId = attempt.lessonId,
+                lessonTitle = lessonTitle(attempt.lessonId),
+                questionText = attempt.questionText,
+                answer = attempt.answer,
+                correct = attempt.correct,
+                feedback = attempt.feedback,
+                mistakeType = attempt.mistakeType,
+                createdLabel = Instant.ofEpochMilli(attempt.createdAt)
+                    .atZone(zoneId)
+                    .format(formatter),
             )
         }
+    }
 
-    val learningProgress: Flow<LearningProgress> = context.schoolDataStore.data
-        .safeData()
-        .map { preferences ->
-            val statuses = SampleContent.lessons.mapNotNull { lesson ->
-                val stored = preferences[lessonStatusKey(lesson.id)] ?: return@mapNotNull null
-                val status = runCatching { MasteryStatus.valueOf(stored) }.getOrNull()
-                    ?: return@mapNotNull null
-                lesson.id to status
-            }.toMap()
-
-            LearningProgress(
-                lessonStatuses = statuses,
-                attempts = preferences[Keys.attempts] ?: 0,
-                correctAttempts = preferences[Keys.correctAttempts] ?: 0,
-                lastLessonId = preferences[Keys.lastLessonId],
-                lastAnswer = preferences[Keys.lastAnswer].orEmpty(),
-                lastFeedback = preferences[Keys.lastFeedback].orEmpty(),
+    val reviewQueue: Flow<List<ScheduledReview>> = learningDao.observeReviewSchedules().map { schedules ->
+        val today = LocalDate.now()
+        val zoneId = ZoneId.systemDefault()
+        schedules.map { schedule ->
+            val dueDate = Instant.ofEpochMilli(schedule.dueAt).atZone(zoneId).toLocalDate()
+            val days = ChronoUnit.DAYS.between(today, dueDate).toInt()
+            ScheduledReview(
+                lessonId = schedule.lessonId,
+                lessonTitle = lessonTitle(schedule.lessonId),
+                dueLabel = when {
+                    days < 0 -> "已到期"
+                    days == 0 -> "今天"
+                    days == 1 -> "明天"
+                    else -> "${days}天后"
+                },
+                intervalDays = schedule.intervalDays,
+                repetitions = schedule.repetitions,
+                lastCorrect = schedule.lastCorrect,
             )
         }
+    }
 
     suspend fun saveAiSettings(settings: AiSettings) {
         context.schoolDataStore.edit { preferences ->
@@ -92,25 +148,47 @@ class PreferencesRepository(
 
     suspend fun recordAttempt(
         lessonId: String,
-        answer: String,
-        correct: Boolean,
-        feedback: String,
+        draft: AttemptDraft,
     ) {
+        val now = System.currentTimeMillis()
+        learningDao.insertAttempt(
+            PracticeAttemptEntity(
+                lessonId = lessonId,
+                questionId = draft.questionId,
+                questionText = draft.questionText.take(4_000),
+                answer = draft.answer.take(4_000),
+                correct = draft.correct,
+                feedback = draft.feedback.take(4_000),
+                mistakeType = draft.mistakeType?.take(120),
+                createdAt = now,
+            ),
+        )
+
+        val previousSchedule = learningDao.getReviewSchedule(lessonId)
+        learningDao.upsertReviewSchedule(
+            ReviewScheduler.next(
+                lessonId = lessonId,
+                previous = previousSchedule,
+                correct = draft.correct,
+                now = now,
+            ),
+        )
+
         context.schoolDataStore.edit { preferences ->
-            preferences[Keys.attempts] = (preferences[Keys.attempts] ?: 0) + 1
-            if (correct) {
-                preferences[Keys.correctAttempts] = (preferences[Keys.correctAttempts] ?: 0) + 1
-                preferences[lessonStatusKey(lessonId)] = MasteryStatus.MASTERED.name
-            } else if (preferences[lessonStatusKey(lessonId)] == null) {
-                preferences[lessonStatusKey(lessonId)] = MasteryStatus.LEARNING.name
+            preferences[lessonStatusKey(lessonId)] = if (draft.correct) {
+                MasteryStatus.MASTERED.name
+            } else {
+                MasteryStatus.NEEDS_REVIEW.name
             }
             preferences[Keys.lastLessonId] = lessonId
-            preferences[Keys.lastAnswer] = answer.take(2_000)
-            preferences[Keys.lastFeedback] = feedback.take(2_000)
+            preferences[Keys.lastAnswer] = draft.answer.take(2_000)
+            preferences[Keys.lastFeedback] = draft.feedback.take(2_000)
         }
     }
 
     suspend fun clearLearningProgress() {
+        learningDao.clearAttempts()
+        learningDao.clearReviewSchedules()
         context.schoolDataStore.edit { preferences ->
             SampleContent.lessons.forEach { lesson -> preferences.remove(lessonStatusKey(lesson.id)) }
             preferences.remove(Keys.attempts)
@@ -120,6 +198,9 @@ class PreferencesRepository(
             preferences.remove(Keys.lastFeedback)
         }
     }
+
+    private fun lessonTitle(lessonId: String): String =
+        SampleContent.lessons.firstOrNull { it.id == lessonId }?.title ?: lessonId
 
     private fun lessonStatusKey(lessonId: String) = stringPreferencesKey("lesson_status_$lessonId")
 
