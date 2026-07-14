@@ -6,7 +6,7 @@ import org.json.JSONObject
 const val LESSON_ANALYSIS_SCHEMA_VERSION = 3
 
 enum class LessonAnalysisSource(val label: String) {
-    PACK("教材包扫描结果"),
+    PACK("预制教材知识包"),
     AI_TEXT("本地 OCR + 文本分析"),
     AI_VISION("教材页面视觉分析"),
     OCR_FALLBACK("本地知识编译"),
@@ -259,45 +259,37 @@ object LessonAnalysisFallback {
             scene = scene,
             exercise = GeneratedExercise(
                 question = when (scene.type) {
-                    LessonSceneType.NUMBER_LINE -> "在数轴上，-3 与 2 哪个数更大？请说明理由。"
-                    LessonSceneType.MIRROR -> "写出 -3 的相反数，并说明它们在数轴上的位置关系。"
-                    LessonSceneType.DISTANCE -> "|-5| 等于多少？为什么结果不是负数？"
-                    LessonSceneType.COMPARISON -> "比较 -8 与 -3 的大小，并说明理由。"
-                    else -> "请用两三句话说明${lesson.title}的核心结论和成立条件。"
+                    LessonSceneType.NUMBER_LINE -> "在数轴上标出 -4 和 1，并说明哪个数更大。"
+                    LessonSceneType.MIRROR -> "写出 6 的相反数。"
+                    LessonSceneType.DISTANCE -> "|-7| 等于多少？"
+                    LessonSceneType.COMPARISON -> "比较 -9 与 -2 的大小。"
+                    else -> "请用一句话说明${lesson.title}最重要的条件或结论。"
                 },
                 acceptedAnswers = when (scene.type) {
-                    LessonSceneType.NUMBER_LINE -> listOf("2", "2更大", "2 > -3", "-3 < 2")
-                    LessonSceneType.MIRROR -> listOf("3", "-3的相反数是3")
-                    LessonSceneType.DISTANCE -> listOf("5", "|-5|=5")
-                    LessonSceneType.COMPARISON -> listOf("-8 < -3", "-3更大")
-                    else -> emptyList()
+                    LessonSceneType.NUMBER_LINE -> listOf("1", "1更大", "-4<1")
+                    LessonSceneType.MIRROR -> listOf("-6")
+                    LessonSceneType.DISTANCE -> listOf("7")
+                    LessonSceneType.COMPARISON -> listOf("-9<-2", "-2更大")
+                    else -> listOf(lesson.title)
                 },
-                hints = scene.steps.take(3),
+                hints = listOf("先观察场景中对象的位置或变化。", "再返回教材原页核对定义。"),
                 explanation = scene.conclusion,
             ),
             source = LessonAnalysisSource.CATALOG_FALLBACK,
         )
     }
-
-    fun generateFromOcr(
-        slot: TextbookSlot,
-        lesson: GeneratedLesson,
-        pages: List<OcrPageResult>,
-    ): LessonAnalysis = LocalKnowledgeCompiler.compile(slot, lesson, pages)?.analysis ?: generate(slot, lesson)
 }
 
 private fun JSONArray?.toStringList(): List<String> = buildList {
-    if (this@toStringList == null) return@buildList
-    for (index in 0 until length()) {
-        val value = optString(index).trim()
-        if (value.isNotEmpty()) add(value)
+    val source = this@toStringList ?: return@buildList
+    for (index in 0 until source.length()) {
+        source.optString(index).trim().takeIf { it.isNotBlank() }?.let(::add)
     }
 }
 
 private fun JSONArray?.toDoubleList(): List<Double> = buildList {
-    if (this@toDoubleList == null) return@buildList
-    for (index in 0 until length()) {
-        val value = optDouble(index, Double.NaN)
-        if (!value.isNaN() && value.isFinite()) add(value)
+    val source = this@toDoubleList ?: return@buildList
+    for (index in 0 until source.length()) {
+        add(source.optDouble(index))
     }
 }
