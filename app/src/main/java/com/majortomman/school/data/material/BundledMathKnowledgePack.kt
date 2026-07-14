@@ -54,25 +54,79 @@ internal data class BundledMathKnowledgeBook(
         evidence = "内置数学知识包 · SHA-256 精确匹配 · ${lessons.size} 个知识点",
     )
 
-    fun writeAnalyses(textbookRoot: File, slot: TextbookSlot) {
-        lessons.forEach { lesson ->
-            val generated = GeneratedLesson(
-                id = "${slot.key}:${lesson.sourceId}",
-                sourceId = lesson.sourceId,
-                title = lesson.title,
-                subtitle = "教材第 ${lesson.pageStart}—${lesson.pageEnd} 页 · 预制数学知识包",
-                estimatedMinutes = ((lesson.pageEnd - lesson.pageStart + 1) * 3).coerceIn(12, 36),
-                pageStart = lesson.pageStart,
-                pageEnd = lesson.pageEnd,
-                objectives = emptyList(),
-                explanation = "",
-                commonMistake = "",
-            )
+    fun install(textbook: InstalledTextbook): InstalledTextbook {
+        validate(textbook.slot, textbook.pageCount)
+        val root = File(textbook.pack.rootPath)
+        val scan = toScanResult()
+        val manifest = textbook.pack.manifest.copy(
+            version = PACK_VERSION,
+            title = title,
+            subject = "数学",
+            pdf = textbook.pack.manifest.pdf.copy(pageIndexOffset = pageIndexOffset),
+        )
+        File(root, "manifest.json").writeText(
+            MaterialPackManifestParser.toJson(manifest).toString(2),
+            Charsets.UTF_8,
+        )
+        File(root, manifest.catalogPath).writeText(
+            DirectPdfImportScanner.catalogToJson(scan.catalog).toString(2),
+            Charsets.UTF_8,
+        )
+
+        val generatedLessons = TextbookCatalogParser.generateLessons(textbook.slot, scan.catalog)
+        writeGeneratedLessons(File(root, "generated/lessons.json"), generatedLessons)
+        File(root, "generated/analysis").deleteRecursively()
+        generatedLessons.forEach { generated ->
             LessonAnalysisStore.write(
-                textbookRoot,
-                PrebuiltMathAnalysisFactory.create(slot, generated),
+                root,
+                PrebuiltMathAnalysisFactory.create(textbook.slot, generated),
             )
         }
+        File(root, "generated/identity.json").apply {
+            parentFile?.mkdirs()
+            writeText(
+                JSONObject()
+                    .put("sourceMode", "PREBUILT_MATH")
+                    .put("title", title)
+                    .put("subject", "数学")
+                    .put("stage", stage.id)
+                    .put("grade", grade)
+                    .put("volume", volume.id)
+                    .put("pageIndexOffset", pageIndexOffset)
+                    .put("knowledgePointCount", generatedLessons.size)
+                    .put("evidence", scan.evidence)
+                    .toString(2),
+                Charsets.UTF_8,
+            )
+        }
+
+        return InstalledTextbook(
+            slot = textbook.slot,
+            pack = textbook.pack.copy(
+                manifest = manifest,
+                sizeBytes = MaterialLibraryStore.directorySize(root),
+            ),
+            pageCount = textbook.pageCount,
+            lessons = generatedLessons,
+        )
+    }
+
+    private fun writeGeneratedLessons(file: File, generatedLessons: List<GeneratedLesson>) {
+        file.parentFile?.let { parent ->
+            require(parent.mkdirs() || parent.isDirectory) { "无法创建预制课程目录" }
+        }
+        val root = JSONObject().put(
+            "lessons",
+            JSONArray().apply { generatedLessons.forEach { put(it.toJson()) } },
+        )
+        val temporary = File(file.parentFile, "${file.name}.tmp")
+        temporary.writeText(root.toString(2), Charsets.UTF_8)
+        if (file.exists()) file.delete()
+        require(temporary.renameTo(file)) { "无法保存预制数学课程" }
+    }
+
+    private companion object {
+        const val PACK_VERSION = "prebuilt-math-v1"
     }
 }
 
@@ -98,6 +152,21 @@ internal object BundledMathKnowledgePack {
             ?: books.firstOrNull { book ->
                 book.aliases.any { alias -> normalizeTitle(alias) == normalizedName }
             }
+    }
+
+    fun upgradeIfMatched(
+        context: Context,
+        textbook: InstalledTextbook,
+    ): InstalledTextbook {
+        if (textbook.pack.manifest.version == "prebuilt-math-v1") return textbook
+        val book = find(
+            context = context,
+            sha256 = textbook.pack.manifest.pdf.sha256,
+            sourceName = textbook.pack.manifest.title,
+        ) ?: return textbook
+        return book.install(textbook).also { upgraded ->
+            MaterialLibraryStore.upsert(context, upgraded)
+        }
     }
 
     fun count(context: Context): Int = loadBooks(context).size
