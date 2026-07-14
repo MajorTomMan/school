@@ -64,6 +64,37 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Restore stable development signing key
+        id: signing-key-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: school-development-keystore-v1-${{ runner.os }}
+
+      - name: Prepare stable development signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          keystore="$HOME/.android/debug.keystore"
+          mkdir -p "$(dirname "$keystore")"
+          if [ ! -s "$keystore" ]; then
+            keytool -genkeypair \
+              -keystore "$keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=School Development,O=MajorTomMan,C=CN" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
+          fi
+          chmod 600 "$keystore"
+          keytool -list -v \
+            -keystore "$keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            | grep -E "SHA256:|Valid from:" || true
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.4.1"
