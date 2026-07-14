@@ -6,9 +6,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal data class BundledMathKnowledgeBook(
-    val assetPath: String,
     val sha256: String,
     val title: String,
+    val aliases: List<String>,
     val stage: EducationStage,
     val grade: Int,
     val volume: TextbookVolume,
@@ -54,11 +54,23 @@ internal data class BundledMathKnowledgeBook(
         evidence = "内置数学知识包 · SHA-256 精确匹配 · ${lessons.size} 个知识点",
     )
 
-    fun writeAnalyses(textbookRoot: File) {
+    fun writeAnalyses(textbookRoot: File, slot: TextbookSlot) {
         lessons.forEach { lesson ->
+            val generated = GeneratedLesson(
+                id = "${slot.key}:${lesson.sourceId}",
+                sourceId = lesson.sourceId,
+                title = lesson.title,
+                subtitle = "教材第 ${lesson.pageStart}—${lesson.pageEnd} 页 · 预制数学知识包",
+                estimatedMinutes = ((lesson.pageEnd - lesson.pageStart + 1) * 3).coerceIn(12, 36),
+                pageStart = lesson.pageStart,
+                pageEnd = lesson.pageEnd,
+                objectives = emptyList(),
+                explanation = "",
+                commonMistake = "",
+            )
             LessonAnalysisStore.write(
                 textbookRoot,
-                LessonAnalysis.fromJson(lesson.analysis, LessonAnalysisSource.PACK),
+                PrebuiltMathAnalysisFactory.create(slot, generated),
             )
         }
     }
@@ -69,83 +81,65 @@ internal data class BundledMathLesson(
     val title: String,
     val pageStart: Int,
     val pageEnd: Int,
-    val analysis: JSONObject,
 )
 
 internal object BundledMathKnowledgePack {
     private const val INDEX_ASSET = "prebuilt/math/index.json"
-    private var cachedIndex: List<IndexEntry>? = null
-    private val cachedBooks = mutableMapOf<String, BundledMathKnowledgeBook>()
+    private var cachedBooks: List<BundledMathKnowledgeBook>? = null
 
     fun find(
         context: Context,
         sha256: String,
         sourceName: String,
     ): BundledMathKnowledgeBook? {
-        val entries = loadIndex(context)
+        val books = loadBooks(context)
         val normalizedName = normalizeTitle(sourceName)
-        val entry = entries.firstOrNull { it.sha256.equals(sha256, ignoreCase = true) }
-            ?: entries.firstOrNull { candidate ->
-                candidate.aliases.any { alias -> normalizeTitle(alias) == normalizedName }
+        return books.firstOrNull { it.sha256.equals(sha256, ignoreCase = true) }
+            ?: books.firstOrNull { book ->
+                book.aliases.any { alias -> normalizeTitle(alias) == normalizedName }
             }
-            ?: return null
-        return synchronized(cachedBooks) {
-            cachedBooks[entry.assetPath] ?: loadBook(context, entry.assetPath).also {
-                cachedBooks[entry.assetPath] = it
-            }
-        }
     }
 
-    fun count(context: Context): Int = loadIndex(context).size
+    fun count(context: Context): Int = loadBooks(context).size
 
-    private fun loadIndex(context: Context): List<IndexEntry> = synchronized(this) {
-        cachedIndex ?: readAsset(context, INDEX_ASSET).let { root ->
+    private fun loadBooks(context: Context): List<BundledMathKnowledgeBook> = synchronized(this) {
+        cachedBooks ?: readAsset(context, INDEX_ASSET).let { root ->
             val books = root.optJSONArray("books") ?: JSONArray()
             buildList {
-                for (index in 0 until books.length()) {
-                    val item = books.getJSONObject(index)
+                for (bookIndex in 0 until books.length()) {
+                    val book = books.getJSONObject(bookIndex)
+                    val lessons = book.optJSONArray("lessons") ?: JSONArray()
                     add(
-                        IndexEntry(
-                            sha256 = item.getString("sha256"),
-                            assetPath = item.getString("asset"),
-                            aliases = item.optJSONArray("aliases").toStringList(),
+                        BundledMathKnowledgeBook(
+                            sha256 = book.getString("sha256"),
+                            title = book.getString("title"),
+                            aliases = book.optJSONArray("aliases").toStringList(),
+                            stage = EducationStage.fromId(book.getString("stage"))
+                                ?: throw IllegalArgumentException("预制教材缺少教育阶段"),
+                            grade = book.getInt("grade"),
+                            volume = TextbookVolume.fromId(book.getInt("volume")),
+                            pageCount = book.getInt("pageCount"),
+                            pageIndexOffset = book.getInt("pageIndexOffset"),
+                            publisher = book.optString("publisher", "人民教育出版社"),
+                            edition = book.optString("edition", "预制数学知识包"),
+                            lessons = buildList {
+                                for (lessonIndex in 0 until lessons.length()) {
+                                    val lesson = lessons.getJSONObject(lessonIndex)
+                                    add(
+                                        BundledMathLesson(
+                                            sourceId = lesson.getString("sourceId"),
+                                            title = lesson.getString("title"),
+                                            pageStart = lesson.getInt("pageStart"),
+                                            pageEnd = lesson.getInt("pageEnd"),
+                                        ),
+                                    )
+                                }
+                            },
                         ),
                     )
                 }
-            }.also { cachedIndex = it }
+            }.also { cachedBooks = it }
         }
-    }
-
-    private fun loadBook(context: Context, assetPath: String): BundledMathKnowledgeBook {
-        val root = readAsset(context, assetPath)
-        val lessons = root.optJSONArray("lessons") ?: JSONArray()
-        return BundledMathKnowledgeBook(
-            assetPath = assetPath,
-            sha256 = root.getString("sha256"),
-            title = root.getString("title"),
-            stage = EducationStage.fromId(root.getString("stage"))
-                ?: throw IllegalArgumentException("预制教材缺少教育阶段"),
-            grade = root.getInt("grade"),
-            volume = TextbookVolume.fromId(root.getInt("volume")),
-            pageCount = root.getInt("pageCount"),
-            pageIndexOffset = root.getInt("pageIndexOffset"),
-            publisher = root.optString("publisher", "人民教育出版社"),
-            edition = root.optString("edition", "预制数学知识包"),
-            lessons = buildList {
-                for (index in 0 until lessons.length()) {
-                    val lesson = lessons.getJSONObject(index)
-                    add(
-                        BundledMathLesson(
-                            sourceId = lesson.getString("sourceId"),
-                            title = lesson.getString("title"),
-                            pageStart = lesson.getInt("pageStart"),
-                            pageEnd = lesson.getInt("pageEnd"),
-                            analysis = lesson.getJSONObject("analysis"),
-                        ),
-                    )
-                }
-            },
-        )
     }
 
     private fun readAsset(context: Context, path: String): JSONObject =
@@ -162,12 +156,6 @@ internal object BundledMathKnowledgePack {
         .replace("）", ")")
         .replace(Regex("[\\s_\\-]+"), "")
         .lowercase()
-
-    private data class IndexEntry(
-        val sha256: String,
-        val assetPath: String,
-        val aliases: List<String>,
-    )
 }
 
 private fun JSONArray?.toStringList(): List<String> = buildList {
