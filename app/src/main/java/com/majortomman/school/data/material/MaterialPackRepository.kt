@@ -23,7 +23,7 @@ class MaterialPackRepository(
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
     private val mutableState = MutableStateFlow(
-        MaterialLibraryState(installedTextbooks = MaterialLibraryStore.read(appContext)),
+        MaterialLibraryState(installedTextbooks = readInstalledAndApplyBundledKnowledge()),
     )
     private val workObserver = Observer<List<WorkInfo>> { workInfos ->
         refresh(workInfos.orEmpty())
@@ -77,8 +77,15 @@ class MaterialPackRepository(
 
     fun enqueueAnalysis(slot: TextbookSlot) {
         val installed = MaterialLibraryStore.read(appContext).firstOrNull { it.slot.key == slot.key } ?: return
-        File(installed.pack.rootPath, "generated/analysis").deleteRecursively()
-        File(installed.pack.rootPath, "generated/questions").deleteRecursively()
+        val upgraded = runCatching {
+            BundledMathKnowledgePack.upgradeIfMatched(appContext, installed)
+        }.getOrDefault(installed)
+        if (upgraded.pack.manifest.version == PREBUILT_MATH_VERSION) {
+            refreshCurrent()
+            return
+        }
+        File(upgraded.pack.rootPath, "generated/analysis").deleteRecursively()
+        File(upgraded.pack.rootPath, "generated/questions").deleteRecursively()
         workManager.beginUniqueWork(
             analysisWorkName(slot),
             ExistingWorkPolicy.REPLACE,
@@ -97,10 +104,22 @@ class MaterialPackRepository(
     fun loadLessonAnalysis(
         textbook: InstalledTextbook,
         lessonSourceId: String,
-    ): LessonAnalysis? = LessonAnalysisStore.read(File(textbook.pack.rootPath), lessonSourceId)
+    ): LessonAnalysis? {
+        val active = runCatching {
+            BundledMathKnowledgePack.upgradeIfMatched(appContext, textbook)
+        }.getOrDefault(textbook)
+        return LessonAnalysisStore.read(File(active.pack.rootPath), lessonSourceId)
+            ?: active.lessons.firstOrNull { it.sourceId == lessonSourceId }
+                ?.let { lesson -> PrebuiltMathAnalysisFactory.create(active.slot, lesson) }
+                ?.also { analysis -> LessonAnalysisStore.write(File(active.pack.rootPath), analysis) }
+    }
 
-    fun analyzedLessonCount(textbook: InstalledTextbook): Int =
-        LessonAnalysisStore.count(File(textbook.pack.rootPath), textbook.lessons)
+    fun analyzedLessonCount(textbook: InstalledTextbook): Int {
+        val active = runCatching {
+            BundledMathKnowledgePack.upgradeIfMatched(appContext, textbook)
+        }.getOrDefault(textbook)
+        return LessonAnalysisStore.count(File(active.pack.rootPath), active.lessons)
+    }
 
     suspend fun removeInstalled(slot: TextbookSlot) = withContext(Dispatchers.IO) {
         cancelProcessing(slot)
@@ -115,8 +134,15 @@ class MaterialPackRepository(
             .let(::refresh)
     }
 
+    private fun readInstalledAndApplyBundledKnowledge(): List<InstalledTextbook> =
+        MaterialLibraryStore.read(appContext).map { textbook ->
+            runCatching {
+                BundledMathKnowledgePack.upgradeIfMatched(appContext, textbook)
+            }.getOrDefault(textbook)
+        }
+
     private fun scheduleMissingAnalyses() {
-        MaterialLibraryStore.read(appContext).forEach { textbook ->
+        readInstalledAndApplyBundledKnowledge().forEach { textbook ->
             val root = File(textbook.pack.rootPath)
             val completed = LessonAnalysisStore.count(root, textbook.lessons)
             val needsAnalysis = completed < textbook.lessons.size
@@ -171,7 +197,7 @@ class MaterialPackRepository(
     )
 
     private fun refresh(workInfos: List<WorkInfo>) {
-        val installed = MaterialLibraryStore.read(appContext)
+        val installed = readInstalledAndApplyBundledKnowledge()
         val jobs = workInfos
             .mapNotNull(::toProcessingState)
             .groupBy { it.slot.key }
@@ -226,4 +252,8 @@ class MaterialPackRepository(
 
     private fun analysisWorkName(slot: TextbookSlot): String = "textbook-analysis-${slot.key}"
     private fun questionWorkName(slot: TextbookSlot): String = "textbook-question-extraction-${slot.key}"
+
+    private companion object {
+        const val PREBUILT_MATH_VERSION = "prebuilt-math-v1"
+    }
 }
