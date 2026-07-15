@@ -13,6 +13,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.School"
         android:usesCleartextTraffic="true">
+        <provider
+            android:name=".data.material.PrebuiltTextbookBootstrapProvider"
+            android:authorities="${applicationId}.prebuilt-textbooks"
+            android:exported="false"
+            android:initOrder="100" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
