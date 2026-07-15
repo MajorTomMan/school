@@ -1,0 +1,30 @@
+name: Export master APK
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  export-master-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download rolling master APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p export
+          gh release download dev-latest \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern school-debug.apk \
+            --dir export \
+            --clobber
+
+      - name: Upload master APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-0.18.0-master-apk
+          path: export/school-debug.apk
