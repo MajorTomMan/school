@@ -12,44 +12,65 @@ internal object PrebuiltMathAnalysisFactory {
         }
 
         return when {
-            title.containsAny("有理数的加法", "有理数的减法", "有理数的乘法", "有理数的除法", "有理数的乘方", "混合运算") ->
+            title.containsAny(
+                "有理数的加法",
+                "有理数的减法",
+                "有理数的乘法",
+                "有理数的除法",
+                "有理数的乘方",
+                "混合运算",
+                "幂的运算",
+            ) -> themed(
+                lesson,
+                summary = "$title 需要把符号判断、数值计算和运算顺序分开处理，再合并为最终结果。",
+                prompt = "负号、括号和不同运算同时出现时，应该先处理哪一层关系？",
+                expression = "(-3)+5=2",
+                conclusion = "先判断符号与运算顺序，再处理数值部分，最后用估算检查结果是否合理。",
+                steps = listOf("识别运算层级", "判断结果符号", "处理括号", "完成数值计算", "估算复核"),
+                misconception = "只计算数字部分、最后随意补符号，或者忽略括号前的负号，会造成连续错误。",
+                question = "完成一道$title，并说明第一步为什么这样做。",
+                answers = listOf("符号", "运算顺序", "括号"),
+            )
+
+            title.containsAny(
+                "代数式",
+                "整式",
+                "单项式",
+                "多项式",
+                "同类项",
+                "去括号",
+                "添括号",
+                "因式分解",
+                "分式",
+                "乘法公式",
+            ) -> themed(
+                lesson,
+                summary = "$title 研究表达式的结构与等价变形；形式可以改变，但相同取值下结果必须保持一致。",
+                prompt = "怎样改变表达式的写法，同时确保它表示的数量关系没有改变？",
+                expression = "2(x+3)=2x+6",
+                conclusion = "先看项、因式和括号结构，再使用运算律或恒等变形，并通过代入复核。",
+                steps = listOf("识别表达式结构", "选择运算律", "处理符号与括号", "整理同类结构", "代入检验"),
+                misconception = "不同字母部分或不同次数的项不能直接合并，去括号时也不能漏掉任何一项。",
+                question = "为什么等价变形后可以用代入同一个数来进行初步检查？",
+                answers = listOf("值相等", "等价", "相同取值"),
+            )
+
+            title.containsAny("导数", "变化率", "极值") -> derivativeAnalysis(lesson)
+
+            title.containsAny("单调性", "最大（小）值", "最大值", "最小值", "最值") ->
                 themed(
                     lesson,
-                    summary = "$title 需要把符号判断、数值计算和运算顺序分开处理，再合并为最终结果。",
-                    prompt = "负号、括号和不同运算同时出现时，应该先处理哪一层关系？",
-                    expression = "(-3)+5=2",
-                    conclusion = "先判断符号与运算顺序，再处理绝对值部分，最后用估算检查结果是否合理。",
-                    steps = listOf("识别运算层级", "判断结果符号", "处理括号", "完成数值计算", "估算复核"),
-                    misconception = "只计算数字部分、最后随意补符号，或者忽略括号前的负号，会造成连续错误。",
-                    question = "完成一道$title，并说明第一步为什么这样做。",
-                    answers = listOf("符号", "运算顺序", "括号"),
+                    summary = "$title 描述函数在某个区间上的整体变化趋势或边界特征。",
+                    prompt = "怎样通过自变量的变化趋势来判断函数值的增减性或最值？",
+                    expression = "x₁<x₂ ⇒ f(x₁)<f(x₂)",
+                    conclusion = "单调性是区间上的性质；最值则必须在定义域或指定区间内能够实际取到。",
+                    steps = listOf("确定研究区间", "任取两个自变量", "比较函数值", "得出单调性", "结合端点或图象判断最值"),
+                    misconception = "单调性必须在特定区间内讨论；最值也不能只看图象趋势而忽略定义域和端点。",
+                    question = "用定义证明函数单调性时，为什么要先限定研究区间？",
+                    answers = listOf("区间", "定义域", "单调性是区间性质"),
                 )
 
-            title.containsAny("代数式", "整式", "单项式", "多项式", "同类项", "去括号", "添括号", "因式分解", "分式") ->
-                themed(
-                    lesson,
-                    summary = "$title 研究表达式的结构与等价变形；形式可以改变，但相同取值下结果必须保持一致。",
-                    prompt = "怎样改变表达式的写法，同时确保它表示的数量关系没有改变？",
-                    expression = "2(x+3)=2x+6",
-                    conclusion = "先看项、因式和括号结构，再使用运算律或恒等变形，并通过代入复核。",
-                    steps = listOf("识别表达式结构", "选择运算律", "处理符号与括号", "整理同类结构", "代入检验"),
-                    misconception = "不同字母部分或不同次数的项不能直接合并，去括号时也不能漏掉任何一项。",
-                    question = "为什么等价变形后可以用代入同一个数来进行初步检查？",
-                    answers = listOf("值相等", "等价", "相同取值"),
-                )
-
-            title.containsAny("一元一次方程", "二元一次方程", "分式方程", "方程的解") ->
-                themed(
-                    lesson,
-                    summary = "$title 的核心是保持等式平衡，通过等价变形逐步分离未知量。",
-                    prompt = "移项为什么不能理解成凭空换符号？",
-                    expression = "2x+3=9 → 2x=6 → x=3",
-                    conclusion = "每一步都必须保持解集不变，得到答案后还应代回原方程检验。",
-                    steps = listOf("整理方程", "两边执行同一运算", "分离未知量", "写出解", "代回检验"),
-                    misconception = "移项只是等式两边同时加减同一项的简写；跳过平衡关系容易把符号改错。",
-                    question = "解方程2x+3=9。",
-                    answers = listOf("x=3", "3"),
-                )
+            title.containsAny("函数", "映射") -> functionAnalysis(lesson)
 
             title.containsAny("一元二次方程", "配方法", "公式法", "根与系数") ->
                 themed(
@@ -62,6 +83,19 @@ internal object PrebuiltMathAnalysisFactory {
                     misconception = "开平方或因式分解时漏掉一个根，以及公式中符号代错，是最常见的问题。",
                     question = "解方程x²-5x+6=0。",
                     answers = listOf("x=2", "x=3", "2,3"),
+                )
+
+            title.containsAny("一元一次方程", "二元一次方程", "分式方程", "方程的解", "方程组") ->
+                themed(
+                    lesson,
+                    summary = "$title 的核心是保持等式平衡，通过等价变形逐步分离未知量。",
+                    prompt = "移项为什么不能理解成凭空换符号？",
+                    expression = "2x+3=9 → 2x=6 → x=3",
+                    conclusion = "每一步都必须保持解集不变，得到答案后还应代回原方程检验。",
+                    steps = listOf("整理方程", "两边执行同一运算", "分离未知量", "写出解", "代回检验"),
+                    misconception = "移项只是等式两边同时加减同一项的简写；跳过平衡关系容易把符号改错。",
+                    question = "解方程2x+3=9。",
+                    answers = listOf("x=3", "3"),
                 )
 
             title.containsAny("集合", "充分条件", "必要条件", "充要条件", "量词", "命题") ->
@@ -92,9 +126,7 @@ internal object PrebuiltMathAnalysisFactory {
                     answers = listOf("等号成立条件", "定义域"),
                 )
 
-            title.containsAny("函数", "映射") -> functionAnalysis(lesson)
-
-            title.containsAny("平方根", "立方根", "二次根式", "根式") ->
+            title.containsAny("平方根", "立方根", "二次根式", "根式", "方根") ->
                 themed(
                     lesson,
                     summary = "$title 把乘方运算反向理解，并在有意义条件允许的范围内进行化简和运算。",
@@ -105,6 +137,19 @@ internal object PrebuiltMathAnalysisFactory {
                     misconception = "把±√a当作算术平方根，或忽略根号内非负条件，是常见错误。",
                     question = "为什么√(a²)通常写成|a|？",
                     answers = listOf("绝对值", "a可能为负"),
+                )
+
+            title.containsAny("椭圆", "双曲线", "抛物线", "圆的方程", "直线的方程") ->
+                themed(
+                    lesson,
+                    summary = "$title 把几何轨迹转化为坐标方程，再从参数读取位置、形状和性质。",
+                    prompt = "一个点满足怎样的距离或斜率关系，才能落在对应曲线上？",
+                    expression = "几何条件 ⇄ 坐标方程",
+                    conclusion = "解析几何的核心是几何条件、坐标表达、代数方程与几何解释之间的往返转换。",
+                    steps = listOf("建立坐标系", "翻译几何条件", "化为标准方程", "读取参数", "用特殊点核对"),
+                    misconception = "只背标准方程而不理解参数与图形的联系，容易在平移和范围判断中出错。",
+                    question = "标准方程中的参数应怎样联系到图形？",
+                    answers = listOf("位置", "形状", "焦点", "坐标"),
                 )
 
             title.containsAny("坐标系", "坐标", "平移") ->
@@ -172,18 +217,18 @@ internal object PrebuiltMathAnalysisFactory {
                     answers = listOf("平行四边形", "一个直角"),
                 )
 
-            title.containsAny("轴对称", "中心对称", "旋转") ->
+            title.containsAny("轴对称", "中心对称", "旋转", "位似") ->
                 themed(
                     lesson,
                     type = LessonSceneType.MIRROR,
-                    summary = "$title 研究图形在特定变换下的对应关系以及保持不变的长度和角度。",
-                    prompt = "变换前后的对应点、距离、角度和方向有哪些保持量？",
+                    summary = "$title 研究图形在特定变换下的对应关系以及保持不变或按比例变化的量。",
+                    prompt = "变换前后的对应点、距离、角度和方向有哪些关系？",
                     expression = "P→P′",
-                    conclusion = "先确定变换中心、轴或角度，再追踪关键点并验证对应关系。",
-                    steps = listOf("确定变换要素", "选择关键点", "作对应点", "检查距离角度", "验证重合关系"),
+                    conclusion = "先确定变换中心、轴、角度或比例，再追踪关键点并验证对应关系。",
+                    steps = listOf("确定变换要素", "选择关键点", "作对应点", "检查距离角度", "验证对应关系"),
                     misconception = "只凭视觉判断而不验证对应点与变换要素，容易得到看似相似但不正确的图形。",
                     question = "描述一次几何变换至少需要指出什么？",
-                    answers = listOf("对称轴", "中心", "旋转角", "变换要素"),
+                    answers = listOf("对称轴", "中心", "旋转角", "比例", "变换要素"),
                 )
 
             title.containsAny("圆", "弧", "弦", "切线", "圆周角") ->
@@ -238,19 +283,6 @@ internal object PrebuiltMathAnalysisFactory {
                     answers = listOf("第n项", "前n项和"),
                 )
 
-            title.containsAny("导数", "变化率", "单调性", "极值", "最大", "最小") ->
-                themed(
-                    lesson,
-                    summary = "$title 用局部变化率描述函数变化，并把导数符号与单调性、极值联系起来。",
-                    prompt = "平均变化率怎样在区间缩小时逼近瞬时变化率？",
-                    expression = "f′(x)=lim Δx→0 [f(x+Δx)-f(x)]/Δx",
-                    conclusion = "导数来自差商极限；判断函数性质时还要结合定义域、临界点、不可导点和端点。",
-                    steps = listOf("写出差商", "令增量趋近0", "得到导数", "分析导数符号", "结合区间端点"),
-                    misconception = "只解f′(x)=0就直接认定极值，忽略导数变号和端点，是常见错误。",
-                    question = "为什么f′(x)=0只是极值候选条件？",
-                    answers = listOf("导数变号", "还要检查", "候选"),
-                )
-
             title.containsAny("排列", "组合", "计数原理", "二项式") ->
                 themed(
                     lesson,
@@ -264,7 +296,7 @@ internal object PrebuiltMathAnalysisFactory {
                     answers = listOf("顺序", "组合", "排列"),
                 )
 
-            title.containsAny("概率", "随机", "事件", "分布", "期望", "方差", "独立性") ->
+            title.containsAny("概率", "随机", "事件", "分布列", "期望", "独立性", "正态分布", "二项分布", "超几何分布") ->
                 themed(
                     lesson,
                     summary = "$title 用样本空间、事件和频率描述随机现象，并区分条件、独立与分布。",
@@ -277,18 +309,31 @@ internal object PrebuiltMathAnalysisFactory {
                     answers = listOf("不能同时发生", "是否影响", "互斥", "独立"),
                 )
 
-            title.containsAny("统计", "抽样", "频率", "平均数", "中位数", "标准差", "直方图", "散点图", "回归", "列联表", "数据") ->
-                themed(
-                    lesson,
-                    summary = "$title 把原始数据整理成能够比较、估计或预测的信息。",
-                    prompt = "选择哪一种统计量或图表，才能回答问题而不掩盖数据差异？",
-                    expression = "x̄=(x₁+…+xₙ)/n",
-                    conclusion = "统计结论依赖样本来源、指标选择和图表尺度；中心位置与离散程度应结合解释。",
-                    steps = listOf("明确总体样本", "整理变量类型", "选择统计量", "解释结果", "检查偏差异常值"),
-                    misconception = "只看平均数而忽略离散程度、样本代表性或异常值，可能产生误导。",
-                    question = "为什么比较两组数据时不能只看平均数？",
-                    answers = listOf("离散程度", "方差", "波动"),
-                )
+            title.containsAny(
+                "统计",
+                "抽样",
+                "频率",
+                "平均数",
+                "中位数",
+                "标准差",
+                "直方图",
+                "散点图",
+                "回归",
+                "列联表",
+                "数据",
+                "百分位数",
+                "相关系数",
+            ) -> themed(
+                lesson,
+                summary = "$title 把原始数据整理成能够比较、估计或预测的信息。",
+                prompt = "选择哪一种统计量或图表，才能回答问题而不掩盖数据差异？",
+                expression = "x̄=(x₁+…+xₙ)/n",
+                conclusion = "统计结论依赖样本来源、指标选择和图表尺度；中心位置与离散程度应结合解释。",
+                steps = listOf("明确总体样本", "整理变量类型", "选择统计量", "解释结果", "检查偏差异常值"),
+                misconception = "只看平均数而忽略离散程度、样本代表性或异常值，可能产生误导。",
+                question = "为什么比较两组数据时不能只看平均数？",
+                answers = listOf("离散程度", "方差", "波动"),
+            )
 
             title.containsAny("空间", "立体", "三视图", "投影") ->
                 themed(
@@ -300,18 +345,6 @@ internal object PrebuiltMathAnalysisFactory {
                     misconception = "只凭平面图直觉判断空间关系，可能把看似相交的线误认为实际相交。",
                     question = "处理空间问题时，为什么需要先说明观察方向或位置关系？",
                     answers = listOf("观察方向", "位置关系"),
-                )
-
-            title.containsAny("椭圆", "双曲线", "抛物线", "圆的方程", "直线的方程") ->
-                themed(
-                    lesson,
-                    summary = "$title 把几何轨迹转化为坐标方程，再从参数读取位置、形状和性质。",
-                    prompt = "一个点满足怎样的距离或斜率关系，才能落在对应曲线上？",
-                    conclusion = "解析几何的核心是几何条件、坐标表达、代数方程与几何解释之间的往返转换。",
-                    steps = listOf("建立坐标系", "翻译几何条件", "化为标准方程", "读取参数", "用特殊点核对"),
-                    misconception = "只背标准方程而不理解参数与图形的联系，容易在平移和范围判断中出错。",
-                    question = "标准方程中的参数应怎样联系到图形？",
-                    answers = listOf("位置", "形状", "焦点", "坐标"),
                 )
 
             else -> base.copy(
@@ -327,11 +360,24 @@ internal object PrebuiltMathAnalysisFactory {
         }
     }
 
+    private fun derivativeAnalysis(lesson: GeneratedLesson): LessonAnalysis = themed(
+        lesson,
+        summary = "${lesson.title}用局部变化率描述函数变化，并把导数符号与单调性、极值联系起来。",
+        prompt = "平均变化率怎样在区间缩小时逼近瞬时变化率？",
+        expression = "f′(x)=lim Δx→0 [f(x+Δx)-f(x)]/Δx",
+        conclusion = "导数来自差商极限；判断函数性质时还要结合定义域、临界点、不可导点和端点。",
+        steps = listOf("写出差商", "令增量趋近0", "得到导数", "分析导数符号", "结合区间端点"),
+        misconception = "只解f′(x)=0就直接认定极值，忽略导数变号和端点，是常见错误。",
+        question = "为什么f′(x)=0只是极值候选条件？",
+        answers = listOf("导数变号", "还要检查", "候选"),
+    )
+
     private fun functionAnalysis(lesson: GeneratedLesson): LessonAnalysis {
         val title = lesson.title
         val expression = when {
             title.contains("二次函数") -> "y=ax²+bx+c"
             title.contains("反比例函数") -> "y=k/x"
+            title.contains("一次函数") -> "y=kx+b"
             title.contains("指数函数") -> "y=aˣ"
             title.contains("对数函数") -> "y=logₐx"
             title.containsAny("三角函数", "正弦", "余弦") -> "y=sin x"
@@ -345,7 +391,7 @@ internal object PrebuiltMathAnalysisFactory {
             conclusion = "理解函数必须同时关注定义域、对应法则、图象和关键性质，不能只背公式。",
             steps = listOf("确定定义域", "识别对应法则", "选择关键自变量", "观察函数值", "用图象验证性质"),
             misconception = "忽略定义域，或把图象形状与参数作用割裂，容易误判单调性、最值和交点。",
-            question = "研究$title时，为什么必须先确定定义域？",
+            question = "研究${title}时，为什么必须先确定定义域？",
             answers = listOf("定义域", "自变量范围"),
         )
     }
