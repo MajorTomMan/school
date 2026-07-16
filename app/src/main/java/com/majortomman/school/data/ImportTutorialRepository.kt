@@ -23,21 +23,18 @@ class ImportTutorialRepository(
     }
 
     /**
-     * 导入教程不再阻塞第一次教材选择。
-     *
-     * UI 仍沿用原有“已完成教程”判断，因此把当前支持学科视为已完成即可直接进入
-     * 教材浏览器；历史完成记录继续保留，避免升级时破坏已有 DataStore 数据。
+     * 导入教程不再作为首次使用的阻塞步骤。这里保留历史完成记录，并把当前学科教程
+     * 默认视为可跳过，兼容旧页面路由和未来重新开放的帮助入口。
      */
-    private val optionalTutorialTokens = SubjectTemplates.all
-        .mapTo(mutableSetOf()) { subject -> token(subject.id, IMPORT_TUTORIAL_VERSION) }
-
     val completedTutorials: Flow<Set<String>> = appContext.importTutorialDataStore.data
         .catch { error ->
             if (error is IOException) emit(androidx.datastore.preferences.core.emptyPreferences())
             else throw error
         }
         .map { preferences ->
-            preferences[Keys.completed].orEmpty() + optionalTutorialTokens
+            preferences[Keys.completed].orEmpty() + SubjectTemplates.all.map { subject ->
+                token(subject.id, IMPORT_TUTORIAL_VERSION)
+            }
         }
 
     suspend fun markCompleted(subjectId: String, version: Int = IMPORT_TUTORIAL_VERSION) {

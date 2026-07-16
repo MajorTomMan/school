@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.majortomman.school.data.curriculum.CurriculumRepository
 import com.majortomman.school.data.local.PracticeAttemptEntity
 import com.majortomman.school.data.local.SchoolDatabase
 import com.majortomman.school.data.review.ReviewScheduler
@@ -44,6 +45,7 @@ data class LearningProgress(
 
 class PreferencesRepository(
     private val context: Context,
+    private val curriculumRepository: CurriculumRepository = CurriculumRepository(context),
 ) {
     private val learningDao = SchoolDatabase.getInstance(context).learningDao()
     private val preferencesFlow = context.schoolDataStore.data.safeData()
@@ -146,6 +148,7 @@ class PreferencesRepository(
         context.schoolDataStore.edit { preferences ->
             preferences[lessonStatusKey(lessonId)] = status.name
         }
+        curriculumRepository.markLegacyLessonStatus(lessonId, status)
     }
 
     suspend fun finishLessonAndStartNext(
@@ -169,6 +172,8 @@ class PreferencesRepository(
             }
             preferences[Keys.lastLessonId] = nextLessonId ?: currentLessonId
         }
+        curriculumRepository.markLegacyLessonStatus(currentLessonId, MasteryStatus.MASTERED)
+        nextLessonId?.let { curriculumRepository.markLegacyLessonStatus(it, MasteryStatus.LEARNING) }
     }
 
     suspend fun recordAttempt(
@@ -199,16 +204,14 @@ class PreferencesRepository(
             ),
         )
 
+        val status = if (draft.correct) MasteryStatus.MASTERED else MasteryStatus.NEEDS_REVIEW
         context.schoolDataStore.edit { preferences ->
-            preferences[lessonStatusKey(lessonId)] = if (draft.correct) {
-                MasteryStatus.MASTERED.name
-            } else {
-                MasteryStatus.NEEDS_REVIEW.name
-            }
+            preferences[lessonStatusKey(lessonId)] = status.name
             preferences[Keys.lastLessonId] = lessonId
             preferences[Keys.lastAnswer] = draft.answer.take(2_000)
             preferences[Keys.lastFeedback] = draft.feedback.take(2_000)
         }
+        curriculumRepository.markLegacyLessonStatus(lessonId, status)
     }
 
     suspend fun clearLearningProgress() {
@@ -217,6 +220,7 @@ class PreferencesRepository(
         learningDao.clearMathAttempts()
         learningDao.clearMathMastery()
         learningDao.clearMathMistakes()
+        curriculumRepository.clearLearningState()
         context.schoolDataStore.edit { preferences ->
             preferences.asMap().keys
                 .map { it.name }
@@ -230,8 +234,11 @@ class PreferencesRepository(
         }
     }
 
-    private fun lessonTitle(lessonId: String): String =
-        SampleContent.lessons.firstOrNull { it.id == lessonId }?.title ?: lessonId
+    private fun lessonTitle(lessonId: String): String = curriculumRepository.state.value
+        .nodeForLegacyLesson(lessonId)
+        ?.title
+        ?: SampleContent.lessons.firstOrNull { it.id == lessonId }?.title
+        ?: lessonId
 
     private fun lessonStatusKey(lessonId: String) = stringPreferencesKey("$LESSON_STATUS_PREFIX$lessonId")
 

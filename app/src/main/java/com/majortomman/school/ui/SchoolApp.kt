@@ -44,6 +44,7 @@ import com.majortomman.school.data.LearningProgress
 import com.majortomman.school.data.MasteryStatus
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.ScheduledReview
+import com.majortomman.school.data.curriculum.CurriculumRepository
 import com.majortomman.school.data.material.LessonAnalysis
 import com.majortomman.school.data.material.MaterialPackRepository
 import com.majortomman.school.data.math.MathQuestionBankRepository
@@ -67,6 +68,7 @@ private enum class MainTab(val label: String) {
 fun SchoolApp(
     repository: PreferencesRepository,
     materialRepository: MaterialPackRepository,
+    curriculumRepository: CurriculumRepository,
     tutorialRepository: ImportTutorialRepository,
     mathQuestionRepository: MathQuestionBankRepository,
     initialTextbookKey: String? = null,
@@ -84,13 +86,19 @@ fun SchoolApp(
     val recentAttempts by repository.recentAttempts.collectAsState(initial = emptyList<AttemptRecord>())
     val reviewQueue by repository.reviewQueue.collectAsState(initial = emptyList<ScheduledReview>())
     val libraryState by materialRepository.state.collectAsState()
+    val curriculumState by curriculumRepository.state.collectAsState()
+    val curriculumProgress by curriculumRepository.nodeProgress.collectAsState()
     val completedTutorials by tutorialRepository.completedTutorials.collectAsState(initial = emptySet())
 
     val activeTextbook = libraryState.installedTextbooks.firstOrNull { it.key == activeTextbookKey }
+    val activeCurriculumId = activeTextbook?.let(curriculumRepository::curriculumIdFor)
     val lessons = activeTextbook?.lessons.orEmpty().mapIndexed { index, generated ->
         val stored = progress.lessonStatuses[generated.id]
+        val nodeStatus = curriculumState.nodeForLegacyLesson(generated.id)
+            ?.let { curriculumProgress[it.id]?.status }
+            ?.let { runCatching { MasteryStatus.valueOf(it.name) }.getOrNull() }
         val fallback = if (index == 0) MasteryStatus.LEARNING else MasteryStatus.NOT_STARTED
-        generated.toLesson(stored ?: fallback)
+        generated.toLesson(stored ?: nodeStatus ?: fallback)
     }
     val currentLesson = lessons.firstOrNull { it.status == MasteryStatus.LEARNING }
         ?: lessons.firstOrNull { it.status == MasteryStatus.NEEDS_REVIEW }
@@ -112,6 +120,12 @@ fun SchoolApp(
         openedGeneratedLesson?.sourceId?.let { sourceId -> "$textbookKey:$sourceId" }
     }
     val openedTextbook = libraryState.installedTextbooks.firstOrNull { it.key == openedTextbookKey }
+
+    LaunchedEffect(libraryState.installedTextbooks.map { textbook ->
+        "${textbook.key}:${textbook.pack.manifest.version}:${textbook.pack.pdfFile.isFile}:${textbook.lessons.size}"
+    }) {
+        runCatching { curriculumRepository.synchronizeInstalledTextbooks(libraryState.installedTextbooks) }
+    }
 
     LaunchedEffect(analysisRequestKey) {
         openedAnalysis = null
@@ -267,13 +281,25 @@ fun SchoolApp(
                             }
 
                             MainTab.PATH -> {
-                                if (activeTextbook == null || lessons.isEmpty()) {
-                                    NoActiveTextbookScreen { selectedTabName = MainTab.SUBJECTS.name }
-                                } else {
-                                    SceneCoursePathScreen(
-                                        lessons = lessons,
-                                        onOpenLesson = { openedLessonId = it },
-                                    )
+                                when {
+                                    activeTextbook == null || lessons.isEmpty() -> {
+                                        NoActiveTextbookScreen { selectedTabName = MainTab.SUBJECTS.name }
+                                    }
+                                    activeCurriculumId != null && activeCurriculumId in curriculumState.curriculumById -> {
+                                        CurriculumTreeScreen(
+                                            snapshot = curriculumState,
+                                            curriculumId = activeCurriculumId,
+                                            progress = curriculumProgress,
+                                            activeLegacyLessonId = currentLesson?.id,
+                                            onOpenLesson = { openedLessonId = it },
+                                        )
+                                    }
+                                    else -> {
+                                        SceneCoursePathScreen(
+                                            lessons = lessons,
+                                            onOpenLesson = { openedLessonId = it },
+                                        )
+                                    }
                                 }
                             }
 
@@ -339,13 +365,13 @@ private fun LessonAnalysisLoadingScreen(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "正在读取预制课程",
+                text = "正在读取课程数据",
                 color = NavigationBlue,
                 fontSize = 15.sp,
             )
         }
         Text(
-            text = "教材与学习记录保持在本机。",
+            text = "课程树、教材与学习记录保持在本机。",
             color = NavigationWhite.copy(alpha = 0.34f),
             fontSize = 13.sp,
         )

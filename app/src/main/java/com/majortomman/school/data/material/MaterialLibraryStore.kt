@@ -27,7 +27,7 @@ internal object MaterialLibraryStore {
         if (libraryFile.isFile) {
             return runCatching { parseLibrary(libraryFile.readText(Charsets.UTF_8)) }
                 .getOrDefault(emptyList())
-                .filter { it.pack.pdfFile.isFile }
+                .filter(::isAvailable)
         }
 
         val migrated = migrateLegacy(context)
@@ -71,6 +71,10 @@ internal object MaterialLibraryStore {
 
     fun directorySize(directory: File): Long =
         directory.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+
+    private fun isAvailable(textbook: InstalledTextbook): Boolean =
+        textbook.pack.pdfFile.isFile ||
+            (textbook.lessons.isNotEmpty() && textbook.pack.manifest.version.startsWith("prebuilt-"))
 
     private fun parseLibrary(json: String): List<InstalledTextbook> {
         val root = JSONObject(json)

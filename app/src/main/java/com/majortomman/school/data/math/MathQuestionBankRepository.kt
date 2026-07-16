@@ -1,7 +1,8 @@
 package com.majortomman.school.data.math
 
 import android.content.Context
-import com.majortomman.school.data.local.MathKnowledgeMasteryEntity
+import com.majortomman.school.data.curriculum.CurriculumRepository
+import com.majortomman.school.data.curriculum.KnowledgeMastery
 import com.majortomman.school.data.local.MathMistakeEntity
 import com.majortomman.school.data.local.MathPracticeAttemptEntity
 import com.majortomman.school.data.local.PracticeAttemptEntity
@@ -18,11 +19,12 @@ import kotlinx.coroutines.flow.map
 
 class MathQuestionBankRepository(
     context: Context,
+    private val curriculumRepository: CurriculumRepository = CurriculumRepository(context),
 ) {
     private val learningDao = SchoolDatabase.getInstance(context).learningDao()
 
     fun observeMastery(textbook: InstalledTextbook): Flow<List<MathMasterySnapshot>> =
-        learningDao.observeMathMastery(textbook.key).map { entities ->
+        curriculumRepository.observeMastery(MATH_SUBJECT_ID).map { entities ->
             val titleById = MathKnowledgeCatalog.all.associateBy { it.id }
             val existing = entities.associateBy { it.knowledgePointId }
             MathKnowledgeCatalog.forTextbook(textbook).map { point ->
@@ -73,10 +75,10 @@ class MathQuestionBankRepository(
         mode: MathPracticeMode,
         seed: Long = System.nanoTime(),
     ): MathQuestion {
-        require(textbook.slot.subjectId == "math") { "当前教材不是数学教材" }
+        require(textbook.slot.subjectId == MATH_SUBJECT_ID) { "当前教材不是数学教材" }
         val points = MathKnowledgeCatalog.forTextbook(textbook)
         require(points.isNotEmpty()) { "当前教材没有可用的数学知识点" }
-        val masteryEntities = learningDao.observeMathMastery(textbook.key).first()
+        val masteryEntities = curriculumRepository.observeMastery(MATH_SUBJECT_ID).first()
         val mastery = masteryEntities.associateBy { it.knowledgePointId }
         val recentTemplates = learningDao.recentMathTemplateIds(textbook.key).toSet()
         val random = Random(seed)
@@ -179,9 +181,9 @@ class MathQuestionBankRepository(
             ),
         )
 
-        val previous = learningDao.getMathMastery(question.textbookKey, question.knowledgePointId)
+        val previous = curriculumRepository.getMastery(MATH_SUBJECT_ID, question.knowledgePointId)
         val updatedMastery = nextMastery(previous, question, evaluation.correct, usedHint, now)
-        learningDao.upsertMathMastery(updatedMastery)
+        curriculumRepository.upsertMastery(updatedMastery)
         updateMistake(question, answer, evaluation, now)
 
         return MathSubmissionResult(
@@ -195,7 +197,7 @@ class MathQuestionBankRepository(
         textbook: InstalledTextbook,
         draft: TextbookQuestionDraft,
         pointId: String,
-        mastery: Map<String, MathKnowledgeMasteryEntity>,
+        mastery: Map<String, KnowledgeMastery>,
         seed: Long,
         recentTemplates: Set<String>,
     ): MathQuestion = MathQuestionTemplateCatalog.generate(
@@ -215,7 +217,7 @@ class MathQuestionBankRepository(
 
     private fun weightedPoint(
         points: List<MathKnowledgePoint>,
-        mastery: Map<String, MathKnowledgeMasteryEntity>,
+        mastery: Map<String, KnowledgeMastery>,
         random: Random,
     ): MathKnowledgePoint {
         val now = System.currentTimeMillis()
@@ -242,12 +244,12 @@ class MathQuestionBankRepository(
     }
 
     private fun nextMastery(
-        previous: MathKnowledgeMasteryEntity?,
+        previous: KnowledgeMastery?,
         question: MathQuestion,
         correct: Boolean,
         usedHint: Boolean,
         now: Long,
-    ): MathKnowledgeMasteryEntity {
+    ): KnowledgeMastery {
         val currentScore = previous?.score ?: INITIAL_SCORE
         val difficultyFactor = 0.85 + question.difficulty.level * 0.08
         val score = if (correct) {
@@ -269,8 +271,8 @@ class MathQuestionBankRepository(
                 else -> 30
             }
         }
-        return MathKnowledgeMasteryEntity(
-            textbookKey = question.textbookKey,
+        return KnowledgeMastery(
+            subjectId = MATH_SUBJECT_ID,
             knowledgePointId = question.knowledgePointId,
             score = score,
             attempts = (previous?.attempts ?: 0) + 1,
@@ -328,6 +330,7 @@ class MathQuestionBankRepository(
     }
 
     companion object {
+        private const val MATH_SUBJECT_ID = "math"
         private const val INITIAL_SCORE = 0.25
         private const val DAY_MILLIS = 24L * 60L * 60L * 1_000L
     }
