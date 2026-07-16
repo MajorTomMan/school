@@ -19,6 +19,12 @@
             android:exported="false"
             android:initOrder="100" />
 
+        <provider
+            android:name=".data.curriculum.MasteryTrendBootstrapProvider"
+            android:authorities="${applicationId}.mastery-trends"
+            android:exported="false"
+            android:initOrder="90" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
