@@ -40,6 +40,7 @@ android {
         getByName("main") {
             java.exclude("com/majortomman/school/data/material/MaterialPackModels.kt")
             java.exclude("com/majortomman/school/data/curriculum/CurriculumRepository.kt")
+            java.exclude("com/majortomman/school/ui/SubjectTextbookCenterScreen.kt")
         }
     }
 
