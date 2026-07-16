@@ -36,6 +36,12 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        getByName("main") {
+            java.exclude("com/majortomman/school/data/material/MaterialPackModels.kt")
+        }
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
