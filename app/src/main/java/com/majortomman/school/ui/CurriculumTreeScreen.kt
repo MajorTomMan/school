@@ -19,20 +19,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.majortomman.school.data.curriculum.CurriculumNode
 import com.majortomman.school.data.curriculum.CurriculumNodeProgress
 import com.majortomman.school.data.curriculum.CurriculumNodeProgressStatus
 import com.majortomman.school.data.curriculum.CurriculumNodeType
 import com.majortomman.school.data.curriculum.CurriculumSnapshot
 import com.majortomman.school.data.curriculum.CurriculumTreeRow
+import com.majortomman.school.data.curriculum.MasteryTrendRepository
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 private val TreeBlack = Color(0xFF050608)
 private val TreeWhite = Color(0xFFF5F7FA)
@@ -41,6 +49,7 @@ private val TreeYellow = Color(0xFFFFCC00)
 private val TreeRed = Color(0xFFFF453A)
 private val TreeMuted = TreeWhite.copy(alpha = 0.44f)
 private val TreeLine = TreeWhite.copy(alpha = 0.12f)
+private val TrendDateFormatter = DateTimeFormatter.ofPattern("MM-dd")
 
 @Composable
 internal fun CurriculumTreeScreen(
@@ -51,6 +60,23 @@ internal fun CurriculumTreeScreen(
     onOpenLesson: (String) -> Unit,
 ) {
     val curriculum = snapshot.curriculumById[curriculumId]
+    val subject = curriculum?.subjectId?.let(snapshot.subjectById::get)
+    val subjectId = curriculum?.subjectId.orEmpty()
+    val activeNode = activeLegacyLessonId?.let(snapshot::nodeForLegacyLesson)
+    val activeKnowledge = activeNode?.let { node -> snapshot.knowledgeForNode(node.id).firstOrNull() }
+    val appContext = LocalContext.current.applicationContext
+    val trendRepository = remember(appContext) { MasteryTrendRepository.getInstance(appContext) }
+    val subjectTrend by remember(trendRepository, subjectId) {
+        trendRepository.observeSubjectTrend(subjectId, days = 30)
+    }.collectAsState(initial = emptyList())
+    val knowledgeTrend by remember(trendRepository, subjectId, activeKnowledge?.id) {
+        trendRepository.observeKnowledgeTrend(
+            subjectId = subjectId,
+            knowledgePointId = activeKnowledge?.id.orEmpty(),
+            days = 30,
+        )
+    }.collectAsState(initial = emptyList())
+
     val rows = snapshot.flattenedTree(curriculumId).filterNot { it.node.type == CurriculumNodeType.ROOT }
     val lessonRows = rows.filter { it.node.legacyLessonId != null }
     val mastered = lessonRows.count { progress[it.node.id]?.status == CurriculumNodeProgressStatus.MASTERED }
@@ -76,8 +102,37 @@ internal fun CurriculumTreeScreen(
                 color = TreeMuted,
                 fontSize = 14.sp,
             )
-            Spacer(Modifier.height(18.dp))
-            val activeNode = activeLegacyLessonId?.let(snapshot::nodeForLegacyLesson)
+            Spacer(Modifier.height(28.dp))
+
+            MasteryTrendChart(
+                title = "${subject?.title ?: "学科"}掌握度趋势",
+                subtitle = "近 30 天 · 基于练习结果的估计",
+                points = subjectTrend.map { point ->
+                    MasteryTrendPoint(
+                        x = point.epochDay,
+                        score = point.averageScore,
+                    )
+                },
+                xLabel = ::epochDayLabel,
+            )
+
+            if (activeKnowledge != null) {
+                Spacer(Modifier.height(30.dp))
+                MasteryTrendChart(
+                    title = "${activeKnowledge.title}趋势",
+                    subtitle = "近 30 天 · 每次掌握度变化",
+                    points = knowledgeTrend.map { point ->
+                        MasteryTrendPoint(
+                            x = point.recordedAt,
+                            score = point.score,
+                            eventType = point.eventType,
+                        )
+                    },
+                    xLabel = ::timestampLabel,
+                )
+            }
+
+            Spacer(Modifier.height(26.dp))
             if (activeNode != null) {
                 val prerequisites = snapshot.knowledgeForNode(activeNode.id)
                     .flatMap { snapshot.prerequisites(it.id) }
@@ -204,3 +259,10 @@ private fun CurriculumTreeRowItem(
         }
     }
 }
+
+private fun epochDayLabel(epochDay: Long): String = LocalDate.ofEpochDay(epochDay).format(TrendDateFormatter)
+
+private fun timestampLabel(timestamp: Long): String = Instant.ofEpochMilli(timestamp)
+    .atZone(ZoneId.systemDefault())
+    .toLocalDate()
+    .format(TrendDateFormatter)
