@@ -16,12 +16,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-class UpdateCoordinator private constructor(context: Context) {
+class UpdateCoordinator(context: Context) {
     private val appContext = context.applicationContext
     private val repository = UpdateRepository(appContext)
     private val preferences = UpdatePreferences(appContext)
     private val workManager = WorkManager.getInstance(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val isPrimaryInstance = registerAsPrimary(this)
 
     val state = UpdateRuntimeBus.state
     val dialogVisible = UpdateRuntimeBus.dialogVisible
@@ -30,12 +31,14 @@ class UpdateCoordinator private constructor(context: Context) {
     val settings = mutableSettings.asStateFlow()
 
     init {
-        repository.restoreCachedState().also { restored ->
-            if (restored is UpdateState.Available || restored is UpdateState.Ready) {
-                UpdateRuntimeBus.showDialog()
+        if (isPrimaryInstance) {
+            repository.restoreCachedState().also { restored ->
+                if (restored is UpdateState.Available || restored is UpdateState.Ready) {
+                    UpdateRuntimeBus.showDialog()
+                }
             }
+            schedulePeriodicCheck()
         }
-        schedulePeriodicCheck()
     }
 
     fun onAppForeground() {
@@ -134,8 +137,19 @@ class UpdateCoordinator private constructor(context: Context) {
         @Volatile
         private var instance: UpdateCoordinator? = null
 
+        private fun registerAsPrimary(candidate: UpdateCoordinator): Boolean = synchronized(this) {
+            if (instance == null) {
+                instance = candidate
+                true
+            } else {
+                instance === candidate
+            }
+        }
+
         fun get(context: Context): UpdateCoordinator = instance ?: synchronized(this) {
-            instance ?: UpdateCoordinator(context.applicationContext).also { instance = it }
+            instance ?: UpdateCoordinator(context.applicationContext).also { created ->
+                if (instance == null) instance = created
+            }
         }
     }
 }
