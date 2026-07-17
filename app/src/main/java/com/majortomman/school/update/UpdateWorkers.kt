@@ -17,7 +17,10 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 class UpdateCheckWorker(
@@ -115,6 +118,7 @@ class UpdateDownloadWorker(
             partial.delete()
             target.delete()
             preferences.clearDownloadedApk()
+            if (throwable is CancellationException) throw throwable
             val message = throwable.message ?: "更新下载失败。"
             UpdateRuntimeBus.publish(UpdateState.Error(message))
             if (runAttemptCount < 2) Result.retry() else Result.failure(workDataOf("error" to message))
@@ -139,6 +143,7 @@ class UpdateDownloadWorker(
                 FileOutputStream(destination).use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
+                        currentCoroutineContext().ensureActive()
                         val count = input.read(buffer)
                         if (count < 0) break
                         if (count == 0) continue
