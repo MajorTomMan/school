@@ -80,7 +80,7 @@ fun InteractiveLessonScreen(
         ) {
             TextAction("返回", InteractiveMuted, onBack)
             Text("交互课程", color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("V1", color = InteractiveMuted, fontSize = 13.sp)
+            Text("V1.2", color = InteractiveMuted, fontSize = 13.sp)
         }
 
         Column(
@@ -118,7 +118,13 @@ fun InteractiveLessonScreen(
             Spacer(Modifier.height(28.dp))
 
             when (spec.kind) {
-                InteractiveLessonKind.LINEAR_FUNCTION -> LinearFunctionLab(lesson.id)
+                InteractiveLessonKind.LINEAR_FUNCTION -> {
+                    LinearFunctionLab(lesson.id)
+                    Spacer(Modifier.height(34.dp))
+                    LinearCoordinateValidationLab(lesson.id)
+                    Spacer(Modifier.height(34.dp))
+                    EquationVerificationLab(lesson.id)
+                }
                 InteractiveLessonKind.NEWTON_FIRST_LAW -> NewtonFirstLawLab(lesson.id)
             }
 

@@ -61,6 +61,7 @@ private enum class MainTab(val label: String) {
     PATH("路径"),
     BANK("题库"),
     REVIEW("复习"),
+    LAB("实验室"),
     SETTINGS("设置"),
 }
 
@@ -335,6 +336,8 @@ fun SchoolApp(
                                     if (lessons.any { it.id == lessonId }) openedLessonId = lessonId
                                 },
                             )
+
+                            MainTab.LAB -> InteractionLabScreen()
 
                             MainTab.SETTINGS -> MaterialSettingsScreen(
                                 settings = aiSettings,
