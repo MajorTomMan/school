@@ -64,6 +64,21 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Resolve development version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_version="$(sed -n 's/.*?: "\([0-9][0-9.]*\)"/\1/p' app/build.gradle.kts | head -n 1)"
+          if [ -z "$base_version" ]; then
+            base_version="0.20.0"
+          fi
+          version_code=$((100000 + GITHUB_RUN_NUMBER))
+          version_name="${base_version}+dev.${GITHUB_RUN_NUMBER}"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "Development version: $version_name ($version_code)"
+
       - name: Verify fixed development signing key
         shell: bash
         run: |
@@ -94,6 +109,22 @@ jobs:
 
           echo "Fixed development certificate SHA-256: $actual"
 
+      - name: Verify update manifest signing key
+        shell: bash
+        env:
+          SCHOOL_UPDATE_PRIVATE_KEY_B64: ${{ secrets.SCHOOL_UPDATE_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          private_key="$RUNNER_TEMP/school-update-private.pem"
+          if [ -n "${SCHOOL_UPDATE_PRIVATE_KEY_B64:-}" ]; then
+            printf '%s' "$SCHOOL_UPDATE_PRIVATE_KEY_B64" | base64 --decode > "$private_key"
+          else
+            base64 --decode signing/school-update-development-private.pem.b64 > "$private_key"
+          fi
+          chmod 600 "$private_key"
+          openssl pkey -in "$private_key" -pubout -out "$RUNNER_TEMP/update-public.pem"
+          diff -u signing/school-update-development-public.pem "$RUNNER_TEMP/update-public.pem"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.4.1"
@@ -101,6 +132,9 @@ jobs:
       - name: Test and assemble debug APK
         id: assemble
         shell: bash
+        env:
+          SCHOOL_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          SCHOOL_VERSION_NAME: ${{ steps.version.outputs.version_name }}
         run: |
           set +e
           gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace > build.log 2>&1
@@ -108,20 +142,17 @@ jobs:
           tail -n 240 build.log
           exit $status
 
-      - name: Prepare APK and verify signature
+      - name: Prepare APK, update manifest and signatures
         id: package
         if: success()
         shell: bash
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          SCHOOL_UPDATE_PRIVATE_KEY_B64: ${{ secrets.SCHOOL_UPDATE_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)"
           short_sha="${GITHUB_SHA::7}"
-
-          if [ -z "$version_name" ]; then
-            echo "Unable to read versionName from app/build.gradle.kts" >&2
-            exit 1
-          fi
-
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk dist/school-debug.apk
           (cd dist && sha256sum school-debug.apk > school-debug.apk.sha256)
@@ -140,8 +171,69 @@ jobs:
           fi
 
           printf '%s  school-debug.apk\n' "$actual" > dist/school-debug.apk.cert-sha256
+
+          python - <<'PY'
+          from datetime import datetime, timezone
+          from pathlib import Path
+          import hashlib
+          import json
+          import os
+
+          notes = Path('.release-notes/current.md').read_text(encoding='utf-8')
+          sections = {'修改点': [], '修复点': []}
+          current = None
+          for raw in notes.splitlines():
+              line = raw.strip()
+              if line == '## 修改点':
+                  current = '修改点'
+              elif line == '## 修复点':
+                  current = '修复点'
+              elif line.startswith('## '):
+                  current = None
+              elif current and line.startswith('- '):
+                  sections[current].append(line[2:].strip())
+
+          apk = Path('dist/school-debug.apk')
+          sha256 = hashlib.sha256(apk.read_bytes()).hexdigest()
+          cert = Path('signing/school-development.cert.sha256').read_text().strip().replace(':', '').lower()
+          manifest = {
+              'schemaVersion': 1,
+              'channel': 'development',
+              'versionCode': int(os.environ['VERSION_CODE']),
+              'versionName': os.environ['VERSION_NAME'],
+              'minimumSupportedVersionCode': 0,
+              'mandatory': False,
+              'publishedAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+              'changes': sections['修改点'],
+              'fixes': sections['修复点'],
+              'apk': {
+                  'fileName': 'school-debug.apk',
+                  'downloadUrl': 'https://github.com/MajorTomMan/school/releases/download/dev-latest/school-debug.apk',
+                  'size': apk.stat().st_size,
+                  'sha256': sha256,
+                  'certificateSha256': cert,
+              },
+          }
+          Path('dist/update-manifest.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, separators=(',', ':')),
+              encoding='utf-8',
+          )
+          PY
+
+          private_key="$RUNNER_TEMP/school-update-private.pem"
+          if [ -n "${SCHOOL_UPDATE_PRIVATE_KEY_B64:-}" ]; then
+            printf '%s' "$SCHOOL_UPDATE_PRIVATE_KEY_B64" | base64 --decode > "$private_key"
+          else
+            base64 --decode signing/school-update-development-private.pem.b64 > "$private_key"
+          fi
+          chmod 600 "$private_key"
+          openssl dgst -sha256 -sign "$private_key" -out dist/update-manifest.sig dist/update-manifest.json
+          openssl dgst -sha256 -verify signing/school-update-development-public.pem \
+            -signature dist/update-manifest.sig dist/update-manifest.json
+
           echo "APK certificate SHA-256: $actual"
-          echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
 
       - name: Upload build diagnostics
@@ -168,6 +260,8 @@ jobs:
             dist/school-debug.apk
             dist/school-debug.apk.sha256
             dist/school-debug.apk.cert-sha256
+            dist/update-manifest.json
+            dist/update-manifest.sig
 
       - name: Publish rolling development release
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -195,23 +289,25 @@ jobs:
           git tag -f "$tag" "$GITHUB_SHA"
           git push origin "refs/tags/$tag" --force
 
+          assets=(
+            dist/school-debug.apk
+            dist/school-debug.apk.sha256
+            dist/school-debug.apk.cert-sha256
+            dist/update-manifest.json
+            dist/update-manifest.sig
+          )
+
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$title" \
               --notes-file release-notes.md \
               --prerelease
-            gh release upload "$tag" \
-              dist/school-debug.apk \
-              dist/school-debug.apk.sha256 \
-              dist/school-debug.apk.cert-sha256 \
+            gh release upload "$tag" "${assets[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
-            gh release create "$tag" \
-              dist/school-debug.apk \
-              dist/school-debug.apk.sha256 \
-              dist/school-debug.apk.cert-sha256 \
+            gh release create "$tag" "${assets[@]}" \
               --repo "$GITHUB_REPOSITORY" \
               --target "$GITHUB_SHA" \
               --title "$title" \
