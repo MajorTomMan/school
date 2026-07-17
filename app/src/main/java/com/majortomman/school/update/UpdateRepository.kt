@@ -46,11 +46,17 @@ internal class UpdateRepository(context: Context) {
     }
 
     fun restoreCachedState(): UpdateState {
-        val manifest = preferences.cachedManifest() ?: return UpdateState.Idle
-        if (manifest.versionCode <= BuildConfig.VERSION_CODE.toLong()) return UpdateState.Idle
-        val state = restoreDownloadedState(manifest) ?: UpdateState.Available(manifest)
-        UpdateRuntimeBus.publish(state)
-        return state
+        val manifest = preferences.cachedManifest() ?: return publishAndReturn(UpdateState.Idle)
+        if (manifest.versionCode <= BuildConfig.VERSION_CODE.toLong()) return publishAndReturn(UpdateState.Idle)
+
+        val ready = restoreDownloadedState(manifest)
+        if (ready != null) return publishAndReturn(ready)
+
+        val now = System.currentTimeMillis()
+        val suppressed = !isMandatory(manifest) && (
+            preferences.ignoredVersion() == manifest.versionCode || preferences.snoozeUntil() > now
+        )
+        return publishAndReturn(if (suppressed) UpdateState.Idle else UpdateState.Available(manifest))
     }
 
     fun settings(): UpdateSettings = preferences.settings()
@@ -74,6 +80,11 @@ internal class UpdateRepository(context: Context) {
 
     fun isMandatory(manifest: UpdateManifest): Boolean =
         manifest.mandatory || BuildConfig.VERSION_CODE.toLong() < manifest.minimumSupportedVersionCode
+
+    private fun publishAndReturn(state: UpdateState): UpdateState {
+        UpdateRuntimeBus.publish(state)
+        return state
+    }
 
     private fun restoreDownloadedState(manifest: UpdateManifest): UpdateState? {
         val path = preferences.downloadedApk(manifest.versionCode) ?: return null
