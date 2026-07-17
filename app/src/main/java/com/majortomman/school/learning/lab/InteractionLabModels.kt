@@ -73,6 +73,62 @@ data class WaterEquationBalance(
         get() = reactants == products && hydrogenCoefficient > 0 && oxygenCoefficient > 0 && waterCoefficient > 0
 }
 
+/**
+ * 在生成物限定为 H₂O 的前提下，根据左侧 H₂、O₂ 系数推导右侧系数。
+ *
+ * 对于 aH₂ + bO₂ → cH₂O：
+ * - 氢守恒要求 c = a；
+ * - 氧守恒要求 c = 2b；
+ * 因此只有 a = 2b 时，才能得到只含 H₂O 的合法右侧。
+ */
+data class WaterEquationDerivation(
+    val hydrogenCoefficient: Int,
+    val oxygenCoefficient: Int,
+) {
+    val reactants: AtomCounts
+        get() = AtomCounts(
+            hydrogen = hydrogenCoefficient * 2,
+            oxygen = oxygenCoefficient * 2,
+        )
+
+    val waterCoefficient: Int?
+        get() = hydrogenCoefficient.takeIf {
+            hydrogenCoefficient > 0 &&
+                oxygenCoefficient > 0 &&
+                hydrogenCoefficient == oxygenCoefficient * 2
+        }
+
+    val products: AtomCounts?
+        get() = waterCoefficient?.let { coefficient ->
+            AtomCounts(
+                hydrogen = coefficient * 2,
+                oxygen = coefficient,
+            )
+        }
+
+    val balance: WaterEquationBalance?
+        get() = waterCoefficient?.let { coefficient ->
+            WaterEquationBalance(
+                hydrogenCoefficient = hydrogenCoefficient,
+                oxygenCoefficient = oxygenCoefficient,
+                waterCoefficient = coefficient,
+            )
+        }
+
+    val isValid: Boolean
+        get() = waterCoefficient != null
+
+    val explanation: String
+        get() = when {
+            hydrogenCoefficient <= 0 || oxygenCoefficient <= 0 ->
+                "左侧必须同时包含正整数个 H₂ 和 O₂。"
+            isValid ->
+                "左侧 H₂ 与 O₂ 的系数比为 2:1，右侧可自动生成 ${waterCoefficient}H₂O。"
+            else ->
+                "右侧若只含 H₂O，H₂ 与 O₂ 的系数必须满足 2:1；当前应将 H₂ 系数设为 ${oxygenCoefficient * 2}。"
+        }
+}
+
 enum class CellPart(
     val label: String,
     val description: String,
