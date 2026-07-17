@@ -13,24 +13,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.School"
         android:usesCleartextTraffic="true">
-        <provider
-            android:name=".data.material.PrebuiltTextbookBootstrapProvider"
-            android:authorities="${applicationId}.prebuilt-textbooks"
-            android:exported="false"
-            android:initOrder="100" />
-
-        <provider
-            android:name=".data.material.PrebuiltCatalogBootstrapProvider"
-            android:authorities="${applicationId}.prebuilt-catalog"
-            android:exported="false"
-            android:initOrder="95" />
-
-        <provider
-            android:name=".data.curriculum.MasteryTrendBootstrapProvider"
-            android:authorities="${applicationId}.mastery-trends"
-            android:exported="false"
-            android:initOrder="90" />
-
+        <!--
+          Heavy textbook catalogue and mastery analytics initialization intentionally starts after
+          MainActivity installs its first Compose frame. Do not restore startup ContentProviders here.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
