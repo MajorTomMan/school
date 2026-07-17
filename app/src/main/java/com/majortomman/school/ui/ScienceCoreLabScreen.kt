@@ -23,16 +23,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.majortomman.school.learning.science.expression.BigRational
 import com.majortomman.school.learning.science.expression.ScienceExpressionEvaluator
 import com.majortomman.school.learning.science.expression.ScienceExpressionParser
 import com.majortomman.school.learning.science.expression.ScienceExpressionRenderer
 import com.majortomman.school.learning.science.expression.ScienceExpressionSimplifier
+import com.majortomman.school.learning.science.math.AlgebraSolver
+import com.majortomman.school.learning.science.math.EquationSolution
+import com.majortomman.school.learning.science.math.Vector2
 import com.majortomman.school.learning.science.quantity.QuantityParser
 import com.majortomman.school.learning.science.quantity.UnitCatalog
 
 private enum class ScienceCoreSection(val label: String) {
     EXPRESSION("精确表达式"),
     QUANTITY("单位与量纲"),
+    MATHEMATICS("数学深化"),
 }
 
 @Composable
@@ -77,6 +82,7 @@ internal fun ScienceCoreLabSample() {
     when (selected) {
         ScienceCoreSection.EXPRESSION -> ExactExpressionSample()
         ScienceCoreSection.QUANTITY -> QuantitySample()
+        ScienceCoreSection.MATHEMATICS -> MathematicsSample()
     }
 }
 
@@ -163,6 +169,76 @@ private fun QuantitySample() {
         fontSize = 13.sp,
         lineHeight = 20.sp,
     )
+}
+
+@Composable
+private fun MathematicsSample() {
+    var aText by rememberSaveable { mutableStateOf("1") }
+    var bText by rememberSaveable { mutableStateOf("-5") }
+    var cText by rememberSaveable { mutableStateOf("6") }
+    val result = runCatching {
+        AlgebraSolver.solveQuadratic(
+            a = BigRational.parse(aText),
+            b = BigRational.parse(bText),
+            c = BigRational.parse(cText),
+        )
+    }
+    val vector = Vector2(3.0, 4.0)
+    val axis = Vector2(1.0, 1.0)
+    val projection = vector.projectionOnto(axis)
+
+    Text("方程、判别式、向量与证明步骤", color = InteractiveYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(12.dp))
+    Text("输入 ax² + bx + c = 0 的系数", color = InteractiveMuted, fontSize = 12.sp)
+    Spacer(Modifier.height(10.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        CoefficientInput("a", aText) { aText = it.take(12) }
+        CoefficientInput("b", bText) { bText = it.take(12) }
+        CoefficientInput("c", cText) { cText = it.take(12) }
+    }
+    Spacer(Modifier.height(18.dp))
+    result.fold(
+        onSuccess = { solution ->
+            val roots = when (val value = solution.solution) {
+                EquationSolution.AllValues -> "所有实数"
+                EquationSolution.NoSolution -> "实数域无解"
+                is EquationSolution.Roots -> value.values.joinToString("，") { "x=${it.text}" }
+            }
+            CoreResultLine("精确根", roots)
+            solution.steps.forEach { step ->
+                CoreResultLine(step.title, step.expression)
+                Text(step.reason, color = InteractiveMuted, fontSize = 12.sp, lineHeight = 18.sp)
+            }
+        },
+        onFailure = { CoreError(it.message ?: "无法求解方程。") },
+    )
+    Spacer(Modifier.height(24.dp))
+    CoreResultLine("向量", "v=(3,4)")
+    CoreResultLine("投影方向", "u=(1,1)")
+    CoreResultLine("v 在 u 上的投影", "(%.2f, %.2f)".format(projection.x, projection.y))
+    Spacer(Modifier.height(12.dp))
+    Text(
+        "同一底层还提供多项式四则运算、一次不等式、函数定义域、直线与圆、三维向量和平面、证明步骤依赖检查。",
+        color = InteractiveMuted,
+        fontSize = 13.sp,
+        lineHeight = 20.sp,
+    )
+}
+
+@Composable
+private fun CoefficientInput(label: String, value: String, onValueChange: (String) -> Unit) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(label, color = InteractiveMuted, fontSize = 12.sp)
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = TextStyle(color = InteractiveWhite, fontSize = 20.sp),
+            cursorBrush = SolidColor(InteractiveYellow),
+            singleLine = true,
+        )
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
+    }
 }
 
 @Composable
