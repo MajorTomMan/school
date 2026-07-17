@@ -32,6 +32,7 @@ private enum class LabSample(val label: String, val subtitle: String) {
     ENGLISH("英语", "词形 · 语序 · 等价表达"),
     JAPANESE("日语", "读音 · 助词 · 活用"),
     SCIENCE_CORE("科学内核", "根号 · π · 单位 · 量纲"),
+    CHEMISTRY_CORE("化学内核", "化学式 · 离子 · 通用配平"),
 }
 
 @Composable
@@ -77,6 +78,7 @@ internal fun InteractionLabScreen() {
             LabSample.ENGLISH -> EnglishLanguageLabSample()
             LabSample.JAPANESE -> JapaneseLanguageLabSample()
             LabSample.SCIENCE_CORE -> ScienceCoreLabSample()
+            LabSample.CHEMISTRY_CORE -> ChemistryCoreLabSample()
         }
         Spacer(Modifier.height(48.dp))
     }
