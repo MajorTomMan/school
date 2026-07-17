@@ -90,6 +90,15 @@ android {
         buildConfigField("String", "FCM_API_KEY", firebaseApiKey.asBuildConfigString())
         buildConfigField("String", "FCM_SENDER_ID", firebaseSenderId.asBuildConfigString())
         buildConfigField("String", "FCM_UPDATE_TOPIC", firebaseUpdateTopic.asBuildConfigString())
+
+        if (updatePushEnabled) {
+            // FirebaseInitProvider reads these resources when Google Play services starts the process
+            // for a background data message. No google-services.json is stored in the repository.
+            resValue("string", "google_app_id", firebaseApplicationId)
+            resValue("string", "google_api_key", firebaseApiKey)
+            resValue("string", "gcm_defaultSenderId", firebaseSenderId)
+            resValue("string", "project_id", firebaseProjectId)
+        }
     }
 
     signingConfigs {
