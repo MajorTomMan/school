@@ -9,7 +9,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.majortomman.school.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -108,7 +107,7 @@ class UpdateDownloadWorker(
     private fun createForegroundInfo(progress: Int, versionName: String): ForegroundInfo {
         ensureNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, UPDATE_NOTIFICATION_CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("正在下载 School $versionName")
             .setContentText("已完成 $progress%")
             .setOnlyAlertOnce(true)
@@ -121,7 +120,7 @@ class UpdateDownloadWorker(
     private fun showReadyNotification(versionName: String) {
         ensureNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, UPDATE_NOTIFICATION_CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("School $versionName 已下载")
             .setContentText("打开应用完成安装")
             .setAutoCancel(true)
