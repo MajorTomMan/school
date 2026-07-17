@@ -1,6 +1,7 @@
 package com.majortomman.school.learning.capability
 
 enum class NumberDomain {
+    NOT_APPLICABLE,
     NATURAL,
     INTEGER,
     RATIONAL,
@@ -39,6 +40,17 @@ enum class ConceptId {
     MASS_CONSERVATION,
     CELL_STRUCTURE,
     BIOLOGICAL_PROCESS,
+    WORD_MEANING,
+    WORD_FORM,
+    SENTENCE_STRUCTURE,
+    SENTENCE_ORDER,
+    DIALOGUE_CONTEXT,
+    LISTENING_COMPREHENSION,
+    PRONUNCIATION,
+    JAPANESE_READING,
+    JAPANESE_PARTICLE,
+    JAPANESE_CONJUGATION,
+    SPEECH_REGISTER,
 }
 
 enum class OperationId {
@@ -51,6 +63,13 @@ enum class OperationId {
     COUNT_ATOMS,
     BALANCE_EQUATION,
     LABEL_DIAGRAM,
+    NORMALIZE_LANGUAGE_ANSWER,
+    VERIFY_WORD_FORM,
+    ORDER_SENTENCE,
+    VERIFY_PARTICLE,
+    VERIFY_CONJUGATION,
+    SWITCH_READING,
+    PLAY_AUDIO,
 }
 
 enum class WidgetType {
@@ -61,6 +80,10 @@ enum class WidgetType {
     COORDINATE_3D,
     CHEMICAL_EQUATION,
     BIOLOGY_DIAGRAM,
+    LANGUAGE_SENTENCE,
+    LANGUAGE_DIALOGUE,
+    JAPANESE_READING,
+    LISTENING,
 }
 
 data class LessonCapability(
