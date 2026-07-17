@@ -43,9 +43,13 @@ class MainActivity : ComponentActivity() {
     private val mathQuestionBankRepository by lazy {
         MathQuestionBankRepository(applicationContext, curriculumRepository)
     }
-    private val updateCoordinator by lazy {
+    private val updateCoordinatorDelegate = lazy {
         UpdateCoordinator.get(applicationContext)
     }
+    private val updateCoordinator: UpdateCoordinator
+        get() = updateCoordinatorDelegate.value
+
+    private var firstFrameReady = false
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { }
@@ -66,18 +70,20 @@ class MainActivity : ComponentActivity() {
                         mathQuestionRepository = mathQuestionBankRepository,
                         initialTextbookKey = initialTextbookKey,
                     )
-                    UpdateOverlayHost(updateCoordinator)
+                    UpdateOverlayHost { updateCoordinator }
                 }
             }
         }
 
         window.decorView.postOnAnimation {
+            firstFrameReady = true
             Log.i(
                 StartupInitializationCoordinator.LOG_TAG,
                 "launcher frame callback: activity=${SystemClock.elapsedRealtime() - activityStartedAt} ms, " +
                     "process=${SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime()} ms",
             )
             requestNotificationPermissionOnce()
+            updateCoordinator.onAppForeground()
         }
         StartupInitializationCoordinator.start(applicationContext) {
             materialPackRepository.refreshCurrent()
@@ -86,11 +92,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        updateCoordinator.onAppForeground()
+        if (firstFrameReady) updateCoordinator.onAppForeground()
     }
 
     override fun onStop() {
-        updateCoordinator.onAppBackground()
+        if (updateCoordinatorDelegate.isInitialized()) updateCoordinator.onAppBackground()
         super.onStop()
     }
 
