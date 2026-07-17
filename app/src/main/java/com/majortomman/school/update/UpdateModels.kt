@@ -45,8 +45,19 @@ internal object UpdateRuntimeBus {
     private val mutableState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state = mutableState.asStateFlow()
 
+    private val mutableDialogVisible = MutableStateFlow(false)
+    val dialogVisible = mutableDialogVisible.asStateFlow()
+
     fun publish(state: UpdateState) {
         mutableState.value = state
+    }
+
+    fun showDialog() {
+        mutableDialogVisible.value = true
+    }
+
+    fun hideDialog() {
+        mutableDialogVisible.value = false
     }
 }
 
