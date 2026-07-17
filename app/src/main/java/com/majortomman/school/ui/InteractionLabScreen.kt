@@ -3,7 +3,6 @@ package com.majortomman.school.ui
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
@@ -49,6 +47,10 @@ import com.majortomman.school.learning.lab.WaterEquationBalance
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+private const val COMPLEX_MIN = -5.0
+private const val COMPLEX_MAX = 5.0
+private const val MAX_CHEMICAL_COEFFICIENT = 4
+
 private enum class LabSample(val label: String, val subtitle: String) {
     COMPLEX("复平面", "z=a+bi"),
     SPACE("三维坐标", "P(x,y,z)"),
@@ -76,12 +78,12 @@ internal fun InteractionLabScreen() {
             fontSize = 15.sp,
             lineHeight = 23.sp,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(22.dp))
 
         LabSample.entries.chunked(2).forEach { rowItems ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 rowItems.forEach { item ->
                     LabChoice(item, item == selected, Modifier.weight(1f)) { selectedName = item.name }
@@ -89,7 +91,7 @@ internal fun InteractionLabScreen() {
                 if (rowItems.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(28.dp))
 
         when (selected) {
             LabSample.COMPLEX -> ComplexPlaneSample()
@@ -97,7 +99,7 @@ internal fun InteractionLabScreen() {
             LabSample.CHEMISTRY -> ChemicalBalanceSample()
             LabSample.BIOLOGY -> BiologyCellSample()
         }
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(48.dp))
     }
 }
 
@@ -105,14 +107,24 @@ internal fun InteractionLabScreen() {
 private fun LabChoice(item: LabSample, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
         modifier = modifier
-            .background(if (selected) InteractiveBlue.copy(alpha = 0.13f) else InteractivePanel, RoundedCornerShape(14.dp))
-            .border(1.dp, if (selected) InteractiveBlue else InteractiveLine, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(vertical = 12.dp),
     ) {
-        Text(item.label, color = if (selected) InteractiveBlue else InteractiveWhite, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(
+            item.label,
+            color = if (selected) InteractiveBlue else InteractiveWhite,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(3.dp))
         Text(item.subtitle, color = InteractiveMuted, fontSize = 12.sp)
+        Spacer(Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (selected) 2.dp else 1.dp)
+                .background(if (selected) InteractiveBlue else InteractiveLine),
+        )
     }
 }
 
@@ -125,20 +137,24 @@ private fun ComplexPlaneSample() {
     SectionTitle("复数与复平面", InteractivePurple)
     Spacer(Modifier.height(12.dp))
     Text(
-        "当前样板只使用实部、虚部和复平面。没有启用模、辐角或极形式。",
+        "当前样板只使用实部、虚部和复平面。输入范围限制为 -5～5，避免点超出坐标图。",
         color = InteractiveMuted,
         fontSize = 15.sp,
         lineHeight = 23.sp,
     )
-    Spacer(Modifier.height(16.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        LabNumberInput("实部 a", realText, Modifier.weight(1f)) { realText = filteredNumber(it) }
-        LabNumberInput("虚部 b", imaginaryText, Modifier.weight(1f)) { imaginaryText = filteredNumber(it) }
+    Spacer(Modifier.height(20.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+        LabNumberInput("实部 a", realText, "-5～5", Modifier.weight(1f)) {
+            realText = filteredBoundedNumber(it, COMPLEX_MIN, COMPLEX_MAX)
+        }
+        LabNumberInput("虚部 b", imaginaryText, "-5～5", Modifier.weight(1f)) {
+            imaginaryText = filteredBoundedNumber(it, COMPLEX_MIN, COMPLEX_MAX)
+        }
     }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(22.dp))
     ComplexPlaneCanvas(value)
-    Spacer(Modifier.height(14.dp))
-    LabResultCard(
+    Spacer(Modifier.height(20.dp))
+    LabResultBlock(
         title = "当前复数",
         main = "z = ${formatLabNumber(value.real)} ${signedImaginary(value.imaginary)}",
         detail = "复平面上的点为 (${formatLabNumber(value.real)}, ${formatLabNumber(value.imaginary)})。",
@@ -152,9 +168,7 @@ private fun ComplexPlaneCanvas(value: ComplexValue) {
         modifier = Modifier
             .fillMaxWidth()
             .height(310.dp)
-            .background(InteractivePanel, RoundedCornerShape(18.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(18.dp))
-            .padding(12.dp),
+            .background(InteractivePanel.copy(alpha = 0.26f)),
     ) {
         val range = 5f
         val left = 28.dp.toPx()
@@ -171,7 +185,7 @@ private fun ComplexPlaneCanvas(value: ComplexValue) {
         drawLine(InteractiveWhite.copy(alpha = 0.72f), Offset(left, sy(0.0)), Offset(right, sy(0.0)), 2.dp.toPx(), StrokeCap.Round)
         drawLine(InteractiveWhite.copy(alpha = 0.72f), Offset(sx(0.0), top), Offset(sx(0.0), bottom), 2.dp.toPx(), StrokeCap.Round)
 
-        val center = Offset(sx(value.real.coerceIn(-5.0, 5.0)), sy(value.imaginary.coerceIn(-5.0, 5.0)))
+        val center = Offset(sx(value.real), sy(value.imaginary))
         val origin = Offset(sx(0.0), sy(0.0))
         drawLine(InteractivePurple, origin, center, 4.dp.toPx(), StrokeCap.Round)
         drawLine(InteractiveYellow.copy(alpha = 0.48f), Offset(center.x, sy(0.0)), center, 2.dp.toPx())
@@ -208,20 +222,20 @@ private fun Coordinate3DSample() {
         fontSize = 15.sp,
         lineHeight = 23.sp,
     )
-    Spacer(Modifier.height(16.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LabNumberInput("x", xText, Modifier.weight(1f)) { xText = filteredNumber(it) }
-        LabNumberInput("y", yText, Modifier.weight(1f)) { yText = filteredNumber(it) }
-        LabNumberInput("z", zText, Modifier.weight(1f)) { zText = filteredNumber(it) }
+    Spacer(Modifier.height(20.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        LabNumberInput("x", xText, null, Modifier.weight(1f)) { xText = filteredNumber(it) }
+        LabNumberInput("y", yText, null, Modifier.weight(1f)) { yText = filteredNumber(it) }
+        LabNumberInput("z", zText, null, Modifier.weight(1f)) { zText = filteredNumber(it) }
     }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(22.dp))
     Coordinate3DCanvas(point, yaw.toDouble(), pitch.toDouble())
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(20.dp))
     LabSlider("水平视角", yaw, -70f..70f) { yaw = it }
-    Spacer(Modifier.height(10.dp))
-    LabSlider("俯仰视角", pitch, 5f..65f) { pitch = it }
     Spacer(Modifier.height(14.dp))
-    LabResultCard(
+    LabSlider("俯仰视角", pitch, 5f..65f) { pitch = it }
+    Spacer(Modifier.height(20.dp))
+    LabResultBlock(
         title = "当前空间点",
         main = "P(${formatLabNumber(point.x)}, ${formatLabNumber(point.y)}, ${formatLabNumber(point.z)})",
         detail = "在 xy 平面上的投影为 (${formatLabNumber(point.x)}, ${formatLabNumber(point.y)}, 0)。",
@@ -235,9 +249,7 @@ private fun Coordinate3DCanvas(point: Point3D, yaw: Double, pitch: Double) {
         modifier = Modifier
             .fillMaxWidth()
             .height(330.dp)
-            .background(InteractivePanel, RoundedCornerShape(18.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(18.dp))
-            .padding(12.dp),
+            .background(InteractivePanel.copy(alpha = 0.26f)),
     ) {
         val center = Offset(size.width * 0.50f, size.height * 0.58f)
         val scale = minOf(size.width, size.height) / 10f
@@ -292,22 +304,28 @@ private fun ChemicalBalanceSample() {
     SectionTitle("化学方程式配平", InteractiveGreen)
     Spacer(Modifier.height(12.dp))
     Text(
-        "这个样板只比较反应前后氢、氧原子的数目，不使用化合价、物质的量或氧化还原概念。",
+        "通过分子中的原子重新组合观察守恒。系数限制为 0～4，避免分子超出绘图区。",
         color = InteractiveMuted,
         fontSize = 15.sp,
         lineHeight = 23.sp,
     )
-    Spacer(Modifier.height(16.dp))
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LabNumberInput("H₂ 系数", h2Text, Modifier.weight(1f)) { h2Text = filteredCoefficient(it) }
-        LabNumberInput("O₂ 系数", o2Text, Modifier.weight(1f)) { o2Text = filteredCoefficient(it) }
-        LabNumberInput("H₂O 系数", h2oText, Modifier.weight(1f)) { h2oText = filteredCoefficient(it) }
+    Spacer(Modifier.height(20.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        LabNumberInput("H₂ 系数", h2Text, "0～4", Modifier.weight(1f)) {
+            h2Text = filteredCoefficient(it, MAX_CHEMICAL_COEFFICIENT)
+        }
+        LabNumberInput("O₂ 系数", o2Text, "0～4", Modifier.weight(1f)) {
+            o2Text = filteredCoefficient(it, MAX_CHEMICAL_COEFFICIENT)
+        }
+        LabNumberInput("H₂O 系数", h2oText, "0～4", Modifier.weight(1f)) {
+            h2oText = filteredCoefficient(it, MAX_CHEMICAL_COEFFICIENT)
+        }
     }
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(22.dp))
     ChemicalEquationCanvas(balance)
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(20.dp))
     val statusColor = if (balance.isBalanced) InteractiveGreen else InteractiveRed
-    LabResultCard(
+    LabResultBlock(
         title = if (balance.isBalanced) "原子数相等" else "还没有配平",
         main = "${balance.hydrogenCoefficient}H₂ + ${balance.oxygenCoefficient}O₂ → ${balance.waterCoefficient}H₂O",
         detail = "反应物 H=${balance.reactants.hydrogen}、O=${balance.reactants.oxygen}；生成物 H=${balance.products.hydrogen}、O=${balance.products.oxygen}。",
@@ -320,64 +338,123 @@ private fun ChemicalEquationCanvas(balance: WaterEquationBalance) {
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
-            .background(InteractivePanel, RoundedCornerShape(18.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(18.dp))
-            .padding(12.dp),
+            .height(330.dp)
+            .background(InteractivePanel.copy(alpha = 0.26f)),
     ) {
         val mid = size.width / 2f
-        val top = 52.dp.toPx()
-        val rowGap = 34.dp.toPx()
-        val maxAtoms = maxOf(1, balance.reactants.hydrogen, balance.reactants.oxygen, balance.products.hydrogen, balance.products.oxygen)
-        fun barWidth(value: Int): Float = (size.width * 0.34f) * value / maxAtoms
-        fun drawAtomBar(label: String, value: Int, y: Float, leftSide: Boolean, color: Color) {
-            val width = barWidth(value)
-            val x = if (leftSide) mid - 22.dp.toPx() - width else mid + 22.dp.toPx()
-            drawRoundRect(
-                color = color.copy(alpha = 0.78f),
-                topLeft = Offset(x, y),
-                size = Size(width, 18.dp.toPx()),
-                cornerRadius = CornerRadius(9.dp.toPx()),
+        val sidePadding = 18.dp.toPx()
+        val halfWidth = mid - sidePadding * 2f
+        val leftStart = sidePadding
+        val rightStart = mid + sidePadding
+
+        val headingPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 14.sp.toPx()
+            color = InteractiveMuted.toArgb()
+            textAlign = Paint.Align.CENTER
+        }
+        drawContext.canvas.nativeCanvas.drawText("反应物", leftStart + halfWidth / 2f, 28.dp.toPx(), headingPaint)
+        drawContext.canvas.nativeCanvas.drawText("生成物", rightStart + halfWidth / 2f, 28.dp.toPx(), headingPaint)
+
+        val formulaPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 13.sp.toPx()
+            color = InteractiveWhite.toArgb()
+        }
+        drawContext.canvas.nativeCanvas.drawText("H₂ × ${balance.hydrogenCoefficient}", leftStart, 58.dp.toPx(), formulaPaint)
+        drawContext.canvas.nativeCanvas.drawText("O₂ × ${balance.oxygenCoefficient}", leftStart, 178.dp.toPx(), formulaPaint)
+        drawContext.canvas.nativeCanvas.drawText("H₂O × ${balance.waterCoefficient}", rightStart, 58.dp.toPx(), formulaPaint)
+
+        fun gridPoint(index: Int, startX: Float, startY: Float, areaWidth: Float, rowGap: Float): Offset {
+            val column = index % 2
+            val row = index / 2
+            return Offset(
+                x = startX + areaWidth * if (column == 0) 0.28f else 0.72f,
+                y = startY + row * rowGap,
             )
-            val paint = Paint().apply {
-                isAntiAlias = true
-                textSize = 13.sp.toPx()
-                this.color = InteractiveWhite.toArgb()
-                textAlign = if (leftSide) Paint.Align.RIGHT else Paint.Align.LEFT
-            }
-            val textX = if (leftSide) x - 7.dp.toPx() else x + width + 7.dp.toPx()
-            drawContext.canvas.nativeCanvas.drawText("$label=$value", textX, y + 14.dp.toPx(), paint)
         }
-        drawAtomBar("H", balance.reactants.hydrogen, top, true, InteractiveBlue)
-        drawAtomBar("H", balance.products.hydrogen, top, false, InteractiveBlue)
-        drawAtomBar("O", balance.reactants.oxygen, top + rowGap, true, InteractiveRed)
-        drawAtomBar("O", balance.products.oxygen, top + rowGap, false, InteractiveRed)
 
-        val paint = Paint().apply { isAntiAlias = true; textSize = 13.sp.toPx(); color = InteractiveMuted.toArgb(); textAlign = Paint.Align.CENTER }
-        drawContext.canvas.nativeCanvas.drawText("反应物", mid - size.width * 0.24f, 24.dp.toPx(), paint)
-        drawContext.canvas.nativeCanvas.drawText("生成物", mid + size.width * 0.24f, 24.dp.toPx(), paint)
-        paint.textSize = 24.sp.toPx(); paint.color = (if (balance.isBalanced) InteractiveGreen else InteractiveYellow).toArgb()
-        drawContext.canvas.nativeCanvas.drawText("→", mid, top + 28.dp.toPx(), paint)
+        repeat(balance.hydrogenCoefficient) { index ->
+            drawDiatomicMolecule(
+                center = gridPoint(index, leftStart, 92.dp.toPx(), halfWidth, 42.dp.toPx()),
+                atomColor = InteractiveBlue,
+                label = "H",
+            )
+        }
+        repeat(balance.oxygenCoefficient) { index ->
+            drawDiatomicMolecule(
+                center = gridPoint(index, leftStart, 212.dp.toPx(), halfWidth, 42.dp.toPx()),
+                atomColor = InteractiveRed,
+                label = "O",
+            )
+        }
+        repeat(balance.waterCoefficient) { index ->
+            drawWaterMolecule(
+                center = gridPoint(index, rightStart, 108.dp.toPx(), halfWidth, 72.dp.toPx()),
+            )
+        }
 
-        val moleculeY = size.height - 54.dp.toPx()
-        repeat(balance.hydrogenCoefficient.coerceIn(0, 5)) { index ->
-            drawDiatomicMolecule(Offset(28.dp.toPx() + index * 31.dp.toPx(), moleculeY), InteractiveBlue)
+        val arrowPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 30.sp.toPx()
+            color = (if (balance.isBalanced) InteractiveGreen else InteractiveYellow).toArgb()
+            textAlign = Paint.Align.CENTER
         }
-        repeat(balance.oxygenCoefficient.coerceIn(0, 4)) { index ->
-            drawDiatomicMolecule(Offset(size.width * 0.35f + index * 31.dp.toPx(), moleculeY), InteractiveRed)
+        drawContext.canvas.nativeCanvas.drawText("→", mid, 154.dp.toPx(), arrowPaint)
+
+        val countPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 13.sp.toPx()
+            color = InteractiveMuted.toArgb()
+            textAlign = Paint.Align.CENTER
         }
-        repeat(balance.waterCoefficient.coerceIn(0, 5)) { index ->
-            val x = mid + 34.dp.toPx() + index * 38.dp.toPx()
-            drawCircle(InteractiveRed, 8.dp.toPx(), Offset(x, moleculeY))
-            drawCircle(InteractiveBlue, 6.dp.toPx(), Offset(x - 9.dp.toPx(), moleculeY + 9.dp.toPx()))
-            drawCircle(InteractiveBlue, 6.dp.toPx(), Offset(x + 9.dp.toPx(), moleculeY + 9.dp.toPx()))
-        }
+        drawContext.canvas.nativeCanvas.drawText(
+            "H ${balance.reactants.hydrogen}  ·  O ${balance.reactants.oxygen}",
+            leftStart + halfWidth / 2f,
+            size.height - 18.dp.toPx(),
+            countPaint,
+        )
+        drawContext.canvas.nativeCanvas.drawText(
+            "H ${balance.products.hydrogen}  ·  O ${balance.products.oxygen}",
+            rightStart + halfWidth / 2f,
+            size.height - 18.dp.toPx(),
+            countPaint,
+        )
     }
 }
 
-private fun DrawScope.drawDiatomicMolecule(center: Offset, color: Color) {
-    drawCircle(color, 7.dp.toPx(), Offset(center.x - 6.dp.toPx(), center.y))
-    drawCircle(color, 7.dp.toPx(), Offset(center.x + 6.dp.toPx(), center.y))
+private fun DrawScope.drawDiatomicMolecule(center: Offset, atomColor: Color, label: String) {
+    val radius = 11.dp.toPx()
+    val left = Offset(center.x - 10.dp.toPx(), center.y)
+    val right = Offset(center.x + 10.dp.toPx(), center.y)
+    drawLine(InteractiveWhite.copy(alpha = 0.55f), left, right, 3.dp.toPx(), StrokeCap.Round)
+    drawAtom(left, radius, atomColor, label)
+    drawAtom(right, radius, atomColor, label)
+}
+
+private fun DrawScope.drawWaterMolecule(center: Offset) {
+    val oxygen = Offset(center.x, center.y - 5.dp.toPx())
+    val leftHydrogen = Offset(center.x - 14.dp.toPx(), center.y + 13.dp.toPx())
+    val rightHydrogen = Offset(center.x + 14.dp.toPx(), center.y + 13.dp.toPx())
+    drawLine(InteractiveWhite.copy(alpha = 0.55f), oxygen, leftHydrogen, 3.dp.toPx(), StrokeCap.Round)
+    drawLine(InteractiveWhite.copy(alpha = 0.55f), oxygen, rightHydrogen, 3.dp.toPx(), StrokeCap.Round)
+    drawAtom(oxygen, 12.dp.toPx(), InteractiveRed, "O")
+    drawAtom(leftHydrogen, 9.dp.toPx(), InteractiveBlue, "H")
+    drawAtom(rightHydrogen, 9.dp.toPx(), InteractiveBlue, "H")
+}
+
+private fun DrawScope.drawAtom(center: Offset, radius: Float, color: Color, label: String) {
+    drawCircle(color.copy(alpha = 0.95f), radius, center)
+    drawCircle(InteractiveWhite.copy(alpha = 0.34f), radius, center, style = Stroke(1.dp.toPx()))
+    val paint = Paint().apply {
+        isAntiAlias = true
+        textSize = 9.sp.toPx()
+        this.color = InteractiveBlack.toArgb()
+        textAlign = Paint.Align.CENTER
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
+    val baseline = center.y - (paint.ascent() + paint.descent()) / 2f
+    drawContext.canvas.nativeCanvas.drawText(label, center.x, baseline, paint)
 }
 
 @Composable
@@ -388,79 +465,195 @@ private fun BiologyCellSample() {
     SectionTitle("植物细胞结构标注", InteractiveYellow)
     Spacer(Modifier.height(12.dp))
     Text(
-        "教学示意图，非真实比例；颜色只用于区分结构。点击下方名称查看对应结构说明。",
+        "不再使用含义不明的定位点。选中结构后，整个结构会高亮，并用引线标出名称。",
         color = InteractiveMuted,
         fontSize = 15.sp,
         lineHeight = 23.sp,
     )
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(10.dp))
+    Text(
+        "从外到内：细胞壁 → 细胞膜 → 细胞质；细胞核、液泡和叶绿体位于细胞内部。",
+        color = InteractiveWhite.copy(alpha = 0.72f),
+        fontSize = 13.sp,
+        lineHeight = 20.sp,
+    )
+    Spacer(Modifier.height(20.dp))
 
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(330.dp)
-            .background(InteractivePanel, RoundedCornerShape(18.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(18.dp))
-            .padding(12.dp),
-    ) {
-        val outerLeft = size.width * 0.12f
-        val outerTop = size.height * 0.12f
-        val outerSize = Size(size.width * 0.76f, size.height * 0.74f)
-        drawRoundRect(
-            color = InteractiveGreen.copy(alpha = 0.34f),
-            topLeft = Offset(outerLeft, outerTop),
-            size = outerSize,
-            cornerRadius = CornerRadius(28.dp.toPx()),
-            style = Stroke(8.dp.toPx()),
-        )
-        drawRoundRect(
-            color = InteractiveBlue.copy(alpha = 0.18f),
-            topLeft = Offset(outerLeft + 8.dp.toPx(), outerTop + 8.dp.toPx()),
-            size = Size(outerSize.width - 16.dp.toPx(), outerSize.height - 16.dp.toPx()),
-            cornerRadius = CornerRadius(23.dp.toPx()),
-        )
-        drawOval(InteractivePurple.copy(alpha = 0.26f), Offset(size.width * 0.34f, size.height * 0.30f), Size(size.width * 0.44f, size.height * 0.39f))
-        drawCircle(InteractiveYellow.copy(alpha = 0.82f), size.width * 0.09f, Offset(size.width * 0.47f, size.height * 0.43f))
-        repeat(5) { index ->
-            val x = size.width * (0.28f + index * 0.11f)
-            val y = size.height * if (index % 2 == 0) 0.67f else 0.74f
-            drawOval(InteractiveGreen, Offset(x, y), Size(26.dp.toPx(), 12.dp.toPx()))
-        }
-
-        CellPart.entries.forEach { part ->
-            val center = Offset(part.normalizedX * size.width, part.normalizedY * size.height)
-            val isSelected = part == selected
-            drawCircle(if (isSelected) InteractiveRed else InteractiveWhite, if (isSelected) 8.dp.toPx() else 5.dp.toPx(), center)
-            if (isSelected) drawCircle(InteractiveRed.copy(alpha = 0.42f), 15.dp.toPx(), center, style = Stroke(2.dp.toPx()))
-        }
-
-        val paint = Paint().apply { isAntiAlias = true; textSize = 12.sp.toPx(); color = InteractiveMuted.toArgb() }
-        drawContext.canvas.nativeCanvas.drawText("教学示意图 · 非真实比例", 14.dp.toPx(), 20.dp.toPx(), paint)
-    }
-    Spacer(Modifier.height(14.dp))
+    PlantCellCanvas(selected)
+    Spacer(Modifier.height(20.dp))
 
     CellPart.entries.chunked(2).forEach { parts ->
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             parts.forEach { part ->
                 LabTextChoice(part.label, part == selected, Modifier.weight(1f)) { selectedName = part.name }
             }
             if (parts.size == 1) Spacer(Modifier.weight(1f))
         }
     }
-    Spacer(Modifier.height(6.dp))
-    LabResultCard(selected.label, selected.description, "当前只展示教材常见结构名称，不展开更细的细胞器机制。", InteractiveYellow)
+    Spacer(Modifier.height(18.dp))
+    LabResultBlock(
+        title = selected.label,
+        main = selected.description,
+        detail = "教学示意图，非真实比例；颜色只用于区分结构。",
+        color = InteractiveYellow,
+    )
 }
 
 @Composable
-private fun LabNumberInput(label: String, value: String, modifier: Modifier = Modifier, onValueChange: (String) -> Unit) {
-    Column(
-        modifier = modifier
-            .background(InteractivePanel, RoundedCornerShape(13.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(13.dp))
-            .padding(13.dp),
+private fun PlantCellCanvas(selected: CellPart) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(390.dp)
+            .background(InteractivePanel.copy(alpha = 0.26f)),
     ) {
-        Text(label, color = InteractiveMuted, fontSize = 12.sp)
-        Spacer(Modifier.height(7.dp))
+        val cellLeft = size.width * 0.13f
+        val cellTop = size.height * 0.16f
+        val cellSize = Size(size.width * 0.72f, size.height * 0.70f)
+        val wallRadius = 28.dp.toPx()
+        val membraneInset = 12.dp.toPx()
+        val membraneLeft = cellLeft + membraneInset
+        val membraneTop = cellTop + membraneInset
+        val membraneSize = Size(cellSize.width - membraneInset * 2f, cellSize.height - membraneInset * 2f)
+
+        drawRoundRect(
+            color = InteractiveBlue.copy(alpha = 0.15f),
+            topLeft = Offset(membraneLeft, membraneTop),
+            size = membraneSize,
+            cornerRadius = CornerRadius(20.dp.toPx()),
+        )
+        drawRoundRect(
+            color = InteractiveGreen.copy(alpha = 0.56f),
+            topLeft = Offset(cellLeft, cellTop),
+            size = cellSize,
+            cornerRadius = CornerRadius(wallRadius),
+            style = Stroke(10.dp.toPx()),
+        )
+        drawRoundRect(
+            color = InteractiveWhite.copy(alpha = 0.72f),
+            topLeft = Offset(membraneLeft, membraneTop),
+            size = membraneSize,
+            cornerRadius = CornerRadius(20.dp.toPx()),
+            style = Stroke(2.dp.toPx()),
+        )
+
+        val vacuoleTopLeft = Offset(size.width * 0.42f, size.height * 0.30f)
+        val vacuoleSize = Size(size.width * 0.31f, size.height * 0.35f)
+        drawRoundRect(
+            color = InteractivePurple.copy(alpha = 0.24f),
+            topLeft = vacuoleTopLeft,
+            size = vacuoleSize,
+            cornerRadius = CornerRadius(34.dp.toPx()),
+        )
+        drawRoundRect(
+            color = InteractivePurple.copy(alpha = 0.55f),
+            topLeft = vacuoleTopLeft,
+            size = vacuoleSize,
+            cornerRadius = CornerRadius(34.dp.toPx()),
+            style = Stroke(2.dp.toPx()),
+        )
+
+        val nucleusCenter = Offset(size.width * 0.34f, size.height * 0.42f)
+        val nucleusRadius = size.width * 0.085f
+        drawCircle(InteractiveYellow.copy(alpha = 0.82f), nucleusRadius, nucleusCenter)
+        drawCircle(InteractiveRed.copy(alpha = 0.72f), nucleusRadius * 0.34f, nucleusCenter)
+        drawCircle(InteractiveWhite.copy(alpha = 0.42f), nucleusRadius, nucleusCenter, style = Stroke(2.dp.toPx()))
+
+        val chloroplasts = listOf(
+            Offset(size.width * 0.31f, size.height * 0.69f),
+            Offset(size.width * 0.45f, size.height * 0.74f),
+            Offset(size.width * 0.59f, size.height * 0.70f),
+            Offset(size.width * 0.70f, size.height * 0.75f),
+        )
+        chloroplasts.forEach { center ->
+            val topLeft = Offset(center.x - 15.dp.toPx(), center.y - 7.dp.toPx())
+            val chloroplastSize = Size(30.dp.toPx(), 14.dp.toPx())
+            drawOval(InteractiveGreen, topLeft, chloroplastSize)
+            drawLine(
+                InteractiveBlack.copy(alpha = 0.48f),
+                Offset(center.x - 8.dp.toPx(), center.y),
+                Offset(center.x + 8.dp.toPx(), center.y),
+                1.dp.toPx(),
+            )
+        }
+
+        when (selected) {
+            CellPart.CELL_WALL -> drawRoundRect(
+                InteractiveYellow,
+                Offset(cellLeft, cellTop),
+                cellSize,
+                CornerRadius(wallRadius),
+                style = Stroke(4.dp.toPx()),
+            )
+            CellPart.CELL_MEMBRANE -> drawRoundRect(
+                InteractiveYellow,
+                Offset(membraneLeft, membraneTop),
+                membraneSize,
+                CornerRadius(20.dp.toPx()),
+                style = Stroke(4.dp.toPx()),
+            )
+            CellPart.CYTOPLASM -> drawRoundRect(
+                InteractiveYellow.copy(alpha = 0.16f),
+                Offset(membraneLeft + 3.dp.toPx(), membraneTop + 3.dp.toPx()),
+                Size(membraneSize.width - 6.dp.toPx(), membraneSize.height - 6.dp.toPx()),
+                CornerRadius(18.dp.toPx()),
+            )
+            CellPart.NUCLEUS -> drawCircle(InteractiveYellow, nucleusRadius + 5.dp.toPx(), nucleusCenter, style = Stroke(4.dp.toPx()))
+            CellPart.VACUOLE -> drawRoundRect(
+                InteractiveYellow,
+                vacuoleTopLeft,
+                vacuoleSize,
+                CornerRadius(34.dp.toPx()),
+                style = Stroke(4.dp.toPx()),
+            )
+            CellPart.CHLOROPLAST -> chloroplasts.forEach { center ->
+                drawOval(
+                    InteractiveYellow,
+                    Offset(center.x - 18.dp.toPx(), center.y - 10.dp.toPx()),
+                    Size(36.dp.toPx(), 20.dp.toPx()),
+                    style = Stroke(3.dp.toPx()),
+                )
+            }
+        }
+
+        val anchor = Offset(selected.normalizedX * size.width, selected.normalizedY * size.height)
+        val labelEnd = Offset(size.width * 0.78f, 54.dp.toPx())
+        val elbow = Offset(labelEnd.x - 38.dp.toPx(), labelEnd.y)
+        drawLine(InteractiveYellow, anchor, elbow, 2.dp.toPx(), StrokeCap.Round)
+        drawLine(InteractiveYellow, elbow, labelEnd, 2.dp.toPx(), StrokeCap.Round)
+
+        val labelPaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 14.sp.toPx()
+            color = InteractiveYellow.toArgb()
+            textAlign = Paint.Align.RIGHT
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        drawContext.canvas.nativeCanvas.drawText(selected.label, labelEnd.x, labelEnd.y - 7.dp.toPx(), labelPaint)
+
+        val notePaint = Paint().apply {
+            isAntiAlias = true
+            textSize = 11.sp.toPx()
+            color = InteractiveMuted.toArgb()
+        }
+        drawContext.canvas.nativeCanvas.drawText("教学示意图 · 非真实比例", 12.dp.toPx(), 22.dp.toPx(), notePaint)
+    }
+}
+
+@Composable
+private fun LabNumberInput(
+    label: String,
+    value: String,
+    rangeHint: String?,
+    modifier: Modifier = Modifier,
+    onValueChange: (String) -> Unit,
+) {
+    Column(modifier = modifier.padding(vertical = 4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = InteractiveMuted, fontSize = 12.sp)
+            if (rangeHint != null) Text(rangeHint, color = InteractiveMuted.copy(alpha = 0.72f), fontSize = 11.sp)
+        }
+        Spacer(Modifier.height(8.dp))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -469,54 +662,64 @@ private fun LabNumberInput(label: String, value: String, modifier: Modifier = Mo
             cursorBrush = SolidColor(InteractiveBlue),
             singleLine = true,
         )
+        Spacer(Modifier.height(10.dp))
+        FlatDivider()
     }
 }
 
 @Composable
 private fun LabSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(InteractivePanel, RoundedCornerShape(13.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(13.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, color = InteractiveMuted, fontSize = 13.sp)
             Text("${value.roundToInt()}°", color = InteractiveBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Slider(value = value, onValueChange = onValueChange, valueRange = range)
+        FlatDivider()
     }
 }
 
 @Composable
 private fun LabTextChoice(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
+    Column(
         modifier = modifier
-            .height(44.dp)
-            .background(if (selected) InteractiveYellow.copy(alpha = 0.12f) else InteractivePanel, RoundedCornerShape(11.dp))
-            .border(1.dp, if (selected) InteractiveYellow else InteractiveLine, RoundedCornerShape(11.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+            .clickable(onClick = onClick)
+            .padding(vertical = 13.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, color = if (selected) InteractiveYellow else InteractiveMuted, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        Text(
+            label,
+            color = if (selected) InteractiveYellow else InteractiveMuted,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+        Spacer(Modifier.height(9.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (selected) 2.dp else 1.dp)
+                .background(if (selected) InteractiveYellow else InteractiveLine),
+        )
     }
 }
 
 @Composable
-private fun LabResultCard(title: String, main: String, detail: String, color: Color) {
+private fun LabResultBlock(title: String, main: String, detail: String, color: Color) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(color.copy(alpha = 0.08f), RoundedCornerShape(15.dp))
-            .border(1.dp, color.copy(alpha = 0.48f), RoundedCornerShape(15.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp),
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(color.copy(alpha = 0.48f)))
+        Spacer(Modifier.height(6.dp))
         Text(title, color = color, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        Text(main, color = InteractiveWhite, fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Medium)
+        Text(main, color = InteractiveWhite, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.Medium)
         Text(detail, color = InteractiveMuted, fontSize = 14.sp, lineHeight = 21.sp)
     }
+}
+
+@Composable
+private fun FlatDivider() {
+    Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
 }
 
 private fun filteredNumber(input: String): String {
@@ -525,7 +728,23 @@ private fun filteredNumber(input: String): String {
     return if (normalized.matches(Regex("-?\\d*(\\.\\d*)?"))) normalized else normalized.dropLast(1)
 }
 
-private fun filteredCoefficient(input: String): String = input.filter(Char::isDigit).take(1)
+private fun filteredBoundedNumber(input: String, min: Double, max: Double): String {
+    val normalized = input.replace('−', '-').take(7)
+    if (!normalized.matches(Regex("-?\\d*(\\.\\d*)?"))) return normalized.dropLast(1)
+    if (normalized.isEmpty() || normalized == "-" || normalized == "." || normalized == "-.") return normalized
+    val parsed = normalized.toDoubleOrNull() ?: return normalized
+    return when {
+        parsed < min -> formatLabNumber(min)
+        parsed > max -> formatLabNumber(max)
+        else -> normalized
+    }
+}
+
+private fun filteredCoefficient(input: String, max: Int): String {
+    val digits = input.filter(Char::isDigit)
+    if (digits.isEmpty()) return ""
+    return (digits.toIntOrNull() ?: 0).coerceIn(0, max).toString()
+}
 
 private fun signedImaginary(value: Double): String = when {
     value > 0 -> "+ ${formatLabNumber(value)}i"
