@@ -24,16 +24,16 @@ class UpdateCoordinator(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val state = UpdateRuntimeBus.state
+    val dialogVisible = UpdateRuntimeBus.dialogVisible
 
     private val mutableSettings = MutableStateFlow(repository.settings())
     val settings = mutableSettings.asStateFlow()
 
-    private val mutableDialogVisible = MutableStateFlow(false)
-    val dialogVisible = mutableDialogVisible.asStateFlow()
-
     init {
         repository.restoreCachedState().also { restored ->
-            mutableDialogVisible.value = restored is UpdateState.Available || restored is UpdateState.Ready
+            if (restored is UpdateState.Available || restored is UpdateState.Ready) {
+                UpdateRuntimeBus.showDialog()
+            }
         }
         schedulePeriodicCheck()
     }
@@ -41,7 +41,7 @@ class UpdateCoordinator(context: Context) {
     fun onAppForeground() {
         val restored = repository.restoreCachedState()
         if (restored is UpdateState.Available || restored is UpdateState.Ready) {
-            mutableDialogVisible.value = true
+            UpdateRuntimeBus.showDialog()
         }
         if (repository.shouldCheckOnForeground()) checkNow(force = false)
     }
@@ -50,14 +50,16 @@ class UpdateCoordinator(context: Context) {
         scope.launch {
             val result = repository.check(force)
             mutableSettings.value = repository.settings()
-            mutableDialogVisible.value = when (result) {
+            val shouldShow = when (result) {
                 is UpdateState.Available,
                 is UpdateState.Ready,
+                -> true
                 is UpdateState.Error,
                 is UpdateState.UpToDate,
-                -> force || result !is UpdateState.UpToDate
+                -> force
                 else -> false
             }
+            if (shouldShow) UpdateRuntimeBus.showDialog() else UpdateRuntimeBus.hideDialog()
         }
     }
 
@@ -67,35 +69,35 @@ class UpdateCoordinator(context: Context) {
             .setConstraints(Constraints.Builder().setRequiredNetworkType(networkType).build())
             .build()
         UpdateRuntimeBus.publish(UpdateState.Downloading(manifest, 0, 0L))
-        mutableDialogVisible.value = true
+        UpdateRuntimeBus.showDialog()
         workManager.enqueueUniqueWork(UPDATE_DOWNLOAD_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
     fun cancelDownload() {
         workManager.cancelUniqueWork(UPDATE_DOWNLOAD_WORK_NAME)
         repository.restoreCachedState()
-        mutableDialogVisible.value = false
+        UpdateRuntimeBus.hideDialog()
     }
 
     fun remindLater(manifest: UpdateManifest) {
         repository.snooze(manifest)
-        mutableDialogVisible.value = false
+        UpdateRuntimeBus.hideDialog()
     }
 
     fun ignoreVersion(manifest: UpdateManifest) {
         repository.ignore(manifest)
-        mutableDialogVisible.value = false
+        UpdateRuntimeBus.hideDialog()
     }
 
     fun dismissStatus() {
-        mutableDialogVisible.value = false
+        UpdateRuntimeBus.hideDialog()
         if (state.value is UpdateState.UpToDate || state.value is UpdateState.Error) {
             UpdateRuntimeBus.publish(UpdateState.Idle)
         }
     }
 
     fun showDialog() {
-        mutableDialogVisible.value = true
+        UpdateRuntimeBus.showDialog()
     }
 
     fun setAutoCheck(enabled: Boolean) {
