@@ -10,12 +10,14 @@ import com.majortomman.school.learning.lab.ComplexValue
 import com.majortomman.school.learning.lab.OrthographicProjector
 import com.majortomman.school.learning.lab.Point3D
 import com.majortomman.school.learning.lab.WaterEquationBalance
+import com.majortomman.school.learning.lab.WaterEquationDerivation
 import com.majortomman.school.learning.relation.RelationDefinition
 import com.majortomman.school.learning.relation.RelationSolveResult
 import com.majortomman.school.learning.relation.SolveRule
 import com.majortomman.school.learning.relation.VariableDefinition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -76,6 +78,33 @@ class LearningEngineFoundationTest {
     fun waterEquationDetectsBalancedAndUnbalancedCoefficients() {
         assertTrue(WaterEquationBalance(2, 1, 2).isBalanced)
         assertFalse(WaterEquationBalance(1, 1, 1).isBalanced)
+    }
+
+    @Test
+    fun waterEquationDerivesProductFromValidReactants() {
+        val derivation = WaterEquationDerivation(
+            hydrogenCoefficient = 4,
+            oxygenCoefficient = 2,
+        )
+
+        assertTrue(derivation.isValid)
+        assertEquals(4, derivation.waterCoefficient)
+        assertEquals(8, derivation.products?.hydrogen)
+        assertEquals(4, derivation.products?.oxygen)
+        assertTrue(derivation.balance?.isBalanced == true)
+    }
+
+    @Test
+    fun waterEquationRejectsReactantRatioThatCannotProduceOnlyWater() {
+        val derivation = WaterEquationDerivation(
+            hydrogenCoefficient = 3,
+            oxygenCoefficient = 1,
+        )
+
+        assertFalse(derivation.isValid)
+        assertNull(derivation.waterCoefficient)
+        assertNull(derivation.products)
+        assertTrue("2:1" in derivation.explanation)
     }
 
     private fun xyzRelation(): RelationDefinition = RelationDefinition(
