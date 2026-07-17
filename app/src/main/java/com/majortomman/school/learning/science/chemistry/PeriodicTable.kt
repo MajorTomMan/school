@@ -22,13 +22,13 @@ object PeriodicTable {
         symbol: String,
         name: String,
         mass: String?,
-        vararg oxidationStates: Int,
+        vararg oxidationStates: Int?,
     ) = ChemicalElement(
         atomicNumber = number,
         symbol = symbol,
         chineseName = name,
         relativeAtomicMass = mass?.toBigDecimal(),
-        commonOxidationStates = oxidationStates.toSet(),
+        commonOxidationStates = oxidationStates.filterNotNull().toSet(),
     )
 
     private val elements = listOf(
