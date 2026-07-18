@@ -1,112 +1,102 @@
 # School 课程包发布
 
-APK 只包含课程数据结构、解析器、同步缓存、页面渲染器、PDF 渲染器、可视化与确定性算法。教材目录、章节、课程正文、例题、小结、习题和教材 PDF 全部通过远端清单同步到应用私有缓存；云端不可用时使用上一次有效缓存，没有缓存时显示课程数据缺失页面。
+APK 只包含课程数据结构、解析器、同步缓存、页面渲染器、PDF 渲染器、可视化与确定性算法。教材目录、章节、课程正文、例题、小结和习题由 GitHub Release 发布；教材 PDF 暂时保存在 Google Drive，由课程清单引用并下载到应用私有缓存。
 
-应用不再提供系统文件选择器、教材目录授权、PDF 导入、端上 OCR、目录识别或本地抽题。
+应用不提供系统文件选择器、教材目录授权、PDF 导入、端上 OCR、目录识别或本地抽题。
 
-## Google Drive 目录
-
-建议在 `School 课程发布` 目录中保存：
+## 发布位置
 
 ```text
-manifest.json
-pep-math-7-1-v1.zip
-pep-math-7-1-course-v1.json
-pep-math-7-1-textbook-v1.pdf
+Google Drive
+└── 义务教育教科书·数学七年级上册.pdf
+
+GitHub Release: course-latest
+├── manifest.json
+├── pep-math-7-1-course.json
+└── pep-math-7-1.zip
 ```
 
-完整 ZIP 用于首次安装、结构升级和大范围修改；独立 `course.json` 与教材 PDF 用于文件级增量更新。只修改课程文字时不会重新下载 PDF；PDF 变化时才下载新的 PDF。
+完整 ZIP 只包含 `course.json` 和其他可发布课程资源，不包含教材 PDF。PDF 在 `manifest.json` 中作为外部文件声明。
 
-## 生成课程发布文件
+## 教材 PDF 元数据
+
+当前七年级上册数学教材：
+
+```text
+Drive file ID: 1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N
+size:          12915486
+SHA-256:       11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9
+pageCount:     202
+pageIndexOffset: 7
+```
+
+Google Drive 文件必须设置为“知道链接的任何人可查看”，否则未登录的 APK 无法下载。
+
+## 本地生成
+
+不需要把 PDF 复制进仓库。使用已经确认的 PDF 元数据即可生成课程资源：
 
 ```bash
 python3 tools/course-content/build_course_release.py \
   --source tools/course-content/pep-math-7-1/course.json \
-  --pdf '/path/to/义务教育教科书·数学七年级上册.pdf' \
-  --pdf-page-count 202 \
-  --pdf-page-index-offset 7 \
   --output build/course-release/pep-math-7-1 \
   --textbook-version 1 \
   --content-version 1 \
-  --minimum-app-version 21
+  --minimum-app-version 22 \
+  --release-base-url 'https://github.com/MajorTomMan/School/releases/download/course-latest' \
+  --pdf-file-id '1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N' \
+  --pdf-size 12915486 \
+  --pdf-sha256 '11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9' \
+  --pdf-page-count 202 \
+  --pdf-page-index-offset 7
 ```
 
-第一次运行会生成：
+生成结果：
+
+```text
+build/course-release/pep-math-7-1/
+├── manifest.json
+├── pep-math-7-1-course.json
+└── pep-math-7-1.zip
+```
+
+ZIP 中只有运行时课程文件：
 
 ```text
 course.json
-assets/textbook.pdf
-pep-math-7-1-v1.zip
-manifest.json
 ```
 
-发布脚本会计算教材 PDF 的 SHA-256，并把以下运行时元数据写入输出版 `course.json`：
+也可以传入 `--pdf /path/to/textbook.pdf`，让工具在本机重新核对 PDF 文件头、大小和 SHA-256。该 PDF 仍不会写入输出目录或 ZIP。
 
-```json
-{
-  "textbook": {
-    "pdf": {
-      "path": "assets/textbook.pdf",
-      "sha256": "...",
-      "pageCount": 202,
-      "pageIndexOffset": 7
-    }
-  }
-}
+## 自动发布
+
+`.github/workflows/course-release.yml` 会在课程源文件合并到 `master` 后自动：
+
+1. 构建课程 JSON 和完整 ZIP；
+2. 校验 PDF 被标记为外部文件；
+3. 检查 ZIP 中不含 PDF；
+4. 创建或更新 `course-latest` Release；
+5. 覆盖上传三个稳定资源。
+
+APK 默认读取：
+
+```text
+https://github.com/MajorTomMan/School/releases/download/course-latest/manifest.json
 ```
 
-先把 `course.json`、`assets/textbook.pdf` 和完整 ZIP 上传到 Google Drive，并将三个文件设为持有链接的用户可查看。取得文件 ID 后重新运行：
-
-```bash
-python3 tools/course-content/build_course_release.py \
-  --source tools/course-content/pep-math-7-1/course.json \
-  --pdf '/path/to/义务教育教科书·数学七年级上册.pdf' \
-  --pdf-page-count 202 \
-  --pdf-page-index-offset 7 \
-  --output build/course-release/pep-math-7-1 \
-  --textbook-version 1 \
-  --content-version 1 \
-  --minimum-app-version 21 \
-  --course-file-id GOOGLE_DRIVE_COURSE_JSON_ID \
-  --pdf-file-id GOOGLE_DRIVE_TEXTBOOK_PDF_ID \
-  --full-file-id GOOGLE_DRIVE_FULL_ZIP_ID
-```
-
-再上传新生成的 `manifest.json`，并将清单文件设为持有链接的用户可查看。
-
-## 配置 APK
-
-构建时通过环境变量传入清单共享链接或直接下载链接：
-
-```bash
-export SCHOOL_COURSE_MANIFEST_URL='https://drive.google.com/file/d/MANIFEST_FILE_ID/view'
-./gradlew :app:assembleDebug
-```
-
-也可以使用 Gradle 属性：
-
-```bash
-./gradlew :app:assembleDebug \
-  -PschoolCourseManifestUrl='https://drive.google.com/file/d/MANIFEST_FILE_ID/view'
-```
-
-客户端会把常见 Google Drive 分享链接转换为直接下载地址。
+仍可通过 `SCHOOL_COURSE_MANIFEST_URL` 或 Gradle 属性 `schoolCourseManifestUrl` 覆盖。
 
 ## 客户端更新规则
 
-- 本地没有该教材：下载包含 `course.json` 和 PDF 的完整 ZIP。
-- 数据结构版本变化：下载完整 ZIP。
-- 变化文件总大小小于完整包的 60%：增量下载。
-- 只修改课程 JSON：只下载 JSON。
-- 只替换教材 PDF：只下载 PDF；若体积接近完整包则自动改用 ZIP。
-- 增量文件总大小达到完整包的 60%：下载完整 ZIP。
-- 增量校验或安装失败：自动改用完整 ZIP。
+- 本地没有该教材：下载完整课程 ZIP，再单独下载 Google Drive PDF。
+- 数据结构版本变化：下载完整课程 ZIP；摘要未变化的 PDF 从旧缓存复用。
+- 只修改课程 JSON：下载 JSON 或完整课程 ZIP，不重新下载 PDF。
+- 只替换教材 PDF：下载新的 PDF；更新计划会把外部文件体积计入全量成本。
+- 增量校验或安装失败：自动改用完整课程 ZIP，并补齐所需外部文件。
 - 下载、SHA-256、JSON、PDF 文件头、PDF 页数或切换失败：保留旧缓存。
 - 云端清单无法访问：使用本地缓存；没有缓存时显示同步状态和重试入口。
 
-所有文件先写入 `filesDir/course-packs/staging`，完成大小、SHA-256、安全路径、JSON 和 PDF 校验后，才会切换到 `active`。旧版本保留在 `backup`，不会在下载过程中覆盖正在使用的课程。
-
-同步完成后，客户端从 `course.json` 构建教材、章节和小节导航，并直接读取课程包中的 PDF。APK 不包含替代目录、教材正文或本地导入入口，因此每个课程包必须提供完整且稳定的 ID、标题、页码、页面块和 PDF 元数据。
+所有文件先写入 `filesDir/course-packs/staging`。客户端会优先复用 `active` 中摘要一致的教材 PDF，缺失或变化时才从 Drive 下载。完成大小、SHA-256、安全路径、JSON 和 PDF 校验后，才会切换到 `active`；旧版本保留在 `backup`。
 
 ## 内容兼容规则
 
