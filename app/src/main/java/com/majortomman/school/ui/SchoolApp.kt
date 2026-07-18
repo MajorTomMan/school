@@ -61,7 +61,7 @@ private enum class MainTab(val label: String) {
     PATH("路径"),
     BANK("题库"),
     REVIEW("复习"),
-    LAB("实验室"),
+    LAB("验证"),
     SETTINGS("设置"),
 }
 
@@ -337,7 +337,7 @@ fun SchoolApp(
                                 },
                             )
 
-                            MainTab.LAB -> InteractionLabScreen()
+                            MainTab.LAB -> VerificationHubScreen()
 
                             MainTab.SETTINGS -> MaterialSettingsScreen(
                                 settings = aiSettings,
