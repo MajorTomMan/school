@@ -7,37 +7,24 @@ import org.json.JSONObject
 
 internal object MaterialLibraryStore {
     private const val ROOT_DIRECTORY = "material-packs"
-    private const val PACKS_DIRECTORY = "packs"
     private const val LIBRARY_FILE = "library.json"
     private const val LEGACY_INDEX_FILE = "installed.json"
     private const val CLOUD_COURSE_VERSION_PREFIX = "cloud-course-"
 
     fun materialRoot(context: Context): File = File(context.filesDir, ROOT_DIRECTORY)
 
-    fun packsRoot(context: Context): File = File(materialRoot(context), PACKS_DIRECTORY)
-
-    fun processingRoot(context: Context, slot: TextbookSlot): File =
-        File(materialRoot(context), ".processing-${slot.key}")
-
-    fun finalRoot(context: Context, slot: TextbookSlot): File =
-        File(packsRoot(context), slot.key)
-
     @Synchronized
     fun read(context: Context): List<InstalledTextbook> {
         val libraryFile = File(materialRoot(context), LIBRARY_FILE)
-        if (libraryFile.isFile) {
-            return runCatching { parseLibrary(libraryFile.readText(Charsets.UTF_8)) }
-                .getOrDefault(emptyList())
-                .filter(::isAvailable)
-        }
-
-        val migrated = migrateLegacy(context)
-        if (migrated.isNotEmpty()) write(context, migrated)
-        return migrated
+        if (!libraryFile.isFile) return emptyList()
+        return runCatching { parseLibrary(libraryFile.readText(Charsets.UTF_8)) }
+            .getOrDefault(emptyList())
+            .filter(::isAvailableCloudTextbook)
     }
 
     @Synchronized
     fun upsert(context: Context, textbook: InstalledTextbook) {
+        require(isAvailableCloudTextbook(textbook)) { "只能登记已校验的云端课程与教材 PDF" }
         val updated = read(context)
             .filterNot { it.slot.key == textbook.slot.key }
             .plus(textbook)
@@ -53,23 +40,33 @@ internal object MaterialLibraryStore {
         return removed
     }
 
-    /** Removes only unbound content installed by old APK builds. User-imported PDFs are preserved. */
+    /** Removes every local-import or bundled textbook left by older APK versions. */
     @Synchronized
     fun purgeLegacyBundledContent(context: Context): Int {
-        val libraryFile = File(materialRoot(context), LIBRARY_FILE)
+        val root = materialRoot(context)
+        val libraryFile = File(root, LIBRARY_FILE)
         val all = if (libraryFile.isFile) {
             runCatching { parseLibrary(libraryFile.readText(Charsets.UTF_8)) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
-        val obsolete = all.filter { textbook ->
-            textbook.pack.manifest.version.startsWith("prebuilt-") && !textbook.pack.pdfFile.isFile
+        val cloudOnly = all.filter(::isAvailableCloudTextbook)
+        val obsolete = all - cloudOnly.toSet()
+        obsolete.forEach { textbook ->
+            val path = File(textbook.pack.rootPath)
+            if (!path.absolutePath.contains("${File.separator}course-packs${File.separator}active${File.separator}")) {
+                path.deleteRecursively()
+            }
         }
-        if (obsolete.isNotEmpty()) {
-            obsolete.forEach { File(it.pack.rootPath).deleteRecursively() }
-            write(context, all - obsolete.toSet())
-        }
+        write(context, cloudOnly)
+
+        File(root, LEGACY_INDEX_FILE).delete()
+        File(root, "packs").deleteRecursively()
+        root.listFiles().orEmpty()
+            .filter { it.name.startsWith(".processing-") || it.name.startsWith(".backup-") }
+            .forEach(File::deleteRecursively)
         File(context.filesDir, "materials/prebuilt").deleteRecursively()
+        context.getSharedPreferences("school_pdf_directories", Context.MODE_PRIVATE).edit().clear().apply()
         return obsolete.size
     }
 
@@ -82,7 +79,7 @@ internal object MaterialLibraryStore {
         val root = JSONObject().put(
             "items",
             JSONArray().apply {
-                textbooks.forEach { put(it.toJson()) }
+                textbooks.filter(::isAvailableCloudTextbook).forEach { put(it.toJson()) }
             },
         )
         temporary.writeText(root.toString(2), Charsets.UTF_8)
@@ -93,9 +90,10 @@ internal object MaterialLibraryStore {
     fun directorySize(directory: File): Long =
         directory.walkTopDown().filter { it.isFile }.sumOf { it.length() }
 
-    private fun isAvailable(textbook: InstalledTextbook): Boolean =
-        textbook.pack.pdfFile.isFile ||
-            (textbook.lessons.isNotEmpty() && textbook.pack.manifest.version.startsWith(CLOUD_COURSE_VERSION_PREFIX))
+    private fun isAvailableCloudTextbook(textbook: InstalledTextbook): Boolean =
+        textbook.pack.manifest.version.startsWith(CLOUD_COURSE_VERSION_PREFIX) &&
+            textbook.pack.pdfFile.isFile &&
+            textbook.lessons.isNotEmpty()
 
     private fun parseLibrary(json: String): List<InstalledTextbook> {
         val root = JSONObject(json)
@@ -143,42 +141,6 @@ internal object MaterialLibraryStore {
             "lessons",
             JSONArray().apply { lessons.forEach { put(it.toJson()) } },
         )
-
-    private fun migrateLegacy(context: Context): List<InstalledTextbook> = runCatching {
-        val legacy = File(materialRoot(context), LEGACY_INDEX_FILE)
-        if (!legacy.isFile) return@runCatching emptyList()
-        val root = JSONObject(legacy.readText(Charsets.UTF_8))
-        val manifest = MaterialPackManifestParser.parse(root.getJSONObject("manifest").toString())
-        val pack = InstalledMaterialPack(
-            manifest = manifest,
-            rootPath = root.getString("rootPath"),
-            installedAt = root.getLong("installedAt"),
-            sizeBytes = root.optLong("sizeBytes", 0L),
-        )
-        if (!pack.pdfFile.isFile) return@runCatching emptyList()
-        val slot = detectSlot(pack)
-        val lessons = loadGeneratedLessons(slot, pack)
-        listOf(
-            InstalledTextbook(
-                slot = slot,
-                pack = pack,
-                pageCount = 0,
-                lessons = lessons,
-            ),
-        )
-    }.getOrDefault(emptyList())
-
-    private fun detectSlot(pack: InstalledMaterialPack): TextbookSlot {
-        val catalogRoot = runCatching { JSONObject(pack.catalogFile.readText(Charsets.UTF_8)) }.getOrNull()
-        val book = catalogRoot?.optJSONObject("book")
-        val subjectTitle = book?.optString("subject")?.takeIf { it.isNotBlank() }
-            ?: pack.manifest.subject
-        val subject = SubjectTemplates.findByTitle(subjectTitle)
-            ?: SubjectTemplates.all.first()
-        val grade = book?.optInt("grade", 7) ?: 7
-        val volume = TextbookVolume.fromId(book?.optInt("volume", 1) ?: 1)
-        return TextbookSlot(subject.id, subject.title, grade, volume)
-    }
 
     private fun loadGeneratedLessons(
         slot: TextbookSlot,
