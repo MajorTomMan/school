@@ -175,9 +175,6 @@ dependencies {
     // 最新 Lucene Kuromoji 负责日语形态素切分、词性、原形、读音和活用信息。
     implementation("org.apache.lucene:lucene-analysis-kuromoji:10.5.0")
 
-    // 中文 OCR 模型不再打包进 APK，仅在未知教材首次需要识别时由 Google Play 服务下载。
-    implementation("com.google.android.gms:play-services-mlkit-text-recognition-chinese:16.0.1")
-
     ksp("androidx.room:room-compiler:$roomVersion")
 
     testImplementation("junit:junit:4.13.2")
