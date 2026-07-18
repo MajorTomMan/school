@@ -235,7 +235,11 @@ object MathFormulaVerifier {
     }
 
     private fun splitRelation(input: String): ParsedRelation {
-        val normalized = input.replace("<=", "≤").replace(">=", "≥").replace('＝', '=')
+        val normalized = input
+            .replace("π", "pi")
+            .replace("<=", "≤")
+            .replace(">=", "≥")
+            .replace('＝', '=')
         val candidates = listOf(
             MathRelationOperator.LESS_OR_EQUAL,
             MathRelationOperator.GREATER_OR_EQUAL,
