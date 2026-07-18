@@ -6,6 +6,8 @@ import android.util.Log
 import com.majortomman.school.data.curriculum.MasteryTrendRepository
 import com.majortomman.school.data.material.BundledTextbookCatalogPack
 import com.majortomman.school.data.material.PrebuiltTextbookBootstrap
+import com.majortomman.school.learning.cloud.CourseSyncManager
+import com.majortomman.school.learning.cloud.CourseSyncResult
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,12 +17,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Keeps disk-heavy catalogue and analytics initialization out of the launch-critical main-thread path.
- *
- * The launcher Activity first installs its Compose content. After a short grace period this coordinator
- * performs version-gated prebuilt catalogue installation on Dispatchers.IO, then asks the material
- * repository to refresh. A failed or interrupted installation does not advance the marker and is retried
- * on the next process launch.
+ * Keeps disk-heavy catalogue, cloud course synchronization and analytics initialization outside the
+ * launch-critical main-thread path.
  */
 object StartupInitializationCoordinator {
     const val LOG_TAG = "SchoolStartup"
@@ -68,6 +66,21 @@ object StartupInitializationCoordinator {
                 }
             } else {
                 Log.i(LOG_TAG, "prebuilt catalog fast path: version already current")
+            }
+
+            val courseSyncStartedAt = SystemClock.elapsedRealtime()
+            when (val result = CourseSyncManager.syncOnStartup(appContext)) {
+                CourseSyncResult.Disabled -> Log.i(LOG_TAG, "cloud course synchronization is not configured")
+                is CourseSyncResult.Success -> Log.i(
+                    LOG_TAG,
+                    "cloud course synchronization finished in " +
+                        "${SystemClock.elapsedRealtime() - courseSyncStartedAt} ms; " +
+                        "updated=${result.updatedTextbooks}, contentVersion=${result.contentVersion}",
+                )
+                is CourseSyncResult.Failed -> Log.w(
+                    LOG_TAG,
+                    "cloud course synchronization failed; bundled or cached courses remain active: ${result.message}",
+                )
             }
 
             delay(ANALYTICS_GRACE_MILLIS)

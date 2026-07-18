@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "textbook": {
+    "id": "pep-math-7-1",
+    "title": "义务教育教科书·数学七年级上册",
+    "publisher": "人民教育出版社",
+    "edition": "人教版",
+    "grade": "七年级",
+    "semester": "上册",
+    "subject": "数学"
+  },
+  "chapters": [
+    {
+      "id": "chapter-01",
+      "number": "第一章",
+      "title": "有理数",
+      "aliases": ["第一章 有理数"],
+      "sections": [
+        {
+          "id": "1.1",
+          "number": "1.1",
+          "title": "正数和负数",
+          "pages": [
+            {
+              "id": "1.1-01",
+              "type": "lesson",
+              "title": "具有相反意义的量",
+              "sourcePage": 2,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "在同一问题中，零上与零下、增加与减少、收入与支出等，分别表示意义相反的两个量。"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "opposite_quantities",
+                  "params": {}
+                },
+                {
+                  "type": "conclusion",
+                  "text": "正数和负数可以表示具有相反意义的量。"
+                }
+              ]
+            },
+            {
+              "id": "1.1-02",
+              "type": "lesson",
+              "title": "正数和负数",
+              "sourcePage": 3,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "像 3，50，7.8% 这样大于 0 的数叫作正数；像 −3，−10，−0.7% 这样小于 0 的数叫作负数。0 既不是正数，也不是负数。"
+                },
+                {
+                  "type": "formula",
+                  "expression": "负数 < 0 < 正数"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "opposite_quantities",
+                  "params": {}
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "1.2",
+          "number": "1.2",
+          "title": "有理数及其大小比较",
+          "aliases": ["有理数的概念", "有理数概念", "有理数的大小比较", "有理数分类"],
+          "pages": [
+            {
+              "id": "1.2-01",
+              "type": "lesson",
+              "title": "有理数",
+              "sourcePage": 14,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "正整数、0、负整数统称为整数；正分数和负分数统称为分数。整数和分数统称为有理数。"
+                },
+                {
+                  "type": "formula",
+                  "expression": "a/b",
+                  "conditions": ["a、b 为整数", "b ≠ 0"]
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "rational_classification",
+                  "params": {}
+                },
+                {
+                  "type": "conclusion",
+                  "text": "有理数包括整数和分数。"
+                }
+              ]
+            },
+            {
+              "id": "1.2-02",
+              "type": "lesson",
+              "title": "有理数的分类",
+              "sourcePage": 15,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "按符号分类，有理数分为正有理数、0 和负有理数；按表示形式分类，有理数分为整数和分数。"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "rational_classification",
+                  "params": {}
+                }
+              ]
+            },
+            {
+              "id": "1.2-03",
+              "type": "lesson",
+              "title": "数轴",
+              "sourcePage": 16,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "规定了原点、正方向和单位长度的直线叫作数轴。"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "number_line",
+                  "params": {
+                    "min": -5,
+                    "max": 5,
+                    "draggable": true
+                  }
+                },
+                {
+                  "type": "conclusion",
+                  "text": "原点、正方向和单位长度是数轴的三个要素。"
+                }
+              ]
+            },
+            {
+              "id": "1.2-04",
+              "type": "lesson",
+              "title": "相反数",
+              "sourcePage": 18,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "只有符号不同的两个数互为相反数。0 的相反数是 0。"
+                },
+                {
+                  "type": "formula",
+                  "expression": "a 的相反数是 −a"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "opposite_numbers",
+                  "params": {}
+                }
+              ]
+            },
+            {
+              "id": "1.2-05",
+              "type": "lesson",
+              "title": "绝对值",
+              "sourcePage": 20,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "数轴上表示数 a 的点与原点的距离，叫作数 a 的绝对值，记作 |a|。"
+                },
+                {
+                  "type": "formula",
+                  "expression": "|a| ≥ 0"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "absolute_value",
+                  "params": {}
+                }
+              ]
+            },
+            {
+              "id": "1.2-06",
+              "type": "lesson",
+              "title": "有理数的大小比较",
+              "aliases": ["大小比较"],
+              "sourcePage": 21,
+              "blocks": [
+                {
+                  "type": "textbook_text",
+                  "text": "在数轴上表示的两个数，右边的数总比左边的数大。两个负数比较大小，绝对值大的反而小。"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "number_comparison",
+                  "params": {}
+                },
+                {
+                  "type": "conclusion",
+                  "text": "比较有理数大小，可以利用数轴，也可以利用符号和绝对值。"
+                }
+              ]
+            },
+            {
+              "id": "1.2-07",
+              "type": "summary",
+              "title": "本节小结",
+              "sourcePage": 21,
+              "blocks": [
+                {
+                  "type": "summary",
+                  "items": [
+                    "有理数包括整数和分数。",
+                    "数轴由原点、正方向和单位长度构成。",
+                    "相反数在数轴上关于原点对称。",
+                    "绝对值表示点到原点的距离。",
+                    "比较有理数大小可以利用数轴、符号和绝对值。"
+                  ]
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "rational_classification",
+                  "params": {}
+                }
+              ]
+            },
+            {
+              "id": "1.2-08",
+              "type": "exercise",
+              "title": "随堂练习",
+              "sourcePage": 22,
+              "blocks": [
+                {
+                  "type": "exercise",
+                  "exerciseId": "math-7-1-1.2-e1",
+                  "number": "1",
+                  "stem": "在数轴上表示 3，−4，0，2，−2，−1，并按从小到大的顺序排列。",
+                  "answerMode": "ordered_values",
+                  "validator": {
+                    "answers": [-4, -2, -1, 0, 2, 3]
+                  },
+                  "hints": [
+                    "数轴上右边的数大于左边的数。",
+                    "先确定每个数在数轴上的位置。"
+                  ]
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "number_line",
+                  "params": {}
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "review": {
+        "id": "chapter-01-review",
+        "title": "第一章小结",
+        "aliases": ["第一章复习题"],
+        "pages": [
+          {
+            "id": "chapter-01-summary",
+            "type": "summary",
+            "title": "本章知识结构",
+            "sourcePage": 21,
+            "blocks": [
+              {
+                "type": "summary",
+                "items": [
+                  "从具有相反意义的量出发引入正数和负数。",
+                  "数轴把有理数与直线上的点联系起来。",
+                  "相反数、绝对值和大小比较都可以借助数轴研究。"
+                ]
+              },
+              {
+                "type": "visualization",
+                "renderer": "rational_classification",
+                "params": {}
+              }
+            ]
+          },
+          {
+            "id": "chapter-01-exercise-01",
+            "type": "exercise",
+            "title": "章末练习",
+            "sourcePage": 22,
+            "blocks": [
+              {
+                "type": "exercise",
+                "exerciseId": "math-7-1-ch1-e1",
+                "number": "1",
+                "stem": "如果温度上升 3 ℃记作 +3 ℃，那么下降 2 ℃记作什么？如果收入用正数表示，−56 元表示什么？",
+                "answerMode": "text",
+                "hints": ["先明确正数表示的意义，再写出相反意义的量。"]
+              },
+              {
+                "type": "visualization",
+                "renderer": "opposite_quantities",
+                "params": {}
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

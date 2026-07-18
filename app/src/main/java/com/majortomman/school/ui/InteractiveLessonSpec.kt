@@ -1,6 +1,7 @@
 package com.majortomman.school.ui
 
 import com.majortomman.school.data.Lesson
+import com.majortomman.school.learning.cloud.CloudCourseRepository
 import com.majortomman.school.learning.course.BiologyCourseContentFactory
 import com.majortomman.school.learning.course.ChemistryCourseContentFactory
 import com.majortomman.school.learning.course.LessonEnrichment
@@ -39,7 +40,7 @@ object InteractiveLessonCatalog {
         val firstPage = lesson.textbookPages.first.coerceAtLeast(1)
         val lastPage = lesson.textbookPages.last.coerceAtLeast(firstPage)
         return when {
-            subjectId == "math" && RationalNumbersCourseFactory.supports(title) -> rationalNumbers(lesson, firstPage, lastPage)
+            subjectId == "math" && isRationalNumbersLesson(title) -> rationalNumbers(lesson, firstPage, lastPage)
             subjectId == "math" && isLinearFunctionLesson(title) -> linearFunction(lesson, firstPage, lastPage)
             subjectId == "physics" && title.contains("牛顿第一定律") -> newtonFirstLaw(firstPage, lastPage)
             subjectId == "math" -> generalMath(lesson, firstPage, lastPage)
@@ -51,7 +52,11 @@ object InteractiveLessonCatalog {
     }
 
     private fun rationalNumbers(lesson: Lesson, firstPage: Int, lastPage: Int): InteractiveLessonSpec {
-        val pages = RationalNumbersCourseFactory.pagesFor(lesson.title, firstPage..lastPage)
+        val sourceRange = firstPage..lastPage
+        val pages = CloudCourseRepository.pagesFor(lesson.title, sourceRange).ifEmpty {
+            RationalNumbersCourseFactory.pagesFor(rationalFallbackTitle(lesson.title), sourceRange)
+        }
+        require(pages.isNotEmpty()) { "有理数课程没有可用页面：${lesson.title}" }
         val first = pages.first()
         return InteractiveLessonSpec(
             kind = InteractiveLessonKind.RATIONAL_NUMBERS,
@@ -190,6 +195,15 @@ object InteractiveLessonCatalog {
             sourcePageEnd = lastPage,
             enrichment = content.enrichment,
         )
+    }
+
+    private fun isRationalNumbersLesson(title: String): Boolean =
+        CloudCourseRepository.supports(title) || RationalNumbersCourseFactory.supports(title) || title.contains("有理数")
+
+    private fun rationalFallbackTitle(title: String): String = when {
+        title.replace(" ", "").contains("有理数的大小比较") -> "有理数及其大小比较"
+        title.replace(" ", "").contains("有理数分类") -> "有理数的概念"
+        else -> title
     }
 
     private fun isLinearFunctionLesson(title: String): Boolean =

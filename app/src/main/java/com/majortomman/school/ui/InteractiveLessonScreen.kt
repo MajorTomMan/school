@@ -61,7 +61,7 @@ fun InteractiveLessonScreen(
     onComplete: () -> Unit,
 ) {
     if (spec.kind == InteractiveLessonKind.RATIONAL_NUMBERS) {
-        RationalNumbersLessonScreen(
+        CloudAwareRationalNumbersLessonScreen(
             lesson = lesson,
             installedMaterial = installedMaterial,
             nextLessonTitle = nextLessonTitle,

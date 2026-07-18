@@ -61,6 +61,7 @@ val firebaseApiKey = resolvedSetting("SCHOOL_FIREBASE_API_KEY", "schoolFirebaseA
 val firebaseSenderId = resolvedSetting("SCHOOL_FIREBASE_SENDER_ID", "schoolFirebaseSenderId")
 val firebaseUpdateTopic = resolvedSetting("SCHOOL_FIREBASE_UPDATE_TOPIC", "schoolFirebaseUpdateTopic")
     .ifBlank { "school_dev_update" }
+val courseManifestUrl = resolvedSetting("SCHOOL_COURSE_MANIFEST_URL", "schoolCourseManifestUrl")
 val updatePushEnabled = listOf(
     firebaseProjectId,
     firebaseApplicationId,
@@ -88,6 +89,7 @@ android {
             "UPDATE_SIGNATURE_URL",
             "https://github.com/MajorTomMan/school/releases/download/dev-latest/update-manifest.sig".asBuildConfigString(),
         )
+        buildConfigField("String", "COURSE_MANIFEST_URL", courseManifestUrl.asBuildConfigString())
         buildConfigField("String", "UPDATE_PUBLIC_KEY_BASE64", updatePublicKey.asBuildConfigString())
         buildConfigField("String", "DEVELOPMENT_CERT_SHA256", developmentCertificate.asBuildConfigString())
         buildConfigField("boolean", "UPDATE_PUSH_ENABLED", updatePushEnabled.toString())
