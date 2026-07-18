@@ -21,6 +21,7 @@ import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.curriculum.CurriculumRepository
 import com.majortomman.school.data.material.MaterialPackRepository
 import com.majortomman.school.data.math.MathQuestionBankRepository
+import com.majortomman.school.network.AppProxy
 import com.majortomman.school.startup.StartupInitializationCoordinator
 import com.majortomman.school.ui.SchoolApp
 import com.majortomman.school.ui.UpdateOverlayHost
@@ -57,6 +58,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val activityStartedAt = SystemClock.elapsedRealtime()
         super.onCreate(savedInstanceState)
+        AppProxy.initialize(applicationContext)
         enableEdgeToEdge()
         val initialTextbookKey = intent.getStringExtra("open_textbook_slot")
         setContent {
