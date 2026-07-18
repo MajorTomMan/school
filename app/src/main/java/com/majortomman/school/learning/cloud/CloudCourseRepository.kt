@@ -222,12 +222,15 @@ internal object CloudCourseCodec {
             }
         }
 
+        val sourcePage = page.optInt("sourcePage", sourcePages.first).coerceAtLeast(1)
+        val sourcePageEnd = page.optInt("sourcePageEnd", sourcePage).coerceAtLeast(sourcePage)
         return RationalLessonPage(
             id = page.getString("id"),
             section = page.optString("section", sectionTitle),
             title = page.getString("title"),
             paragraphs = paragraphs,
-            sourcePage = page.optInt("sourcePage", sourcePages.first).coerceAtLeast(1),
+            sourcePage = sourcePage,
+            sourcePageEnd = sourcePageEnd,
             visualization = visualization,
             formula = formula,
             conclusion = conclusion,
