@@ -10,6 +10,7 @@ internal object MaterialLibraryStore {
     private const val PACKS_DIRECTORY = "packs"
     private const val LIBRARY_FILE = "library.json"
     private const val LEGACY_INDEX_FILE = "installed.json"
+    private const val CLOUD_COURSE_VERSION_PREFIX = "cloud-course-"
 
     fun materialRoot(context: Context): File = File(context.filesDir, ROOT_DIRECTORY)
 
@@ -52,6 +53,26 @@ internal object MaterialLibraryStore {
         return removed
     }
 
+    /** Removes only unbound content installed by old APK builds. User-imported PDFs are preserved. */
+    @Synchronized
+    fun purgeLegacyBundledContent(context: Context): Int {
+        val libraryFile = File(materialRoot(context), LIBRARY_FILE)
+        val all = if (libraryFile.isFile) {
+            runCatching { parseLibrary(libraryFile.readText(Charsets.UTF_8)) }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+        val obsolete = all.filter { textbook ->
+            textbook.pack.manifest.version.startsWith("prebuilt-") && !textbook.pack.pdfFile.isFile
+        }
+        if (obsolete.isNotEmpty()) {
+            obsolete.forEach { File(it.pack.rootPath).deleteRecursively() }
+            write(context, all - obsolete.toSet())
+        }
+        File(context.filesDir, "materials/prebuilt").deleteRecursively()
+        return obsolete.size
+    }
+
     @Synchronized
     fun write(context: Context, textbooks: List<InstalledTextbook>) {
         val rootDirectory = materialRoot(context)
@@ -74,7 +95,7 @@ internal object MaterialLibraryStore {
 
     private fun isAvailable(textbook: InstalledTextbook): Boolean =
         textbook.pack.pdfFile.isFile ||
-            (textbook.lessons.isNotEmpty() && textbook.pack.manifest.version.startsWith("prebuilt-"))
+            (textbook.lessons.isNotEmpty() && textbook.pack.manifest.version.startsWith(CLOUD_COURSE_VERSION_PREFIX))
 
     private fun parseLibrary(json: String): List<InstalledTextbook> {
         val root = JSONObject(json)
