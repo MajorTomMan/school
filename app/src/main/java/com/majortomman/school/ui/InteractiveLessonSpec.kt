@@ -1,6 +1,7 @@
 package com.majortomman.school.ui
 
 import com.majortomman.school.data.Lesson
+import com.majortomman.school.learning.course.BiologyCourseContentFactory
 import com.majortomman.school.learning.course.ChemistryCourseContentFactory
 import com.majortomman.school.learning.course.LessonEnrichment
 import com.majortomman.school.learning.course.MathCourseContentFactory
@@ -41,6 +42,7 @@ object InteractiveLessonCatalog {
             subjectId == "math" -> generalMath(lesson, firstPage, lastPage)
             subjectId == "physics" -> generalPhysics(lesson, firstPage, lastPage)
             subjectId == "chemistry" -> generalChemistry(lesson, firstPage, lastPage)
+            subjectId == "biology" -> generalBiology(lesson, firstPage, lastPage)
             else -> null
         }
     }
@@ -135,6 +137,25 @@ object InteractiveLessonCatalog {
         return InteractiveLessonSpec(
             kind = InteractiveLessonKind.SCIENCE_GENERAL,
             badge = "化学课程 · 组成与守恒约束",
+            title = lesson.title,
+            subtitle = content.subtitle,
+            formula = content.formula,
+            sourceSummary = content.sourceSummary,
+            derivationTitle = "按教材顺序理解${lesson.title}",
+            derivationSteps = content.steps,
+            background = content.background,
+            misconception = content.misconception,
+            sourcePage = firstPage,
+            sourcePageEnd = lastPage,
+            enrichment = content.enrichment,
+        )
+    }
+
+    private fun generalBiology(lesson: Lesson, firstPage: Int, lastPage: Int): InteractiveLessonSpec {
+        val content = BiologyCourseContentFactory.create(lesson)
+        return InteractiveLessonSpec(
+            kind = InteractiveLessonKind.SCIENCE_GENERAL,
+            badge = "生物课程 · 结构过程与证据约束",
             title = lesson.title,
             subtitle = content.subtitle,
             formula = content.formula,
