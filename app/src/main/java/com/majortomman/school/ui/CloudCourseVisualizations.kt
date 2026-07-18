@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -34,7 +33,6 @@ import androidx.compose.ui.unit.sp
 import com.majortomman.school.learning.course.AbsoluteValueModel
 import com.majortomman.school.learning.course.SignedMovementDirection
 import com.majortomman.school.learning.course.SignedMovementModel
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
