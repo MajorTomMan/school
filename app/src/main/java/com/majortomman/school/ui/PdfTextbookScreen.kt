@@ -66,7 +66,7 @@ fun PdfTextbookScreen(
 ) {
     if (!pack.pdfFile.isFile) {
         ReaderError(
-            message = "预制课程已经可以学习，但尚未绑定教材 PDF。请从教材中心绑定对应版本后再查看原页。",
+            message = "教材 PDF 尚未下载或缓存已损坏。请返回后重新同步云端课程包。",
             onBack = onBack,
         )
         return
@@ -80,7 +80,7 @@ fun PdfTextbookScreen(
 
     if (session == null) {
         ReaderError(
-            message = sessionResult.exceptionOrNull()?.message ?: "无法打开教材 PDF",
+            message = sessionResult.exceptionOrNull()?.message ?: "无法打开云端教材缓存",
             onBack = onBack,
         )
         return
@@ -227,7 +227,7 @@ private fun ReaderError(message: String, onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("尚未绑定教材", color = ReaderWhite, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("教材不可用", color = ReaderWhite, fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(14.dp))
         Text(message, color = ReaderMuted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
