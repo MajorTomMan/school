@@ -1,6 +1,7 @@
 package com.majortomman.school.ui
 
 import com.majortomman.school.data.Lesson
+import com.majortomman.school.learning.course.ChemistryCourseContentFactory
 import com.majortomman.school.learning.course.LessonEnrichment
 import com.majortomman.school.learning.course.MathCourseContentFactory
 import com.majortomman.school.learning.course.PhysicsCourseContentFactory
@@ -10,6 +11,7 @@ enum class InteractiveLessonKind {
     NEWTON_FIRST_LAW,
     MATH_GENERAL,
     PHYSICS_GENERAL,
+    CHEMISTRY_GENERAL,
 }
 
 data class InteractiveLessonSpec(
@@ -38,6 +40,7 @@ object InteractiveLessonCatalog {
             subjectId == "physics" && title.contains("牛顿第一定律") -> newtonFirstLaw(firstPage, lastPage)
             subjectId == "math" -> generalMath(lesson, firstPage, lastPage)
             subjectId == "physics" -> generalPhysics(lesson, firstPage, lastPage)
+            subjectId == "chemistry" -> generalChemistry(lesson, firstPage, lastPage)
             else -> null
         }
     }
@@ -113,6 +116,25 @@ object InteractiveLessonCatalog {
         return InteractiveLessonSpec(
             kind = InteractiveLessonKind.PHYSICS_GENERAL,
             badge = "物理课程 · 教材模型约束",
+            title = lesson.title,
+            subtitle = content.subtitle,
+            formula = content.formula,
+            sourceSummary = content.sourceSummary,
+            derivationTitle = "按教材顺序理解${lesson.title}",
+            derivationSteps = content.steps,
+            background = content.background,
+            misconception = content.misconception,
+            sourcePage = firstPage,
+            sourcePageEnd = lastPage,
+            enrichment = content.enrichment,
+        )
+    }
+
+    private fun generalChemistry(lesson: Lesson, firstPage: Int, lastPage: Int): InteractiveLessonSpec {
+        val content = ChemistryCourseContentFactory.create(lesson)
+        return InteractiveLessonSpec(
+            kind = InteractiveLessonKind.CHEMISTRY_GENERAL,
+            badge = "化学课程 · 组成与守恒约束",
             title = lesson.title,
             subtitle = content.subtitle,
             formula = content.formula,
