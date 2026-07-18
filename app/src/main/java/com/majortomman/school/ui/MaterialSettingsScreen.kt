@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,6 +66,7 @@ private val SettingsLine = SettingsWhite.copy(alpha = 0.13f)
 
 private enum class SettingsPage(val label: String) {
     PROXY("代理"),
+    UPDATE("更新"),
     AI("AI"),
 }
 
@@ -113,12 +115,12 @@ fun MaterialSettingsScreen(
             .padding(horizontal = 24.dp, vertical = 30.dp),
     ) {
         Text("设置", color = SettingsWhite, fontSize = 42.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
         SettingsPageSelector(
             selected = SettingsPage.valueOf(pageName),
             onSelect = { pageName = it.name },
         )
-        Spacer(Modifier.height(38.dp))
+        Spacer(Modifier.height(36.dp))
 
         AnimatedContent(
             targetState = SettingsPage.valueOf(pageName),
@@ -158,10 +160,14 @@ fun MaterialSettingsScreen(
                             onFailure = { proxyStatus = "保存失败：${it.message ?: "代理地址无效"}" },
                         )
                     },
+                )
+
+                SettingsPage.UPDATE -> UpdateSettingsPage(
                     updateState = updateState,
                     autoCheck = updateSettings.autoCheck,
                     wifiOnly = updateSettings.wifiOnly,
                     lastCheckedAt = updateSettings.lastCheckedAt,
+                    updateUsesProxy = proxySettings.useForUpdates,
                     onToggleAutoCheck = { updateCoordinator.setAutoCheck(!updateSettings.autoCheck) },
                     onToggleWifiOnly = { updateCoordinator.setWifiOnly(!updateSettings.wifiOnly) },
                     onCheckUpdate = { updateCoordinator.checkNow(force = true) },
@@ -216,27 +222,29 @@ fun MaterialSettingsScreen(
 
 @Composable
 private fun SettingsPageSelector(selected: SettingsPage, onSelect: (SettingsPage) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(30.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         SettingsPage.entries.forEach { page ->
             Column(
                 modifier = Modifier
-                    .weight(1f)
                     .clickable { onSelect(page) }
-                    .padding(vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.Start,
             ) {
                 Text(
                     page.label,
                     color = if (selected == page) SettingsWhite else SettingsMuted,
-                    fontSize = 20.sp,
+                    fontSize = 19.sp,
                     fontWeight = if (selected == page) FontWeight.Bold else FontWeight.Medium,
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Box(
                     Modifier
-                        .fillMaxWidth()
+                        .width(36.dp)
                         .height(if (selected == page) 3.dp else 1.dp)
-                        .background(if (selected == page) SettingsBlue else SettingsLine),
+                        .background(if (selected == page) SettingsBlue else Color.Transparent),
                 )
             }
         }
@@ -253,14 +261,6 @@ private fun ProxySettingsPage(
     onToggleAi: () -> Unit,
     proxyStatus: String?,
     onSaveProxy: () -> Unit,
-    updateState: UpdateState,
-    autoCheck: Boolean,
-    wifiOnly: Boolean,
-    lastCheckedAt: Long,
-    onToggleAutoCheck: () -> Unit,
-    onToggleWifiOnly: () -> Unit,
-    onCheckUpdate: () -> Unit,
-    onShowUpdateStatus: () -> Unit,
 ) {
     Column {
         SettingsSectionTitle("代理")
@@ -301,8 +301,22 @@ private fun ProxySettingsPage(
                 body = proxyStatus.orEmpty(),
             )
         }
+    }
+}
 
-        Spacer(Modifier.height(48.dp))
+@Composable
+private fun UpdateSettingsPage(
+    updateState: UpdateState,
+    autoCheck: Boolean,
+    wifiOnly: Boolean,
+    lastCheckedAt: Long,
+    updateUsesProxy: Boolean,
+    onToggleAutoCheck: () -> Unit,
+    onToggleWifiOnly: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    onShowUpdateStatus: () -> Unit,
+) {
+    Column {
         SettingsSectionTitle("应用更新")
         Text(
             "${BuildConfig.VERSION_NAME}（${BuildConfig.VERSION_CODE}）",
@@ -314,8 +328,8 @@ private fun ProxySettingsPage(
         Text("开发通道 · GitHub dev-latest", color = SettingsMuted, lineHeight = 22.sp)
         Spacer(Modifier.height(7.dp))
         Text(
-            if (useForUpdates) "更新清单、签名与 APK 下载：通过代理" else "更新清单、签名与 APK 下载：直接连接",
-            color = if (useForUpdates) SettingsBlue else SettingsMuted,
+            if (updateUsesProxy) "更新清单、签名与 APK 下载：通过代理" else "更新清单、签名与 APK 下载：直接连接",
+            color = if (updateUsesProxy) SettingsBlue else SettingsMuted,
             fontSize = 12.sp,
             lineHeight = 19.sp,
         )
