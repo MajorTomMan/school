@@ -2,9 +2,10 @@ package com.majortomman.school.ai
 
 import android.util.Base64
 import com.majortomman.school.data.AiSettings
+import com.majortomman.school.network.AppProxy
+import com.majortomman.school.network.ProxyRoute
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -205,7 +206,7 @@ class OpenAiCompatibleClient(
             "接口地址必须以 http:// 或 https:// 开头"
         }
         val apiBase = if (endpoint.endsWith("/v1")) endpoint else "$endpoint/v1"
-        return (URL("$apiBase/$path").openConnection() as HttpURLConnection).apply {
+        return AppProxy.openConnection("$apiBase/$path", ProxyRoute.AI).apply {
             requestMethod = method
             connectTimeout = 10_000
             readTimeout = 120_000
