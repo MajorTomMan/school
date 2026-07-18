@@ -68,33 +68,14 @@ object MathFormulaVerifier {
             val left = ScienceExpressionParser.parse(parsed.left)
             val right = parsed.right?.let(ScienceExpressionParser::parse)
             val variables = (variablesOf(left) + right?.let(::variablesOf).orEmpty()).sorted()
-            val simplifiedLeft = ScienceExpressionSimplifier.simplify(left, domain)
-            val simplifiedRight = right?.let { ScienceExpressionSimplifier.simplify(it, domain) }
-            val renderedLeft = ScienceExpressionRenderer.render(simplifiedLeft)
-            val renderedRight = simplifiedRight?.let(ScienceExpressionRenderer::render)
-
-            if (right == null) {
-                val missing = variables.filterNot(values::containsKey)
-                if (missing.isNotEmpty()) {
-                    return MathFormulaVerificationResult(
-                        original = trimmed,
-                        variables = variables,
-                        normalizedLeft = renderedLeft,
-                        status = MathFormulaStatus.NEEDS_VARIABLE_VALUES,
-                        message = "表达式结构有效；填写 ${missing.joinToString("、")} 后可以计算数值。",
-                    )
-                }
-                val evaluated = ScienceExpressionEvaluator.evaluate(left, values)
-                return MathFormulaVerificationResult(
-                    original = trimmed,
-                    variables = variables,
-                    normalizedLeft = renderedLeft,
-                    leftValue = evaluated,
-                    status = MathFormulaStatus.VALID_EXPRESSION,
-                    message = "表达式结构有效，已完成化简和代入计算。",
-                )
+            val normalizedLeft = ScienceExpressionRenderer.render(ScienceExpressionSimplifier.simplify(left, domain))
+            val normalizedRight = right?.let {
+                ScienceExpressionRenderer.render(ScienceExpressionSimplifier.simplify(it, domain))
             }
 
+            if (right == null) {
+                return verifyExpression(trimmed, left, variables, normalizedLeft, values)
+            }
             if (sampleRelation && variables.isNotEmpty()) {
                 return verifyBySamples(
                     original = trimmed,
@@ -102,44 +83,90 @@ object MathFormulaVerifier {
                     right = right,
                     relation = requireNotNull(parsed.operator),
                     variables = variables,
-                    normalizedLeft = renderedLeft,
-                    normalizedRight = requireNotNull(renderedRight),
+                    normalizedLeft = normalizedLeft,
+                    normalizedRight = requireNotNull(normalizedRight),
                 )
             }
-
-            val missing = variables.filterNot(values::containsKey)
-            if (missing.isNotEmpty()) {
-                return MathFormulaVerificationResult(
-                    original = trimmed,
-                    variables = variables,
-                    normalizedLeft = renderedLeft,
-                    normalizedRight = renderedRight,
-                    relation = parsed.operator,
-                    status = MathFormulaStatus.NEEDS_VARIABLE_VALUES,
-                    message = "关系式结构有效；填写 ${missing.joinToString("、")} 后验证当前取值。",
-                )
-            }
-            val leftValue = ScienceExpressionEvaluator.evaluate(left, values)
-            val rightValue = ScienceExpressionEvaluator.evaluate(right, values)
-            val matches = compare(leftValue, rightValue, requireNotNull(parsed.operator))
-            MathFormulaVerificationResult(
+            verifyAtValues(
                 original = trimmed,
+                left = left,
+                right = right,
+                relation = requireNotNull(parsed.operator),
                 variables = variables,
-                normalizedLeft = renderedLeft,
-                normalizedRight = renderedRight,
-                relation = parsed.operator,
-                leftValue = leftValue,
-                rightValue = rightValue,
-                status = if (matches) MathFormulaStatus.TRUE_AT_VALUES else MathFormulaStatus.FALSE_AT_VALUES,
-                message = if (matches) {
-                    "在当前变量取值下，关系成立。"
-                } else {
-                    "在当前变量取值下，关系不成立；这已经构成当前关系的一个反例。"
-                },
+                normalizedLeft = normalizedLeft,
+                normalizedRight = requireNotNull(normalizedRight),
+                values = values,
             )
-        }.getOrElse { error ->
-            unsupported(trimmed, error.message ?: "无法识别这个数学式子。")
+        }.getOrElse { error -> unsupported(trimmed, error.message ?: "无法识别这个数学式子。") }
+    }
+
+    private fun verifyExpression(
+        original: String,
+        expression: ScienceExpression,
+        variables: List<String>,
+        normalized: String,
+        values: Map<String, Double>,
+    ): MathFormulaVerificationResult {
+        val missing = variables.filterNot(values::containsKey)
+        if (missing.isNotEmpty()) {
+            return MathFormulaVerificationResult(
+                original = original,
+                variables = variables,
+                normalizedLeft = normalized,
+                status = MathFormulaStatus.NEEDS_VARIABLE_VALUES,
+                message = "表达式结构有效；填写 ${missing.joinToString("、")} 后可以计算数值。",
+            )
         }
+        return MathFormulaVerificationResult(
+            original = original,
+            variables = variables,
+            normalizedLeft = normalized,
+            leftValue = ScienceExpressionEvaluator.evaluate(expression, values),
+            status = MathFormulaStatus.VALID_EXPRESSION,
+            message = "表达式结构有效，已完成化简和代入计算。",
+        )
+    }
+
+    private fun verifyAtValues(
+        original: String,
+        left: ScienceExpression,
+        right: ScienceExpression,
+        relation: MathRelationOperator,
+        variables: List<String>,
+        normalizedLeft: String,
+        normalizedRight: String,
+        values: Map<String, Double>,
+    ): MathFormulaVerificationResult {
+        val missing = variables.filterNot(values::containsKey)
+        if (missing.isNotEmpty()) {
+            return MathFormulaVerificationResult(
+                original = original,
+                variables = variables,
+                normalizedLeft = normalizedLeft,
+                normalizedRight = normalizedRight,
+                relation = relation,
+                status = MathFormulaStatus.NEEDS_VARIABLE_VALUES,
+                message = "关系式结构有效；填写 ${missing.joinToString("、")} 后验证当前取值。",
+            )
+        }
+        val leftValue = ScienceExpressionEvaluator.evaluate(left, values)
+        val rightValue = ScienceExpressionEvaluator.evaluate(right, values)
+        val matches = compare(leftValue, rightValue, relation)
+        return MathFormulaVerificationResult(
+            original = original,
+            variables = variables,
+            normalizedLeft = normalizedLeft,
+            normalizedRight = normalizedRight,
+            relation = relation,
+            leftValue = leftValue,
+            rightValue = rightValue,
+            status = if (matches) MathFormulaStatus.TRUE_AT_VALUES else MathFormulaStatus.FALSE_AT_VALUES,
+            message = if (matches) {
+                "在当前变量取值下，关系成立。"
+            } else {
+                "在当前变量取值下，关系不成立；这已经构成当前关系的一个反例。"
+            },
+        )
     }
 
     private fun verifyBySamples(
@@ -163,19 +190,21 @@ object MathFormulaVerifier {
                 error = "变量数量超过样本检查上限。",
             )
         }
-        val assignments = sampleAssignments(variables).take(49)
-        val samples = assignments.mapNotNull { assignment ->
-            runCatching {
-                val leftValue = ScienceExpressionEvaluator.evaluate(left, assignment)
-                val rightValue = ScienceExpressionEvaluator.evaluate(right, assignment)
-                MathFormulaSample(
-                    variables = assignment,
-                    left = leftValue,
-                    right = rightValue,
-                    matches = compare(leftValue, rightValue, relation),
-                )
-            }.getOrNull()
-        }
+        val samples = sampleAssignments(variables)
+            .take(49)
+            .mapNotNull { assignment ->
+                runCatching {
+                    val leftValue = ScienceExpressionEvaluator.evaluate(left, assignment)
+                    val rightValue = ScienceExpressionEvaluator.evaluate(right, assignment)
+                    MathFormulaSample(
+                        variables = assignment,
+                        left = leftValue,
+                        right = rightValue,
+                        matches = compare(leftValue, rightValue, relation),
+                    )
+                }.getOrNull()
+            }
+            .toList()
         if (samples.isEmpty()) {
             return MathFormulaVerificationResult(
                 original = original,
@@ -206,10 +235,7 @@ object MathFormulaVerifier {
     }
 
     private fun splitRelation(input: String): ParsedRelation {
-        val normalized = input
-            .replace("<=", "≤")
-            .replace(">=", "≥")
-            .replace('＝', '=')
+        val normalized = input.replace("<=", "≤").replace(">=", "≥").replace('＝', '=')
         val candidates = listOf(
             MathRelationOperator.LESS_OR_EQUAL,
             MathRelationOperator.GREATER_OR_EQUAL,
@@ -242,9 +268,7 @@ object MathFormulaVerifier {
 
     private fun compare(left: ComplexApprox, right: ComplexApprox, operator: MathRelationOperator): Boolean {
         if (operator != MathRelationOperator.EQUAL) {
-            require(abs(left.imaginary) < EPSILON && abs(right.imaginary) < EPSILON) {
-                "复数不能直接比较大小。"
-            }
+            require(abs(left.imaginary) < EPSILON && abs(right.imaginary) < EPSILON) { "复数不能直接比较大小。" }
         }
         return when (operator) {
             MathRelationOperator.EQUAL -> nearlyEqual(left.real, right.real) && nearlyEqual(left.imaginary, right.imaginary)
