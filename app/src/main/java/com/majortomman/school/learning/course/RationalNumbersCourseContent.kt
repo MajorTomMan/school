@@ -33,6 +33,7 @@ data class RationalLessonPage(
     val paragraphs: List<String>,
     val sourcePage: Int,
     val visualization: RationalVisualizationKind,
+    val sourcePageEnd: Int = sourcePage,
     val formula: String? = null,
     val conclusion: String? = null,
 )

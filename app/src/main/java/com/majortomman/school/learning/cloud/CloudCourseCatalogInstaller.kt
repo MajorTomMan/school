@@ -151,12 +151,16 @@ internal object CloudCourseCatalogInstaller {
 
     private fun pageRange(pages: JSONArray?): IntRange? {
         if (pages == null || pages.length() == 0) return null
-        val values = buildList {
-            for (index in 0 until pages.length()) {
-                pages.getJSONObject(index).optInt("sourcePage", 1).coerceAtLeast(1).let(::add)
-            }
+        var start = Int.MAX_VALUE
+        var end = Int.MIN_VALUE
+        for (index in 0 until pages.length()) {
+            val page = pages.getJSONObject(index)
+            val pageStart = page.optInt("sourcePage", 1).coerceAtLeast(1)
+            val pageEnd = page.optInt("sourcePageEnd", pageStart).coerceAtLeast(pageStart)
+            start = minOf(start, pageStart)
+            end = maxOf(end, pageEnd)
         }
-        return values.minOrNull()!!..values.maxOrNull()!!
+        return start..end
     }
 
     private fun parseGrade(value: Any?): Int {

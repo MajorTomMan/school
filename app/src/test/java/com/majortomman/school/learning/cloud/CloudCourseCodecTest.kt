@@ -15,6 +15,7 @@ class CloudCourseCodecTest {
         assertTrue(pages.any { it.title == "随堂练习" })
         assertTrue(pages.any { it.visualization == RationalVisualizationKind.NUMBER_COMPARISON })
         assertTrue(pages.all { it.sourcePage in 14..24 })
+        assertEquals(22, pages.first { it.title == "大小比较" }.sourcePageEnd)
     }
 
     @Test
@@ -71,6 +72,7 @@ class CloudCourseCodecTest {
                           "id":"comparison",
                           "title":"大小比较",
                           "sourcePage":21,
+                          "sourcePageEnd":22,
                           "blocks":[
                             {"type":"textbook_text","text":"数轴右边的数大于左边的数。"},
                             {"type":"visualization","renderer":"number_comparison"}

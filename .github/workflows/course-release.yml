@@ -32,6 +32,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install textbook validation dependency
+        run: python3 -m pip install --disable-pip-version-check --quiet PyMuPDF
+
+      - name: Download and validate textbook source
+        run: |
+          set -euo pipefail
+          mkdir -p build/course-source
+          pdf="build/course-source/textbook.pdf"
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output "$pdf" \
+            "https://drive.usercontent.google.com/download?id=1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N&export=download&confirm=t"
+          test "$(stat -c%s "$pdf")" = "12915486"
+          printf '%s  %s\n' \
+            "11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9" \
+            "$pdf" | sha256sum --check --strict
+          python3 tools/course-content/validate_course_sources.py \
+            --source tools/course-content/pep-math-7-1/course.json \
+            --pdf "$pdf" \
+            --page-index-offset 7 \
+            --expected-page-count 202
+
       - name: Build course release
         run: |
           python3 tools/course-content/build_course_release.py \
@@ -41,6 +62,7 @@ jobs:
             --content-version "${GITHUB_RUN_NUMBER}" \
             --minimum-app-version 22 \
             --release-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/course-latest" \
+            --pdf build/course-source/textbook.pdf \
             --pdf-file-id "1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N" \
             --pdf-size 12915486 \
             --pdf-sha256 "11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9" \
