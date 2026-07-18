@@ -40,7 +40,7 @@ class FreeSentenceAnalyzerTest {
     }
 
     @Test
-    fun analyzesBasicJapaneseSentence() {
+    fun analyzesJapaneseOnlyThroughKuromojiMorphemes() {
         val result = FreeSentenceAnalyzer.analyze(
             FreeLanguage.JAPANESE,
             "私は学校へ行きます。",
@@ -48,11 +48,26 @@ class FreeSentenceAnalyzerTest {
 
         assertEquals(SentenceJudgement.SUPPORTED_CORRECT, result.judgement)
         assertTrue(result.segments.any { it.role == GrammarRole.TOPIC && it.text == "私" })
-        assertTrue(result.segments.any { it.role == GrammarRole.PREDICATE && it.text == "行きます" })
+        assertTrue(result.segments.any { it.role == GrammarRole.PARTICLE && it.text == "は" })
+        assertTrue(result.segments.any { it.role == GrammarRole.PREDICATE && it.text == "行き" && it.explanation.contains("原形: 行く") })
+        assertTrue(result.segments.any { it.role == GrammarRole.AUXILIARY && it.text == "ます" })
+        assertTrue(result.limitation.contains("Apache Lucene Kuromoji"))
     }
 
     @Test
-    fun detectsMovementParticleIssue() {
+    fun keepsFullNegativePastAuxiliaryChainAttachedToVerb() {
+        val result = FreeSentenceAnalyzer.analyze(
+            FreeLanguage.JAPANESE,
+            "昨日は肉を食べませんでした。",
+        )
+
+        assertTrue(result.segments.any { it.role == GrammarRole.PREDICATE && it.text == "食べ" })
+        assertTrue(result.segments.count { it.role == GrammarRole.AUXILIARY } >= 2)
+        assertTrue(result.segments.any { it.explanation.contains("活用形") })
+    }
+
+    @Test
+    fun detectsMovementParticleIssueFromKuromojiPartOfSpeech() {
         val result = FreeSentenceAnalyzer.analyze(
             FreeLanguage.JAPANESE,
             "私は学校を行きます。",
@@ -63,7 +78,7 @@ class FreeSentenceAnalyzerTest {
     }
 
     @Test
-    fun detectsMixedJapaneseEnding() {
+    fun detectsIncompatibleKuromojiAuxiliarySequence() {
         val result = FreeSentenceAnalyzer.analyze(
             FreeLanguage.JAPANESE,
             "私は学生ですます。",
