@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import com.majortomman.school.data.Lesson
 import com.majortomman.school.data.material.InstalledMaterialPack
 import com.majortomman.school.learning.cloud.CloudCourseRepository
+import com.majortomman.school.learning.cloud.CourseSyncManager
+import com.majortomman.school.learning.cloud.CourseSyncResult
 import com.majortomman.school.learning.course.RationalLessonPage
 import com.majortomman.school.learning.course.RationalVisualizationKind
 import kotlin.math.abs
@@ -48,7 +52,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 @Composable
-fun CloudAwareRationalNumbersLessonScreen(
+fun CloudCourseLessonScreen(
     lesson: Lesson,
     installedMaterial: InstalledMaterialPack,
     nextLessonTitle: String?,
@@ -56,30 +60,102 @@ fun CloudAwareRationalNumbersLessonScreen(
     onBack: () -> Unit,
     onComplete: () -> Unit,
 ) {
-    val cloudRevision by CloudCourseRepository.revision.collectAsState()
-    val cloudPages = remember(lesson.title, lesson.textbookPages, cloudRevision) {
+    val revision by CloudCourseRepository.revision.collectAsState()
+    val pages = remember(lesson.title, lesson.textbookPages, revision) {
         CloudCourseRepository.pagesFor(lesson.title, lesson.textbookPages)
     }
-    if (cloudPages.isEmpty()) {
-        RationalNumbersLessonScreen(
-            lesson = lesson,
-            installedMaterial = installedMaterial,
-            nextLessonTitle = nextLessonTitle,
-            onOpenTextbook = onOpenTextbook,
+    if (pages.isEmpty()) {
+        CourseDataUnavailableScreen(
+            lessonTitle = lesson.title,
             onBack = onBack,
-            onComplete = onComplete,
         )
         return
     }
 
     CloudCoursePager(
-        pages = cloudPages,
+        pages = pages,
         installedMaterial = installedMaterial,
         nextLessonTitle = nextLessonTitle,
         onOpenTextbook = onOpenTextbook,
         onBack = onBack,
         onComplete = onComplete,
     )
+}
+
+@Composable
+private fun CourseDataUnavailableScreen(
+    lessonTitle: String,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var syncing by rememberSaveable { mutableStateOf(false) }
+    var status by rememberSaveable { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(InteractiveBlack)
+            .systemBarsPadding()
+            .navigationBarsPadding()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        CloudTextAction("返回", InteractiveMuted, onBack)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (syncing) {
+                CircularProgressIndicator(color = InteractiveBlue)
+            }
+            Text(
+                "课程数据尚未下载",
+                color = InteractiveWhite,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                lessonTitle,
+                color = InteractiveMuted,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+            )
+            status?.let {
+                Text(
+                    it,
+                    color = InteractiveMuted,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            InteractiveAction(
+                label = if (syncing) "正在同步" else "重新同步课程",
+                color = InteractiveBlue,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !syncing,
+            ) {
+                syncing = true
+                status = null
+                scope.launch {
+                    status = when (val result = CourseSyncManager.syncOnStartup(context)) {
+                        CourseSyncResult.Disabled -> "尚未配置课程清单地址"
+                        is CourseSyncResult.Success -> if (result.updatedTextbooks > 0) {
+                            "课程数据已更新"
+                        } else {
+                            "云端没有可用于当前课程的新数据"
+                        }
+                        is CourseSyncResult.Failed -> result.message
+                    }
+                    syncing = false
+                }
+            }
+        }
+        Spacer(Modifier.height(48.dp))
+    }
 }
 
 @Composable
@@ -108,7 +184,14 @@ private fun CloudCoursePager(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CloudTextAction("返回", InteractiveMuted, onBack)
-            Text(currentPage.section, color = InteractiveWhite, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                currentPage.section,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                color = InteractiveWhite,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
             CloudTextAction(
                 "教材第 ${currentPage.sourcePage} 页",
                 if (installedMaterial.pdfFile.isFile) InteractiveYellow else InteractiveMuted,
@@ -157,6 +240,10 @@ private fun CloudCoursePager(
 private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pageCount: Int) {
     BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp)) {
         val compact = maxHeight < 620.dp
+        val hasVisualization = page.visualization !in setOf(
+            RationalVisualizationKind.NONE,
+            RationalVisualizationKind.HISTORY,
+        )
         val visualHeight = if (compact) 180.dp else 245.dp
         Column(Modifier.fillMaxSize()) {
             Text(page.section, color = InteractiveBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -190,8 +277,10 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
                     textAlign = TextAlign.Center,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            CloudVisualization(page, Modifier.fillMaxWidth().height(visualHeight))
+            if (hasVisualization) {
+                Spacer(Modifier.height(12.dp))
+                CloudVisualization(page, Modifier.fillMaxWidth().height(visualHeight))
+            }
             if (!page.conclusion.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
@@ -223,57 +312,54 @@ private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         when (page.visualization) {
-            RationalVisualizationKind.OPPOSITE_QUANTITIES -> CloudOppositeQuantities()
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> CloudClassification()
-            RationalVisualizationKind.NUMBER_LINE -> CloudAdjustableNumberLine(NumberLineMode.VALUE)
-            RationalVisualizationKind.OPPOSITE_NUMBERS -> CloudAdjustableNumberLine(NumberLineMode.OPPOSITE)
-            RationalVisualizationKind.ABSOLUTE_VALUE -> CloudAdjustableNumberLine(NumberLineMode.ABSOLUTE)
-            RationalVisualizationKind.NUMBER_COMPARISON -> CloudComparison()
-            RationalVisualizationKind.ADDITION_PROCESS -> CloudSignedChips()
-            RationalVisualizationKind.SUBTRACTION_TRANSFORM -> CloudExpressionSteps(
-                listOf(page.formula ?: "9 − (−8)", "9 + 8", "17"),
-            )
-            RationalVisualizationKind.MULTIPLICATION_SIGN -> CloudSignRule()
-            RationalVisualizationKind.DIVISION_TRANSFORM -> CloudExpressionSteps(
-                listOf(page.formula ?: "(−12) ÷ 3", "(−12) × 1/3", "−4"),
-            )
-            RationalVisualizationKind.POWER_PROCESS -> CloudPower()
-            RationalVisualizationKind.HISTORY -> Text(
-                "教材内容与练习按原有顺序编排",
-                color = InteractiveMuted,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-            )
+            RationalVisualizationKind.NONE,
+            RationalVisualizationKind.HISTORY,
+            -> Unit
+            RationalVisualizationKind.OPPOSITE_QUANTITIES -> OppositeDirectionVisual()
+            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> ClassificationVisual()
+            RationalVisualizationKind.NUMBER_LINE -> AdjustableNumberLine(NumberLineMode.VALUE)
+            RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
+            RationalVisualizationKind.ABSOLUTE_VALUE -> AdjustableNumberLine(NumberLineMode.ABSOLUTE)
+            RationalVisualizationKind.NUMBER_COMPARISON -> ComparisonVisual()
+            RationalVisualizationKind.ADDITION_PROCESS -> SignedUnitVisual()
+            RationalVisualizationKind.SUBTRACTION_TRANSFORM,
+            RationalVisualizationKind.DIVISION_TRANSFORM,
+            -> FormulaProcessVisual(page.formula)
+            RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
+            RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
         }
     }
 }
 
 @Composable
-private fun CloudOppositeQuantities() {
-    Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.SpaceEvenly) {
-        listOf("零上 5 ℃" to "零下 5 ℃", "增加 12" to "减少 12", "收入 300 元" to "支出 300 元")
-            .forEach { (positive, negative) ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(positive, Modifier.weight(1f), color = InteractiveBlue, textAlign = TextAlign.End)
-                    Text("↔", color = InteractiveMuted)
-                    Text(negative, Modifier.weight(1f), color = InteractiveYellow)
-                }
-            }
+private fun OppositeDirectionVisual() {
+    var value by rememberSaveable { mutableStateOf(3f) }
+    Column(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.SpaceEvenly,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Slider(value = value, onValueChange = { value = it.roundToInt().toFloat() }, valueRange = 1f..10f, steps = 8)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Text("+${value.roundToInt()}", color = InteractiveBlue, fontSize = 24.sp)
+            Text("0", color = InteractiveWhite, fontSize = 20.sp)
+            Text("−${value.roundToInt()}", color = InteractiveYellow, fontSize = 24.sp)
+        }
     }
 }
 
 @Composable
-private fun CloudClassification() {
+private fun ClassificationVisual() {
     Column(
         Modifier.fillMaxSize().padding(14.dp),
         verticalArrangement = Arrangement.SpaceEvenly,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CloudNode("有理数", InteractiveWhite)
+        CloudNode("数", InteractiveWhite)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CloudNode("正有理数", InteractiveBlue, Modifier.weight(1f))
+            CloudNode("正", InteractiveBlue, Modifier.weight(1f))
             CloudNode("0", InteractiveWhite, Modifier.weight(0.6f))
-            CloudNode("负有理数", InteractiveYellow, Modifier.weight(1f))
+            CloudNode("负", InteractiveYellow, Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CloudNode("整数", InteractiveBlue, Modifier.weight(1f))
@@ -292,7 +378,7 @@ private fun CloudNode(text: String, color: Color, modifier: Modifier = Modifier)
 private enum class NumberLineMode { VALUE, OPPOSITE, ABSOLUTE }
 
 @Composable
-private fun CloudAdjustableNumberLine(mode: NumberLineMode) {
+private fun AdjustableNumberLine(mode: NumberLineMode) {
     var value by rememberSaveable { mutableStateOf(-2f) }
     val points = when (mode) {
         NumberLineMode.VALUE -> listOf(value to InteractiveYellow)
@@ -301,12 +387,12 @@ private fun CloudAdjustableNumberLine(mode: NumberLineMode) {
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("数 x", color = InteractiveMuted, fontSize = 12.sp)
+            Text("x", color = InteractiveMuted, fontSize = 12.sp)
             Text(
                 when (mode) {
-                    NumberLineMode.ABSOLUTE -> "|${cloudNumber(value)}| = ${cloudNumber(abs(value))}"
-                    NumberLineMode.OPPOSITE -> "${cloudNumber(value)} 与 ${cloudNumber(-value)}"
-                    NumberLineMode.VALUE -> cloudNumber(value)
+                    NumberLineMode.ABSOLUTE -> "|${displayNumber(value)}| = ${displayNumber(abs(value))}"
+                    NumberLineMode.OPPOSITE -> "${displayNumber(value)}，${displayNumber(-value)}"
+                    NumberLineMode.VALUE -> displayNumber(value)
                 },
                 color = InteractiveYellow,
                 fontSize = 14.sp,
@@ -314,72 +400,122 @@ private fun CloudAdjustableNumberLine(mode: NumberLineMode) {
             )
         }
         Slider(value = value, onValueChange = { value = (it * 2f).roundToInt() / 2f }, valueRange = -5f..5f)
-        Canvas(Modifier.fillMaxWidth().weight(1f)) { drawCloudNumberLine(points) }
+        Canvas(Modifier.fillMaxWidth().weight(1f)) { drawNumberLine(points) }
     }
 }
 
 @Composable
-private fun CloudComparison() {
-    Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+private fun ComparisonVisual() {
+    var left by rememberSaveable { mutableStateOf(-3f) }
+    var right by rememberSaveable { mutableStateOf(2f) }
+    Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+        Slider(value = left, onValueChange = { left = it.roundToInt().toFloat() }, valueRange = -5f..5f)
+        Slider(value = right, onValueChange = { right = it.roundToInt().toFloat() }, valueRange = -5f..5f)
         Canvas(Modifier.fillMaxWidth().weight(1f)) {
-            drawCloudNumberLine(listOf(-4f to InteractiveYellow, -2f to InteractiveBlue))
+            drawNumberLine(listOf(left to InteractiveYellow, right to InteractiveBlue))
         }
-        Text("−4 在 −2 的左边，因此 −4 < −2", color = InteractiveWhite, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        val relation = when {
+            left < right -> "<"
+            left > right -> ">"
+            else -> "="
+        }
+        Text(
+            "${displayNumber(left)} $relation ${displayNumber(right)}",
+            color = InteractiveWhite,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
 @Composable
-private fun CloudSignedChips() {
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceEvenly) {
-        Text("3 个正单位与 5 个负单位", color = InteractiveWhite, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+private fun SignedUnitVisual() {
+    var positive by rememberSaveable { mutableStateOf(2f) }
+    var negative by rememberSaveable { mutableStateOf(3f) }
+    Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+        Slider(value = positive, onValueChange = { positive = it.roundToInt().toFloat() }, valueRange = 0f..6f, steps = 5)
+        Slider(value = negative, onValueChange = { negative = it.roundToInt().toFloat() }, valueRange = 0f..6f, steps = 5)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            repeat(3) { Text("＋", color = InteractiveBlue, fontSize = 26.sp) }
-            Spacer(Modifier.width(16.dp))
-            repeat(5) { Text("−", color = InteractiveYellow, fontSize = 26.sp) }
+            repeat(positive.roundToInt()) { Text("＋", color = InteractiveBlue, fontSize = 24.sp) }
+            Spacer(Modifier.width(14.dp))
+            repeat(negative.roundToInt()) { Text("−", color = InteractiveYellow, fontSize = 24.sp) }
         }
-        Text("抵消 3 对后，剩余 2 个负单位：−2", color = InteractiveYellow, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(
+            "结果：${positive.roundToInt() - negative.roundToInt()}",
+            color = InteractiveWhite,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
 @Composable
-private fun CloudExpressionSteps(steps: List<String>) {
-    Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.SpaceEvenly, horizontalAlignment = Alignment.CenterHorizontally) {
-        steps.distinct().forEachIndexed { index, step ->
-            Text(step, color = if (index == steps.lastIndex) InteractiveYellow else InteractiveWhite, fontSize = 21.sp, fontWeight = FontWeight.Medium)
-            if (index != steps.lastIndex) Text("↓", color = InteractiveMuted, fontSize = 18.sp)
-        }
-    }
+private fun FormulaProcessVisual(formula: String?) {
+    Text(
+        formula.orEmpty(),
+        modifier = Modifier.fillMaxWidth().padding(18.dp),
+        color = InteractiveYellow,
+        fontSize = 22.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+    )
 }
 
 @Composable
-private fun CloudSignRule() {
+private fun SignRuleVisual() {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.SpaceEvenly) {
         listOf("＋ × ＋ = ＋", "＋ × − = −", "− × ＋ = −", "− × − = ＋").forEach { rule ->
-            Text(rule, color = if (rule.endsWith("＋")) InteractiveBlue else InteractiveYellow, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Text(
+                rule,
+                color = if (rule.endsWith("＋")) InteractiveBlue else InteractiveYellow,
+                fontSize = 18.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
 
 @Composable
-private fun CloudPower() {
+private fun PowerVisual() {
+    var base by rememberSaveable { mutableStateOf(-2f) }
     var exponent by rememberSaveable { mutableStateOf(3f) }
-    val n = exponent.roundToInt().coerceIn(1, 6)
-    val value = (1..n).fold(1) { result, _ -> result * -2 }
+    val baseValue = base.roundToInt()
+    val exponentValue = exponent.roundToInt().coerceIn(1, 6)
+    val result = (1..exponentValue).fold(1) { current, _ -> current * baseValue }
     Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+        Slider(value = base, onValueChange = { base = it.roundToInt().toFloat() }, valueRange = -4f..4f, steps = 7)
         Slider(value = exponent, onValueChange = { exponent = it.roundToInt().toFloat() }, valueRange = 1f..6f, steps = 4)
-        Text("(−2)$n = ${List(n) { "(−2)" }.joinToString(" × ")}", color = InteractiveWhite, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-        Text("结果：$value", color = InteractiveYellow, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(
+            "$baseValue ^ $exponentValue = $result",
+            color = InteractiveYellow,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCloudNumberLine(points: List<Pair<Float, Color>>) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNumberLine(points: List<Pair<Float, Color>>) {
     val left = 22f
     val right = size.width - 22f
     val centerY = size.height * 0.58f
-    drawLine(InteractiveWhite.copy(alpha = 0.72f), Offset(left, centerY), Offset(right, centerY), strokeWidth = 3f, cap = StrokeCap.Round)
+    drawLine(
+        InteractiveWhite.copy(alpha = 0.72f),
+        Offset(left, centerY),
+        Offset(right, centerY),
+        strokeWidth = 3f,
+        cap = StrokeCap.Round,
+    )
     for (tick in -5..5) {
         val x = left + (tick + 5) / 10f * (right - left)
-        drawLine(InteractiveWhite.copy(alpha = 0.45f), Offset(x, centerY - 8f), Offset(x, centerY + 8f), strokeWidth = 2f)
+        drawLine(
+            InteractiveWhite.copy(alpha = 0.45f),
+            Offset(x, centerY - 8f),
+            Offset(x, centerY + 8f),
+            strokeWidth = 2f,
+        )
     }
     points.forEach { (value, color) ->
         val x = left + (value.coerceIn(-5f, 5f) + 5f) / 10f * (right - left)
@@ -387,7 +523,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCloudNumberLine
     }
 }
 
-private fun cloudNumber(value: Float): String =
+private fun displayNumber(value: Float): String =
     if (value == value.roundToInt().toFloat()) value.roundToInt().toString() else "%.1f".format(value)
 
 @Composable
