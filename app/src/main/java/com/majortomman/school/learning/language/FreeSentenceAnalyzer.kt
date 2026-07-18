@@ -317,6 +317,7 @@ object JapaneseSentenceAnalyzer {
     private val politeEndings = listOf("ませんでした", "ましょう", "ました", "ません", "でしょう", "ください", "あります", "います", "です", "ます")
     private val casualEndings = listOf("ではない", "じゃない", "だった", "っている", "ている", "ない", "した", "する", "くる", "来る", "行く", "帰る", "だ", "る", "う", "く", "す", "つ", "ぬ", "ぶ", "む", "ぐ", "た")
     private val movementPredicates = listOf("行きます", "行く", "来ます", "来る", "帰ります", "帰る", "向かいます", "向かう")
+    private val overlappingEndings = listOf("ですます", "ますだ", "でしただ")
 
     fun analyze(sentence: String): FreeSentenceAnalysis {
         val normalized = Normalizer.normalize(sentence, Normalizer.Form.NFKC).trim()
@@ -339,10 +340,10 @@ object JapaneseSentenceAnalyzer {
         }
 
         val polite = politeEndings.any(predicateText::endsWith)
-        val casual = casualEndings.any(predicateText::endsWith)
-        if (predicateText.contains("ですます") || predicateText.contains("ますだ") || predicateText.contains("でしただ")) {
+        val casual = !polite && casualEndings.any(predicateText::endsWith)
+        if (overlappingEndings.any(core::contains)) {
             issues += SentenceIssue("mixed_ending", "丁寧体と普通体の語尾が重なっています。", "文末を一つの活用形にしてください。")
-        } else if (polite && casual && !predicateText.endsWith("です")) {
+        } else if (polite && casual) {
             issues += SentenceIssue("mixed_register", "一つの述語で丁寧体と普通体が混在している可能性があります。", "です・ます体か普通体のどちらかにそろえてください。")
         }
 
