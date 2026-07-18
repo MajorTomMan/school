@@ -2,7 +2,9 @@ package com.majortomman.school.ui
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,8 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -202,25 +206,211 @@ internal fun AbsoluteValueNumberLineVisual() {
     }
 }
 
+private data class RationalClassificationChoice(
+    val id: String,
+    val example: String,
+    val cellLabel: String,
+    val signLabel: String,
+    val formLabel: String,
+    val color: Color,
+)
+
+private val rationalClassificationChoices = listOf(
+    RationalClassificationChoice("positive_integer", "3", "正整数", "正有理数", "整数", InteractiveBlue),
+    RationalClassificationChoice("positive_fraction", "1/2", "正分数", "正有理数", "分数", InteractiveBlue),
+    RationalClassificationChoice("zero", "0", "0", "0", "整数", InteractiveWhite),
+    RationalClassificationChoice("negative_integer", "−4", "负整数", "负有理数", "整数", InteractiveYellow),
+    RationalClassificationChoice("negative_fraction", "−2/3", "负分数", "负有理数", "分数", InteractiveYellow),
+)
+
 @Composable
 internal fun ClassificationVisual() {
+    var selectedId by rememberSaveable { mutableStateOf("negative_fraction") }
+    val selected = rationalClassificationChoices.first { it.id == selectedId }
+
     Column(
-        Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "有理数的双维分类",
+                color = InteractiveWhite,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text("点选交叉格", color = InteractiveMuted, fontSize = 10.sp)
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "符号 ↓",
+                modifier = Modifier.width(48.dp),
+                color = InteractiveMuted,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+            )
+            ClassificationMatrixHeader("整数", Modifier.weight(1f))
+            ClassificationMatrixHeader("分数", Modifier.weight(1f))
+        }
+
+        ClassificationMatrixRow(
+            sign = "正",
+            signColor = InteractiveBlue,
+            integerChoice = rationalClassificationChoices[0],
+            fractionChoice = rationalClassificationChoices[1],
+            selectedId = selectedId,
+            onSelect = { selectedId = it },
+        )
+        ClassificationMatrixRow(
+            sign = "0",
+            signColor = InteractiveWhite,
+            integerChoice = rationalClassificationChoices[2],
+            fractionChoice = null,
+            selectedId = selectedId,
+            onSelect = { selectedId = it },
+        )
+        ClassificationMatrixRow(
+            sign = "负",
+            signColor = InteractiveYellow,
+            integerChoice = rationalClassificationChoices[3],
+            fractionChoice = rationalClassificationChoices[4],
+            selectedId = selectedId,
+            onSelect = { selectedId = it },
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "例 ${selected.example}",
+                modifier = Modifier.width(58.dp),
+                color = selected.color,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            ClassificationPath(
+                prefix = "按符号",
+                value = selected.signLabel,
+                color = selected.color,
+                modifier = Modifier.weight(1f),
+            )
+            ClassificationPath(
+                prefix = "按形式",
+                value = selected.formLabel,
+                color = selected.color,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClassificationMatrixHeader(label: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "按表示形式 → $label",
+        modifier = modifier,
+        color = InteractiveMuted,
+        fontSize = 10.sp,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
+private fun ClassificationMatrixRow(
+    sign: String,
+    signColor: Color,
+    integerChoice: RationalClassificationChoice?,
+    fractionChoice: RationalClassificationChoice?,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(48.dp)
+                .height(34.dp)
+                .border(1.dp, signColor.copy(alpha = 0.58f), RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(sign, color = signColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        ClassificationMatrixCell(
+            choice = integerChoice,
+            selected = integerChoice?.id == selectedId,
+            modifier = Modifier.weight(1f),
+            onSelect = onSelect,
+        )
+        ClassificationMatrixCell(
+            choice = fractionChoice,
+            selected = fractionChoice?.id == selectedId,
+            modifier = Modifier.weight(1f),
+            onSelect = onSelect,
+        )
+    }
+}
+
+@Composable
+private fun ClassificationMatrixCell(
+    choice: RationalClassificationChoice?,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onSelect: (String) -> Unit,
+) {
+    val shape = RoundedCornerShape(6.dp)
+    val color = choice?.color ?: InteractiveMuted
+    Box(
+        modifier = modifier
+            .height(34.dp)
+            .background(
+                if (selected) color.copy(alpha = 0.18f) else InteractivePanel.copy(alpha = 0.2f),
+                shape,
+            )
+            .border(if (selected) 1.5.dp else 1.dp, color.copy(alpha = if (selected) 0.95f else 0.28f), shape)
+            .clickable(enabled = choice != null) { choice?.let { onSelect(it.id) } },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = choice?.cellLabel ?: "—",
+            color = if (choice == null) InteractiveMuted.copy(alpha = 0.35f) else color,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun ClassificationPath(
+    prefix: String,
+    value: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(color.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
+            .border(1.dp, color.copy(alpha = 0.42f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 5.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CloudNode("有理数", InteractiveWhite)
-        Text("按符号", color = InteractiveMuted, fontSize = 10.sp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            CloudNode("正有理数", InteractiveBlue, Modifier.weight(1f))
-            CloudNode("0", InteractiveWhite, Modifier.weight(0.42f))
-            CloudNode("负有理数", InteractiveYellow, Modifier.weight(1f))
-        }
-        Text("按表示形式", color = InteractiveMuted, fontSize = 10.sp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CloudNode("整数", InteractiveBlue, Modifier.weight(1f))
-            CloudNode("分数形式", InteractiveYellow, Modifier.weight(1f))
-        }
+        Text(prefix, color = InteractiveMuted, fontSize = 9.sp)
+        Text(value, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
 
