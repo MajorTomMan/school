@@ -11,6 +11,7 @@ internal data class CourseFileSpec(
     val url: String,
     val size: Long,
     val sha256: String,
+    val inFullPackage: Boolean = true,
 )
 
 internal data class CourseTextbookManifest(
@@ -88,7 +89,12 @@ internal object CourseUpdatePlanner {
         if (fullSize <= 0L || remote.fullPackage.url.isBlank()) {
             return CourseUpdatePlan.Incremental(changed, deleted)
         }
-        return if (incrementalSize.toDouble() < fullSize.toDouble() * fullDownloadThreshold) {
+
+        // 完整 ZIP 可以不包含教材 PDF 等外部资源。执行全量安装时，这些发生变化的
+        // 外部文件仍然需要单独下载，因此必须计入全量传输成本。
+        val changedExternalSize = changed.filterNot(CourseFileSpec::inFullPackage).sumOf(CourseFileSpec::size)
+        val fullTransferSize = fullSize + changedExternalSize
+        return if (incrementalSize.toDouble() < fullTransferSize.toDouble() * fullDownloadThreshold) {
             CourseUpdatePlan.Incremental(changed, deleted)
         } else {
             CourseUpdatePlan.Full("增量下载体积接近完整课程包")
@@ -111,6 +117,9 @@ internal object CourseManifestCodec {
                 val files = textbook.getJSONArray("files").mapObjects(::decodeFile)
                 require(files.map(CourseFileSpec::path).distinct().size == files.size) {
                     "课程 ${textbook.getString("id")} 包含重复文件路径"
+                }
+                require(files.filterNot(CourseFileSpec::inFullPackage).all { it.url.isNotBlank() }) {
+                    "课程 ${textbook.getString("id")} 的外部文件缺少下载地址"
                 }
                 add(
                     CourseTextbookManifest(
@@ -181,6 +190,7 @@ internal object CourseManifestCodec {
         url = json.optString("url").trim(),
         size = json.getLong("size").also { require(it >= 0L) { "课程文件大小不能为负数" } },
         sha256 = validateSha256(json.getString("sha256")),
+        inFullPackage = json.optBoolean("inFullPackage", true),
     )
 
     private fun JSONArray.mapObjects(transform: (JSONObject) -> CourseFileSpec): List<CourseFileSpec> =
