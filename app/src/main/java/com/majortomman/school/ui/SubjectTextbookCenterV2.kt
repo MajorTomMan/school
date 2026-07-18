@@ -15,11 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.majortomman.school.data.material.EducationStage
 import com.majortomman.school.data.material.InstalledTextbook
 import com.majortomman.school.data.material.MaterialLibraryState
 import com.majortomman.school.data.material.SubjectTemplates
 import com.majortomman.school.data.material.TextbookSlot
+
+private val CenterBlack = Color(0xFF050608)
 
 private enum class CenterPage {
     STAGES,
