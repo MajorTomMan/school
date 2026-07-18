@@ -8,12 +8,17 @@ import org.junit.Test
 class RationalNumbersCourseFactoryTest {
     @Test
     fun followsTextbookChapterOrder() {
-        val pages = RationalNumbersCourseFactory.pagesFor("有理数", 1..21)
+        val pages = RationalNumbersCourseFactory.pagesFor("有理数", 1..23)
+
+        val comparisonIndex = pages.indexOfFirst { it.title == "有理数的大小比较" }
+        val summaryIndex = pages.indexOfFirst { it.title == "本章知识结构" }
+        val exercisesIndex = pages.indexOfFirst { it.section == "第一章 章末练习" }
 
         assertEquals("具有相反意义的量", pages.first().title)
         assertTrue(pages.indexOfFirst { it.title == "数轴" } < pages.indexOfFirst { it.title == "相反数" })
         assertTrue(pages.indexOfFirst { it.title == "相反数" } < pages.indexOfFirst { it.title == "绝对值" })
-        assertEquals("有理数的大小比较", pages.last().title)
+        assertTrue(comparisonIndex in 0 until summaryIndex)
+        assertTrue(summaryIndex in 0 until exercisesIndex)
     }
 
     @Test
@@ -46,7 +51,7 @@ class RationalNumbersCourseFactoryTest {
 
     @Test
     fun courseTextContainsNoDevelopmentConversation() {
-        val pages = RationalNumbersCourseFactory.pagesFor("有理数的运算", 24..59)
+        val pages = RationalNumbersCourseFactory.pagesFor("有理数的运算", 24..62)
         val text = pages.joinToString("\n") { page ->
             listOf(page.section, page.title, page.paragraphs.joinToString("\n"), page.formula, page.conclusion)
                 .joinToString("\n")
@@ -69,6 +74,7 @@ class RationalNumbersCourseFactoryTest {
     fun recognizesTextbookLessonTitles() {
         assertTrue(RationalNumbersCourseFactory.supports("1.1 正数和负数"))
         assertTrue(RationalNumbersCourseFactory.supports("1.2 有理数及其大小比较"))
+        assertTrue(RationalNumbersCourseFactory.supports("有理数的概念"))
         assertTrue(RationalNumbersCourseFactory.supports("2.1 有理数的加法与减法"))
         assertTrue(RationalNumbersCourseFactory.supports("2.2 有理数的乘法与除法"))
         assertTrue(RationalNumbersCourseFactory.supports("2.3 有理数的乘方"))
