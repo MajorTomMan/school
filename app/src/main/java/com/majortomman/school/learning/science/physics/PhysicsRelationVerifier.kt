@@ -4,18 +4,6 @@ import kotlin.math.abs
 import kotlin.math.pow
 
 enum class PhysicsRelationId(
-    val displayName: String,
-    val displayFormula: String,
-    val explanation: String,
-) {
-    SPEED("速度", "v=s/t", "路程与时间均采用同一运动过程；平均速度不能代替任意时刻的瞬时速度。"),
-    ACCELERATION("加速度", "a=(v-v₀)/t", "适用于用速度变化量与对应时间定义平均加速度的教材情境。"),
-    DENSITY("密度", "ρ=m/V", "质量与体积必须属于同一物体或同一均匀物质样品。"),
-    PRESSURE("压强", "p=F/S", "F 是垂直作用在受力面上的压力，S 是对应受力面积。"),
-    NEWTON_SECOND("牛顿第二定律", "F=ma", "F 表示合外力；质量不变并使用同一惯性参考系。"),
-    WORK("功", "W=Fs", "首版验证力与位移同向的教材基本模型；一般情形还要考虑夹角。"),
-    POWER("功率", "P=W/t", "功率表示做功快慢，W 与 t 必须对应同一过程。"),
-    KINETIC_ENERGY("动能", "Eₖ=mv²/2", "适用于经典um class PhysicsRelationId(
     val display: String,
     val target: String,
     val variables: List<String>,
@@ -33,21 +21,9 @@ enum class PhysicsRelationId(
     MOMENTUM("p=m·v", "p", listOf("m", "v"), "经典力学，速度方向决定动量方向"),
     HEAT("Q=c·m·ΔT", "Q", listOf("c", "m", "dT"), "无相变且比热容近似不变"),
     WAVE_SPEED("v=f·λ", "v", listOf("f", "lambda"), "同一介质中的周期波"),
-    OHM("U=I·R", "U", listOf("I", "R"), "导体状态和温度条件适n    val relation: PhysicsRelationId,
-    val expectedSymbol: String,
-    val expectedValue: Double?,
-    val expectedUnit: String,
-    val providedValue: Double?,
-    val correct: Boolean?,
-    val substitutions: List<String>,
-    val message: String,
-    val error: String? = null,
-)
-
-object PhysicsRelationVerifier {
-    private const val EPSILON = 1e-7
-
-    fun supported给定模型处理"),
+    OHM("U=I·R", "U", listOf("I", "R"), "导体状态和温度条件适合欧姆定律"),
+    ELECTRIC_POWER("P=U·I", "P", listOf("U", "I"), "电压与电流对应同一用电器和时刻"),
+    ELECTRIC_ENERGY("W=P·t", "W", listOf("P", "t"), "功率在该时间段内按教材模型处理"),
     JOULE_HEAT("Q=I²·R·t", "Q", listOf("I", "R", "t"), "纯电阻或教材规定的焦耳热模型"),
     FREQUENCY_PERIOD("f=1/T", "f", listOf("T"), "周期 T>0"),
     LENS("1/f=1/u+1/v", "f", listOf("u", "v"), "薄透镜、近轴光线；符号约定需与教材一致"),
@@ -135,10 +111,14 @@ object PhysicsRelationVerifier {
         }
         val missing = relation.variables.filterNot(values::containsKey)
         if (missing.isNotEmpty() || submittedTarget == null) {
+            val names = buildList {
+                addAll(missing)
+                if (submittedTarget == null) add(relation.target)
+            }
             return PhysicsVerificationResult(
                 relation = relation,
                 status = PhysicsVerificationStatus.MISSING_VALUES,
-                message = "请填写 ${missing.plus(relation.target.takeIf { submittedTarget == null }).filterNotNull().joinToString("、")}。",
+                message = "请填写 ${names.joinToString("、")}。",
             )
         }
 
