@@ -79,8 +79,8 @@ fun InteractiveLessonScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextAction("返回", InteractiveMuted, onBack)
-            Text("交互课程", color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("V1.2", color = InteractiveMuted, fontSize = 13.sp)
+            Text("教材课程", color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text("参数 · 可视化 · 验证", color = InteractiveMuted, fontSize = 12.sp)
         }
 
         Column(
@@ -106,7 +106,7 @@ fun InteractiveLessonScreen(
             FormulaHero(spec.formula)
             Spacer(Modifier.height(22.dp))
 
-            SourceSummaryCard(
+            SourceSummarySection(
                 title = installedMaterial.manifest.title,
                 pageLabel = pageLabel,
                 summary = spec.sourceSummary,
@@ -115,38 +115,53 @@ fun InteractiveLessonScreen(
                 onOpenTextbook = { onOpenTextbook(spec.sourcePage) },
                 sourceAvailable = installedMaterial.pdfFile.isFile,
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(30.dp))
 
             when (spec.kind) {
                 InteractiveLessonKind.LINEAR_FUNCTION -> {
                     LinearFunctionLab(lesson.id)
-                    Spacer(Modifier.height(34.dp))
+                    Spacer(Modifier.height(32.dp))
                     LinearCoordinateValidationLab(lesson.id)
-                    Spacer(Modifier.height(34.dp))
+                    Spacer(Modifier.height(32.dp))
                     EquationVerificationLab(lesson.id)
                 }
                 InteractiveLessonKind.NEWTON_FIRST_LAW -> NewtonFirstLawLab(lesson.id)
+                InteractiveLessonKind.MATH_GENERAL -> MathCourseWorkbench(spec)
             }
 
-            Spacer(Modifier.height(34.dp))
+            Spacer(Modifier.height(36.dp))
             SectionTitle(spec.derivationTitle, InteractiveYellow)
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             DerivationSteps(spec.derivationSteps)
 
-            Spacer(Modifier.height(34.dp))
+            Spacer(Modifier.height(36.dp))
             SectionTitle("背景知识", InteractivePurple)
             Spacer(Modifier.height(12.dp))
             spec.background.forEach { paragraph ->
                 Text(
                     paragraph,
                     modifier = Modifier.padding(bottom = 16.dp),
-                    color = InteractiveWhite.copy(alpha = 0.78f),
+                    color = InteractiveWhite.copy(alpha = 0.80f),
                     fontSize = 17.sp,
                     lineHeight = 27.sp,
                 )
             }
 
-            MisconceptionCard(spec.misconception)
+            if (spec.enrichment.extensions.isNotEmpty()) {
+                Spacer(Modifier.height(22.dp))
+                SectionTitle("扩展知识 · 非本课必会", InteractiveBlue)
+                Spacer(Modifier.height(12.dp))
+                spec.enrichment.extensions.forEach { note ->
+                    Column(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
+                        Text(note.title, color = InteractiveBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(7.dp))
+                        Text(note.body, color = InteractiveWhite.copy(alpha = 0.74f), fontSize = 16.sp, lineHeight = 25.sp)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+            MisconceptionSection(spec.misconception)
             Spacer(Modifier.height(38.dp))
         }
 
@@ -176,26 +191,23 @@ fun InteractiveLessonScreen(
 
 @Composable
 private fun FormulaHero(formula: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(InteractivePanel, RoundedCornerShape(18.dp))
-            .border(1.dp, InteractiveLine, RoundedCornerShape(18.dp))
-            .padding(horizontal = 20.dp, vertical = 24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveYellow.copy(alpha = 0.72f)))
         Text(
             formula,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
             color = InteractiveYellow,
             fontSize = 30.sp,
+            lineHeight = 38.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center,
         )
+        Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
     }
 }
 
 @Composable
-private fun SourceSummaryCard(
+private fun SourceSummarySection(
     title: String,
     pageLabel: String,
     summary: String,
@@ -204,16 +216,9 @@ private fun SourceSummaryCard(
     onOpenTextbook: () -> Unit,
     sourceAvailable: Boolean,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(InteractivePanel, RoundedCornerShape(16.dp))
-            .border(1.dp, InteractiveBlue.copy(alpha = 0.36f), RoundedCornerShape(16.dp))
-            .clickable(onClick = onToggle)
-            .padding(18.dp),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -230,19 +235,19 @@ private fun SourceSummaryCard(
             exit = fadeOut(tween(150)) + shrinkVertically(tween(210)),
         ) {
             Column {
-                Spacer(Modifier.height(16.dp))
-                Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
-                Spacer(Modifier.height(16.dp))
-                Text(summary, color = InteractiveWhite, fontSize = 18.sp, lineHeight = 29.sp)
+                Spacer(Modifier.height(8.dp))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveBlue.copy(alpha = 0.35f)))
                 Spacer(Modifier.height(14.dp))
+                Text(summary, color = InteractiveWhite, fontSize = 17.sp, lineHeight = 28.sp)
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    if (sourceAvailable) "此处为移动端整理内容，点击下方按钮可核对教材原页。" else "尚未绑定 PDF；绑定后可直接核对教材原页。",
+                    if (sourceAvailable) "School 解释与教材原文分开；可打开原页核对。" else "尚未绑定 PDF；当前只展示页码约束下的 School 自有解释。",
                     color = InteractiveMuted,
                     fontSize = 13.sp,
                     lineHeight = 20.sp,
                 )
                 if (sourceAvailable) {
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(10.dp))
                     TextAction("打开教材原页 →", InteractiveYellow, onOpenTextbook)
                 }
             }
@@ -252,7 +257,7 @@ private fun SourceSummaryCard(
 
 @Composable
 private fun DerivationSteps(steps: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+    Column {
         steps.forEachIndexed { index, step ->
             Row(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
@@ -260,13 +265,7 @@ private fun DerivationSteps(steps: List<String>) {
                 verticalAlignment = Alignment.Top,
             ) {
                 Text("%02d".format(index + 1), color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    step,
-                    modifier = Modifier.weight(1f),
-                    color = InteractiveWhite.copy(alpha = 0.82f),
-                    fontSize = 17.sp,
-                    lineHeight = 27.sp,
-                )
+                Text(step, modifier = Modifier.weight(1f), color = InteractiveWhite.copy(alpha = 0.82f), fontSize = 17.sp, lineHeight = 27.sp)
             }
             if (index != steps.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
         }
@@ -274,16 +273,12 @@ private fun DerivationSteps(steps: List<String>) {
 }
 
 @Composable
-private fun MisconceptionCard(text: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(InteractiveRed.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-            .border(1.dp, InteractiveRed.copy(alpha = 0.44f), RoundedCornerShape(16.dp))
-            .padding(18.dp),
-    ) {
+private fun MisconceptionSection(text: String) {
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveRed.copy(alpha = 0.75f)))
+        Spacer(Modifier.height(12.dp))
         Text("常见误区", color = InteractiveRed, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Text(text, color = InteractiveWhite, fontSize = 17.sp, lineHeight = 27.sp)
     }
 }
@@ -295,7 +290,7 @@ internal fun SectionTitle(title: String, color: Color) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.height(3.dp).weight(0.12f).background(color, RoundedCornerShape(10.dp)))
+        Box(Modifier.height(3.dp).weight(0.12f).background(color))
         Text(title, modifier = Modifier.weight(0.88f), color = InteractiveWhite, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
     }
 }
