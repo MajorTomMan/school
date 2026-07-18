@@ -1,6 +1,7 @@
 package com.majortomman.school.learning.cloud
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.majortomman.school.BuildConfig
 import com.majortomman.school.network.AppProxy
@@ -20,7 +21,47 @@ object CourseSyncManager {
 
     private val syncMutex = Mutex()
 
-    suspend fun syncOnStartup(context: Context): CourseSyncResult = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdates(context: Context): CourseUpdateCheckResult = withContext(Dispatchers.IO) {
+        syncMutex.withLock {
+            val manifestUrl = BuildConfig.COURSE_MANIFEST_URL.trim()
+            if (manifestUrl.isBlank()) return@withLock CourseUpdateCheckResult.Disabled
+
+            val appContext = context.applicationContext
+            runCatching {
+                val manifest = downloadManifest(appContext, manifestUrl)
+                val store = CoursePackStore(appContext)
+                val planned = plannedUpdates(manifest, store)
+                if (planned.isEmpty()) {
+                    CourseUpdateCheckResult.NoUpdate(manifest.contentVersion)
+                } else {
+                    val kind = when {
+                        planned.any { it.local == null } -> CourseUpdateKind.INITIAL
+                        planned.any { it.plan is CourseUpdatePlan.Full } -> CourseUpdateKind.FULL
+                        else -> CourseUpdateKind.INCREMENTAL
+                    }
+                    CourseUpdateCheckResult.Available(
+                        CourseUpdateOffer(
+                            kind = kind,
+                            textbookCount = planned.size,
+                            estimatedBytes = planned.sumOf(::estimatedTransferBytes),
+                            contentVersion = manifest.contentVersion,
+                        ),
+                    )
+                }
+            }.getOrElse { error ->
+                Log.w(LOG_TAG, "course update check failed", error)
+                CourseUpdateCheckResult.Failed(error.message ?: error::class.java.simpleName)
+            }
+        }
+    }
+
+    suspend fun syncOnStartup(context: Context): CourseSyncResult =
+        syncAfterConfirmation(context, onProgress = {})
+
+    suspend fun syncAfterConfirmation(
+        context: Context,
+        onProgress: (CourseSyncProgress) -> Unit,
+    ): CourseSyncResult = withContext(Dispatchers.IO) {
         syncMutex.withLock {
             val manifestUrl = BuildConfig.COURSE_MANIFEST_URL.trim()
             if (manifestUrl.isBlank()) {
@@ -31,28 +72,27 @@ object CourseSyncManager {
             val appContext = context.applicationContext
             val store = CoursePackStore(appContext)
             runCatching {
-                val rawManifest = downloadBytes(
-                    context = appContext,
-                    url = manifestUrl,
-                    maximumBytes = MAX_MANIFEST_BYTES,
-                ).toString(Charsets.UTF_8)
-                val manifest = CourseManifestCodec.decode(rawManifest)
+                onProgress(CourseSyncProgress(0L, 0L, "课程清单", "正在检查更新"))
+                val manifest = downloadManifest(appContext, manifestUrl)
+                val planned = plannedUpdates(manifest, store)
+                if (planned.isEmpty()) {
+                    onProgress(CourseSyncProgress(0L, 0L, "", "课程已经是最新版本"))
+                    return@runCatching CourseSyncResult.Success(0, manifest.contentVersion)
+                }
+
+                val tracker = ProgressTracker(
+                    initialTotalBytes = planned.sumOf(::estimatedTransferBytes).coerceAtLeast(1L),
+                    listener = onProgress,
+                )
                 var updatedCount = 0
 
-                manifest.textbooks.forEach { remote ->
-                    if (remote.minimumAppVersion > BuildConfig.VERSION_CODE) {
-                        Log.i(
-                            LOG_TAG,
-                            "skip ${remote.id}: requires app ${remote.minimumAppVersion}, current ${BuildConfig.VERSION_CODE}",
-                        )
-                        return@forEach
-                    }
-                    val local = store.readLocalState(remote.id)
-                    when (val plan = CourseUpdatePlanner.plan(remote, local)) {
-                        CourseUpdatePlan.None -> Log.i(LOG_TAG, "${remote.id} already current at ${remote.version}")
+                planned.forEach { update ->
+                    val remote = update.remote
+                    when (val plan = update.plan) {
+                        CourseUpdatePlan.None -> Unit
                         is CourseUpdatePlan.Full -> {
                             Log.i(LOG_TAG, "full update ${remote.id}: ${plan.reason}")
-                            installFull(appContext, store, remote)
+                            installFull(appContext, store, remote, tracker)
                             updatedCount += 1
                         }
                         is CourseUpdatePlan.Incremental -> {
@@ -63,17 +103,19 @@ object CourseSyncManager {
                             )
                             runCatching {
                                 store.installIncremental(remote, plan) { file, destination ->
-                                    downloadToFile(appContext, file, destination)
+                                    downloadToFile(appContext, file, destination, tracker)
                                 }
                             }.getOrElse { incrementalError ->
                                 Log.w(LOG_TAG, "incremental update failed; retry full package", incrementalError)
-                                installFull(appContext, store, remote)
+                                tracker.addTotal(estimatedFullTransferBytes(remote, update.local))
+                                installFull(appContext, store, remote, tracker)
                             }
                             updatedCount += 1
                         }
                     }
                 }
 
+                tracker.complete("正在校验并启用课程")
                 if (updatedCount > 0) CloudCourseRepository.markContentChanged()
                 CourseSyncResult.Success(updatedCount, manifest.contentVersion)
             }.getOrElse { error ->
@@ -83,26 +125,72 @@ object CourseSyncManager {
         }
     }
 
+    private fun plannedUpdates(
+        manifest: CourseManifest,
+        store: CoursePackStore,
+    ): List<PlannedCourseUpdate> = manifest.textbooks.mapNotNull { remote ->
+        if (remote.minimumAppVersion > BuildConfig.VERSION_CODE) {
+            Log.i(
+                LOG_TAG,
+                "skip ${remote.id}: requires app ${remote.minimumAppVersion}, current ${BuildConfig.VERSION_CODE}",
+            )
+            return@mapNotNull null
+        }
+        val local = store.readLocalState(remote.id)
+        val plan = CourseUpdatePlanner.plan(remote, local)
+        plan.takeUnless { it == CourseUpdatePlan.None }?.let {
+            PlannedCourseUpdate(remote, local, it)
+        }
+    }
+
+    private fun estimatedTransferBytes(update: PlannedCourseUpdate): Long = when (val plan = update.plan) {
+        CourseUpdatePlan.None -> 0L
+        is CourseUpdatePlan.Incremental -> plan.changedFiles.sumOf(CourseFileSpec::size)
+        is CourseUpdatePlan.Full -> estimatedFullTransferBytes(update.remote, update.local)
+    }
+
+    private fun estimatedFullTransferBytes(
+        remote: CourseTextbookManifest,
+        local: LocalCourseState?,
+    ): Long {
+        val externalBytes = remote.files
+            .filterNot(CourseFileSpec::inFullPackage)
+            .filter { file ->
+                local?.files?.get(file.path)?.let { state ->
+                    state.size == file.size && state.sha256 == file.sha256
+                } != true
+            }
+            .sumOf(CourseFileSpec::size)
+        return remote.fullPackage.size + externalBytes
+    }
+
     private fun installFull(
         context: Context,
         store: CoursePackStore,
         remote: CourseTextbookManifest,
+        tracker: ProgressTracker,
     ) {
         val packageFile = store.temporaryDownloadFile(remote.id, "full")
         try {
-            downloadToFile(context, remote.fullPackage, packageFile)
+            downloadToFile(context, remote.fullPackage, packageFile, tracker)
             store.installFull(remote, packageFile) { file, destination ->
-                downloadToFile(context, file, destination)
+                downloadToFile(context, file, destination, tracker)
             }
         } finally {
             packageFile.delete()
         }
     }
 
-    private fun downloadToFile(context: Context, spec: CourseFileSpec, destination: File) {
+    private fun downloadToFile(
+        context: Context,
+        spec: CourseFileSpec,
+        destination: File,
+        tracker: ProgressTracker,
+    ) {
         require(spec.url.isNotBlank()) { "课程文件 ${spec.path} 缺少下载地址" }
         destination.parentFile?.mkdirs()
         destination.delete()
+        tracker.beginFile(spec.path)
         val connection = AppProxy.openConnection(
             context,
             normalizeGoogleDriveDownloadUrl(spec.url),
@@ -133,6 +221,7 @@ object CourseSyncManager {
                         require(downloaded <= spec.size) { "课程文件超过清单声明大小：${spec.path}" }
                         digest.update(buffer, 0, count)
                         output.write(buffer, 0, count)
+                        tracker.addBytes(count.toLong(), spec.path)
                     }
                 }
             }
@@ -143,6 +232,15 @@ object CourseSyncManager {
             connection.disconnect()
         }
     }
+
+    private fun downloadManifest(context: Context, url: String): CourseManifest =
+        CourseManifestCodec.decode(
+            downloadBytes(
+                context = context,
+                url = url,
+                maximumBytes = MAX_MANIFEST_BYTES,
+            ).toString(Charsets.UTF_8),
+        )
 
     private fun downloadBytes(context: Context, url: String, maximumBytes: Int): ByteArray {
         val connection = AppProxy.openConnection(
@@ -196,9 +294,88 @@ object CourseSyncManager {
         return "https://drive.google.com/uc?export=download&id=$fileId"
     }
 
+    private data class PlannedCourseUpdate(
+        val remote: CourseTextbookManifest,
+        val local: LocalCourseState?,
+        val plan: CourseUpdatePlan,
+    )
+
+    private class ProgressTracker(
+        initialTotalBytes: Long,
+        private val listener: (CourseSyncProgress) -> Unit,
+    ) {
+        private var downloadedBytes = 0L
+        private var totalBytes = initialTotalBytes
+        private var lastEmissionAt = 0L
+        private var currentItem = ""
+
+        fun beginFile(path: String) {
+            currentItem = path.substringAfterLast('/')
+            emit(force = true, stage = "正在下载")
+        }
+
+        fun addBytes(count: Long, path: String) {
+            downloadedBytes += count
+            currentItem = path.substringAfterLast('/')
+            emit(force = downloadedBytes >= totalBytes, stage = "正在下载")
+        }
+
+        fun addTotal(bytes: Long) {
+            totalBytes += bytes.coerceAtLeast(0L)
+            emit(force = true, stage = "正在切换为完整课程包")
+        }
+
+        fun complete(stage: String) {
+            downloadedBytes = totalBytes
+            emit(force = true, stage = stage)
+        }
+
+        private fun emit(force: Boolean, stage: String) {
+            val now = SystemClock.elapsedRealtime()
+            if (!force && now - lastEmissionAt < PROGRESS_EMIT_INTERVAL_MS) return
+            lastEmissionAt = now
+            listener(
+                CourseSyncProgress(
+                    downloadedBytes = downloadedBytes.coerceAtMost(totalBytes),
+                    totalBytes = totalBytes,
+                    currentItem = currentItem,
+                    stage = stage,
+                ),
+            )
+        }
+    }
+
     private const val MAX_MANIFEST_BYTES = 2 * 1024 * 1024
     private const val CONNECT_TIMEOUT_MS = 15_000
     private const val READ_TIMEOUT_MS = 120_000
+    private const val PROGRESS_EMIT_INTERVAL_MS = 200L
+}
+
+data class CourseSyncProgress(
+    val downloadedBytes: Long,
+    val totalBytes: Long,
+    val currentItem: String,
+    val stage: String,
+)
+
+enum class CourseUpdateKind {
+    INITIAL,
+    FULL,
+    INCREMENTAL,
+}
+
+data class CourseUpdateOffer(
+    val kind: CourseUpdateKind,
+    val textbookCount: Int,
+    val estimatedBytes: Long,
+    val contentVersion: Long,
+)
+
+sealed interface CourseUpdateCheckResult {
+    data object Disabled : CourseUpdateCheckResult
+    data class NoUpdate(val contentVersion: Long) : CourseUpdateCheckResult
+    data class Available(val offer: CourseUpdateOffer) : CourseUpdateCheckResult
+    data class Failed(val message: String) : CourseUpdateCheckResult
 }
 
 sealed interface CourseSyncResult {
