@@ -176,7 +176,7 @@ class MaterialPackRepository(
     }
 
     private fun scheduleMissingAnalyses(textbooks: List<InstalledTextbook>) {
-        textbooks.filterNot(InstalledTextbook::isCloudCourseOnly).forEach { textbook ->
+        textbooks.filterNot { it.isCloudCourseOnly() }.forEach { textbook ->
             val root = File(textbook.pack.rootPath)
             val completed = LessonAnalysisStore.count(root, textbook.lessons)
             val needsAnalysis = completed < textbook.lessons.size
