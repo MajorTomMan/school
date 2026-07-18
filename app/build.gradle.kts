@@ -6,6 +6,12 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 fun String.asBuildConfigString(): String = "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 fun resolvedSetting(environmentName: String, propertyName: String): String =
@@ -125,6 +131,7 @@ android {
     }
 
     compileOptions {
+        // Gradle 与单元测试使用 Java 21；Android 产物继续保持 Java 17 字节码基线。
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -162,6 +169,9 @@ dependencies {
     implementation("androidx.room:room-ktx:$roomVersion")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("com.google.firebase:firebase-messaging")
+
+    // 最新 Lucene Kuromoji 负责日语形态素切分、词性、原形、读音和活用信息。
+    implementation("org.apache.lucene:lucene-analysis-kuromoji:10.5.0")
 
     // 中文 OCR 模型不再打包进 APK，仅在未知教材首次需要识别时由 Google Play 服务下载。
     implementation("com.google.android.gms:play-services-mlkit-text-recognition-chinese:16.0.1")
