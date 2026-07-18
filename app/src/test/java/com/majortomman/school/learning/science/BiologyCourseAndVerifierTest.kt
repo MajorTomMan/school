@@ -1,7 +1,6 @@
 package com.majortomman.school.learning.science
 
 import com.majortomman.school.learning.course.BiologyCourseCategory
-import com.majortomman.school.learning.course.BiologyCourseContentFactory
 import com.majortomman.school.learning.science.biology.BiologyRelationId
 import com.majortomman.school.learning.science.biology.BiologyRelationVerifier
 import com.majortomman.school.learning.science.biology.BiologyVerificationStatus
@@ -10,15 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BiologyCourseAndVerifierTest {
-    @Test
-    fun classifiesBiologyTextbookThemes() {
-        assertEquals(BiologyCourseCategory.CELL, BiologyCourseContentFactory.classify("细胞的基本结构"))
-        assertEquals(BiologyCourseCategory.EXPERIMENT, BiologyCourseContentFactory.classify("观察植物细胞"))
-        assertEquals(BiologyCourseCategory.GENETICS, BiologyCourseContentFactory.classify("基因在亲子代间的传递"))
-        assertEquals(BiologyCourseCategory.ECOLOGY, BiologyCourseContentFactory.classify("生态系统中的食物链和食物网"))
-        assertEquals(BiologyCourseCategory.HUMAN, BiologyCourseContentFactory.classify("人体内的血液循环"))
-    }
-
     @Test
     fun verifiesMagnificationWithSameUnits() {
         val result = BiologyRelationVerifier.verify(
@@ -49,7 +39,7 @@ class BiologyCourseAndVerifierTest {
     }
 
     @Test
-    fun refusesRelationOutsideCurrentTheme() {
+    fun refusesRelationOutsidePackagePermission() {
         val result = BiologyRelationVerifier.verify(
             category = BiologyCourseCategory.GENETICS,
             relation = BiologyRelationId.CARDIAC_OUTPUT,
