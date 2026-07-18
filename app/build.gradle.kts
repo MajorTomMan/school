@@ -45,11 +45,11 @@ if (!developmentKeystore.isFile || developmentKeystore.length() == 0L) {
 val resolvedVersionCode = providers.environmentVariable("SCHOOL_VERSION_CODE")
     .orNull
     ?.toIntOrNull()
-    ?: 22
+    ?: 23
 val resolvedVersionName = providers.environmentVariable("SCHOOL_VERSION_NAME")
     .orNull
     ?.takeIf(String::isNotBlank)
-    ?: "0.21.0"
+    ?: "0.21.1"
 val updatePublicKey = updatePublicKeySource.readText(Charsets.UTF_8).filterNot(Char::isWhitespace)
 val developmentCertificate = developmentCertificateSource.readText(Charsets.UTF_8)
     .lowercase()
@@ -177,10 +177,12 @@ dependencies {
 
     // 最新 Lucene Kuromoji 负责日语形态素切分、词性、原形、读音和活用信息。
     implementation("org.apache.lucene:lucene-analysis-kuromoji:10.5.0")
+    implementation("org.apache.lucene:lucene-core:10.5.0")
+    implementation("org.apache.lucene:lucene-analysis-common:10.5.0")
 
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517")
 }
