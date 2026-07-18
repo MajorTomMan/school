@@ -11,7 +11,7 @@ enum class InteractiveLessonKind {
     NEWTON_FIRST_LAW,
     MATH_GENERAL,
     PHYSICS_GENERAL,
-    CHEMISTRY_GENERAL,
+    SCIENCE_GENERAL,
 }
 
 data class InteractiveLessonSpec(
@@ -133,7 +133,7 @@ object InteractiveLessonCatalog {
     private fun generalChemistry(lesson: Lesson, firstPage: Int, lastPage: Int): InteractiveLessonSpec {
         val content = ChemistryCourseContentFactory.create(lesson)
         return InteractiveLessonSpec(
-            kind = InteractiveLessonKind.CHEMISTRY_GENERAL,
+            kind = InteractiveLessonKind.SCIENCE_GENERAL,
             badge = "化学课程 · 组成与守恒约束",
             title = lesson.title,
             subtitle = content.subtitle,
