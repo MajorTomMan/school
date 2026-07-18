@@ -19,7 +19,7 @@ class RationalNumbersTextbookStructureTest {
 
     @Test
     fun firstChapterContainsSummaryAndAllExerciseGroups() {
-        val pages = RationalNumbersCourseFactory.pagesFor("第一章 有理数", 1..23)
+        val pages = RationalNumbersCourseFactory.pagesFor("有理数", 1..23)
 
         assertTrue(pages.any { it.section == "第一章 小结" && it.title == "本章知识结构" })
         assertTrue(pages.any { it.id == "chapter-one-exercises-1-2" })
@@ -30,7 +30,7 @@ class RationalNumbersTextbookStructureTest {
 
     @Test
     fun secondChapterContainsSummaryAndAllExerciseGroups() {
-        val pages = RationalNumbersCourseFactory.pagesFor("第二章 有理数的运算", 24..62)
+        val pages = RationalNumbersCourseFactory.pagesFor("有理数的运算", 24..62)
 
         assertTrue(pages.any { it.section == "第二章 小结" && it.title == "本章知识结构" })
         assertTrue(pages.any { it.id == "chapter-two-exercises-1-3" })
@@ -42,11 +42,13 @@ class RationalNumbersTextbookStructureTest {
 
     @Test
     fun summaryAndExercisesReferenceTextbookPages() {
-        val first = RationalNumbersCourseFactory.pagesFor("第一章 有理数", 1..23)
+        val first = RationalNumbersCourseFactory.pagesFor("有理数", 1..23)
             .filter { it.section.contains("小结") || it.section.contains("章末练习") }
-        val second = RationalNumbersCourseFactory.pagesFor("第二章 有理数的运算", 24..62)
+        val second = RationalNumbersCourseFactory.pagesFor("有理数的运算", 24..62)
             .filter { it.section.contains("小结") || it.section.contains("章末练习") }
 
+        assertTrue(first.isNotEmpty())
+        assertTrue(second.isNotEmpty())
         assertTrue(first.all { it.sourcePage in 21..23 })
         assertTrue(second.all { it.sourcePage in 59..62 })
     }
@@ -54,8 +56,8 @@ class RationalNumbersTextbookStructureTest {
     @Test
     fun textbookPagesContainNoGenericFormulaWorkbenchLanguage() {
         val text = (
-            RationalNumbersCourseFactory.pagesFor("第一章 有理数", 1..23) +
-                RationalNumbersCourseFactory.pagesFor("第二章 有理数的运算", 24..62)
+            RationalNumbersCourseFactory.pagesFor("有理数", 1..23) +
+                RationalNumbersCourseFactory.pagesFor("有理数的运算", 24..62)
             ).joinToString("\n") { page ->
                 listOf(page.section, page.title, page.paragraphs.joinToString("\n"), page.formula, page.conclusion)
                     .joinToString("\n")
