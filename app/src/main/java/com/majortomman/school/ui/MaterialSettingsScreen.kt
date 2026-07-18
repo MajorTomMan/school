@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.majortomman.school.BuildConfig
 import com.majortomman.school.ai.OpenAiCompatibleClient
 import com.majortomman.school.data.AiSettings
+import com.majortomman.school.network.AppProxy
+import com.majortomman.school.network.AppProxySettings
 import com.majortomman.school.update.UpdateCoordinator
 import com.majortomman.school.update.UpdateState
 import java.text.DateFormat
@@ -61,6 +63,12 @@ private val SettingsYellow = Color(0xFFFFCC00)
 private val SettingsMuted = SettingsWhite.copy(alpha = 0.46f)
 private val SettingsLine = SettingsWhite.copy(alpha = 0.13f)
 
+private enum class SettingsPage(val label: String) {
+    PROXY("代理"),
+    AI("AI"),
+}
+
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun MaterialSettingsScreen(
     settings: AiSettings,
@@ -68,6 +76,7 @@ fun MaterialSettingsScreen(
     onOpenSubjects: () -> Unit,
     onClearProgress: () -> Unit,
 ) {
+    var pageName by rememberSaveable { mutableStateOf(SettingsPage.PROXY.name) }
     var endpoint by rememberSaveable { mutableStateOf(settings.endpoint) }
     var model by rememberSaveable { mutableStateOf(settings.model) }
     var apiKey by rememberSaveable { mutableStateOf(settings.apiKey) }
@@ -79,11 +88,21 @@ fun MaterialSettingsScreen(
     val updateCoordinator = remember(appContext) { UpdateCoordinator.get(appContext) }
     val updateState by updateCoordinator.state.collectAsState()
     val updateSettings by updateCoordinator.settings.collectAsState()
+    val proxySettings by AppProxy.settings.collectAsState()
+    var proxyUrl by rememberSaveable { mutableStateOf(proxySettings.proxyUrl) }
+    var useForUpdates by rememberSaveable { mutableStateOf(proxySettings.useForUpdates) }
+    var useForAi by rememberSaveable { mutableStateOf(proxySettings.useForAi) }
+    var proxyStatus by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(settings) {
         endpoint = settings.endpoint
         model = settings.model
         apiKey = settings.apiKey
+    }
+    LaunchedEffect(proxySettings) {
+        proxyUrl = proxySettings.proxyUrl
+        useForUpdates = proxySettings.useForUpdates
+        useForAi = proxySettings.useForAi
     }
 
     Column(
@@ -94,23 +113,194 @@ fun MaterialSettingsScreen(
             .padding(horizontal = 24.dp, vertical = 30.dp),
     ) {
         Text("设置", color = SettingsWhite, fontSize = 42.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(42.dp))
+        Spacer(Modifier.height(28.dp))
+        SettingsPageSelector(
+            selected = SettingsPage.valueOf(pageName),
+            onSelect = { pageName = it.name },
+        )
+        Spacer(Modifier.height(38.dp))
 
-        SettingsSectionTitle("教材")
-        Text("教材按学科、年级和册次分别管理。", color = SettingsWhite, fontSize = 20.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(9.dp))
+        AnimatedContent(
+            targetState = SettingsPage.valueOf(pageName),
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "settingsPages",
+        ) { page ->
+            when (page) {
+                SettingsPage.PROXY -> ProxySettingsPage(
+                    proxyUrl = proxyUrl,
+                    onProxyUrlChange = {
+                        proxyUrl = it
+                        proxyStatus = null
+                    },
+                    useForUpdates = useForUpdates,
+                    onToggleUpdates = {
+                        useForUpdates = !useForUpdates
+                        proxyStatus = null
+                    },
+                    useForAi = useForAi,
+                    onToggleAi = {
+                        useForAi = !useForAi
+                        proxyStatus = null
+                    },
+                    proxyStatus = proxyStatus,
+                    onSaveProxy = {
+                        runCatching {
+                            AppProxy.save(
+                                appContext,
+                                AppProxySettings(
+                                    proxyUrl = proxyUrl,
+                                    useForUpdates = useForUpdates,
+                                    useForAi = useForAi,
+                                ),
+                            )
+                        }.fold(
+                            onSuccess = { proxyStatus = "代理设置已保存。" },
+                            onFailure = { proxyStatus = "保存失败：${it.message ?: "代理地址无效"}" },
+                        )
+                    },
+                    updateState = updateState,
+                    autoCheck = updateSettings.autoCheck,
+                    wifiOnly = updateSettings.wifiOnly,
+                    lastCheckedAt = updateSettings.lastCheckedAt,
+                    onToggleAutoCheck = { updateCoordinator.setAutoCheck(!updateSettings.autoCheck) },
+                    onToggleWifiOnly = { updateCoordinator.setWifiOnly(!updateSettings.wifiOnly) },
+                    onCheckUpdate = { updateCoordinator.checkNow(force = true) },
+                    onShowUpdateStatus = updateCoordinator::showDialog,
+                )
+
+                SettingsPage.AI -> AiSettingsPage(
+                    endpoint = endpoint,
+                    onEndpointChange = {
+                        endpoint = it
+                        connectionStatus = null
+                    },
+                    model = model,
+                    onModelChange = {
+                        model = it
+                        connectionStatus = null
+                    },
+                    apiKey = apiKey,
+                    onApiKeyChange = { apiKey = it },
+                    connectionStatus = connectionStatus,
+                    isTesting = isTesting,
+                    aiUsesProxy = proxySettings.useForAi,
+                    onTest = {
+                        isTesting = true
+                        connectionStatus = "正在连接…"
+                        val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
+                        scope.launch {
+                            connectionStatus = OpenAiCompatibleClient(updated).testConnection().fold(
+                                onSuccess = { it },
+                                onFailure = { "连接失败：${it.message ?: it::class.java.simpleName}" },
+                            )
+                            isTesting = false
+                        }
+                    },
+                    onSaveAi = {
+                        onSave(AiSettings(endpoint.trim(), model.trim(), apiKey.trim()))
+                        connectionStatus = "已保存"
+                    },
+                    confirmClearProgress = confirmClearProgress,
+                    onBeginClear = { confirmClearProgress = true },
+                    onCancelClear = { confirmClearProgress = false },
+                    onConfirmClear = {
+                        onClearProgress()
+                        confirmClearProgress = false
+                    },
+                )
+            }
+        }
+        Spacer(Modifier.height(42.dp))
+    }
+}
+
+@Composable
+private fun SettingsPageSelector(selected: SettingsPage, onSelect: (SettingsPage) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+        SettingsPage.entries.forEach { page ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onSelect(page) }
+                    .padding(vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    page.label,
+                    color = if (selected == page) SettingsWhite else SettingsMuted,
+                    fontSize = 20.sp,
+                    fontWeight = if (selected == page) FontWeight.Bold else FontWeight.Medium,
+                )
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(if (selected == page) 3.dp else 1.dp)
+                        .background(if (selected == page) SettingsBlue else SettingsLine),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProxySettingsPage(
+    proxyUrl: String,
+    onProxyUrlChange: (String) -> Unit,
+    useForUpdates: Boolean,
+    onToggleUpdates: () -> Unit,
+    useForAi: Boolean,
+    onToggleAi: () -> Unit,
+    proxyStatus: String?,
+    onSaveProxy: () -> Unit,
+    updateState: UpdateState,
+    autoCheck: Boolean,
+    wifiOnly: Boolean,
+    lastCheckedAt: Long,
+    onToggleAutoCheck: () -> Unit,
+    onToggleWifiOnly: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    onShowUpdateStatus: () -> Unit,
+) {
+    Column {
+        SettingsSectionTitle("代理")
+        SettingsInput(
+            label = "代理地址",
+            value = proxyUrl,
+            onValueChange = onProxyUrlChange,
+            keyboardType = KeyboardType.Uri,
+            placeholder = "http://192.168.1.2:7890",
+        )
+        Spacer(Modifier.height(10.dp))
         Text(
-            "导入进度、后台处理状态和生成课程都可以在学科页查看。",
+            "支持 HTTP、HTTPS、SOCKS 和 SOCKS5。未写协议时按 HTTP 处理；未写端口时 HTTP 使用 8080，SOCKS 使用 1080。",
             color = SettingsMuted,
-            lineHeight = 23.sp,
+            fontSize = 12.sp,
+            lineHeight = 19.sp,
         )
         Spacer(Modifier.height(20.dp))
-        Text(
-            "前往学科管理",
-            modifier = Modifier.clickable(onClick = onOpenSubjects),
-            color = SettingsBlue,
-            fontWeight = FontWeight.SemiBold,
-        )
+        SettingsToggleRow("版本更新走代理", useForUpdates, onToggleUpdates)
+        SettingsToggleRow("AI 请求走代理", useForAi, onToggleAi)
+        Spacer(Modifier.height(20.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Text(
+                "保存代理",
+                modifier = Modifier.clickable(onClick = onSaveProxy),
+                color = SettingsBlue,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        AnimatedVisibility(
+            visible = proxyStatus != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+        ) {
+            SettingsInlineNotice(
+                color = if (proxyStatus.orEmpty().startsWith("保存失败")) SettingsRed else SettingsBlue,
+                label = "代理状态",
+                body = proxyStatus.orEmpty(),
+            )
+        }
 
         Spacer(Modifier.height(48.dp))
         SettingsSectionTitle("应用更新")
@@ -124,35 +314,21 @@ fun MaterialSettingsScreen(
         Text("开发通道 · GitHub dev-latest", color = SettingsMuted, lineHeight = 22.sp)
         Spacer(Modifier.height(7.dp))
         Text(
-            if (BuildConfig.UPDATE_PUSH_ENABLED) {
-                "即时发布提醒：已启用 · ${BuildConfig.FCM_UPDATE_TOPIC}"
-            } else {
-                "即时发布提醒：待配置 · 当前使用启动检查和每日兜底"
-            },
-            color = if (BuildConfig.UPDATE_PUSH_ENABLED) SettingsBlue else SettingsMuted,
+            if (useForUpdates) "更新清单、签名与 APK 下载：通过代理" else "更新清单、签名与 APK 下载：直接连接",
+            color = if (useForUpdates) SettingsBlue else SettingsMuted,
             fontSize = 12.sp,
             lineHeight = 19.sp,
         )
         Spacer(Modifier.height(20.dp))
-        SettingsToggleRow("自动检查更新", updateSettings.autoCheck) {
-            updateCoordinator.setAutoCheck(!updateSettings.autoCheck)
-        }
-        SettingsToggleRow("仅在 Wi-Fi 下载", updateSettings.wifiOnly) {
-            updateCoordinator.setWifiOnly(!updateSettings.wifiOnly)
-        }
+        SettingsToggleRow("自动检查更新", autoCheck, onToggleAutoCheck)
+        SettingsToggleRow("仅在 Wi-Fi 下载", wifiOnly, onToggleWifiOnly)
         Spacer(Modifier.height(12.dp))
-        Text(
-            text = "上次检查：${formatUpdateCheckTime(updateSettings.lastCheckedAt)}",
-            color = SettingsMuted,
-            fontSize = 12.sp,
-        )
+        Text("上次检查：${formatUpdateCheckTime(lastCheckedAt)}", color = SettingsMuted, fontSize = 12.sp)
         Spacer(Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 "检查更新",
-                modifier = Modifier.clickable(enabled = updateState !is UpdateState.Checking) {
-                    updateCoordinator.checkNow(force = true)
-                },
+                modifier = Modifier.clickable(enabled = updateState !is UpdateState.Checking, onClick = onCheckUpdate),
                 color = if (updateState is UpdateState.Checking) SettingsMuted else SettingsBlue,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -165,12 +341,11 @@ fun MaterialSettingsScreen(
             ) {
                 Text(
                     "查看状态",
-                    modifier = Modifier.clickable(onClick = updateCoordinator::showDialog),
+                    modifier = Modifier.clickable(onClick = onShowUpdateStatus),
                     color = SettingsWhite.copy(alpha = 0.72f),
                 )
             }
         }
-        Spacer(Modifier.height(14.dp))
         SettingsInlineNotice(
             color = when (updateState) {
                 is UpdateState.Error -> SettingsRed
@@ -183,43 +358,56 @@ fun MaterialSettingsScreen(
             label = "更新状态",
             body = updateState.settingsDescription(),
         )
+    }
+}
 
-        Spacer(Modifier.height(48.dp))
+@Composable
+private fun AiSettingsPage(
+    endpoint: String,
+    onEndpointChange: (String) -> Unit,
+    model: String,
+    onModelChange: (String) -> Unit,
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
+    connectionStatus: String?,
+    isTesting: Boolean,
+    aiUsesProxy: Boolean,
+    onTest: () -> Unit,
+    onSaveAi: () -> Unit,
+    confirmClearProgress: Boolean,
+    onBeginClear: () -> Unit,
+    onCancelClear: () -> Unit,
+    onConfirmClear: () -> Unit,
+) {
+    Column {
         SettingsSectionTitle("AI")
-        SettingsInput("接口地址", endpoint, { endpoint = it; connectionStatus = null }, KeyboardType.Uri)
+        Text(
+            if (aiUsesProxy) "当前 AI 请求通过代理连接。" else "当前 AI 请求直接连接，不使用代理。",
+            color = if (aiUsesProxy) SettingsBlue else SettingsMuted,
+            fontSize = 12.sp,
+        )
+        Spacer(Modifier.height(20.dp))
+        SettingsInput("接口地址", endpoint, onEndpointChange, KeyboardType.Uri, placeholder = "http://192.168.1.2:7777/v1")
         Spacer(Modifier.height(22.dp))
-        SettingsInput("模型", model, { model = it; connectionStatus = null })
+        SettingsInput("模型", model, onModelChange, placeholder = "gemma-4")
         Spacer(Modifier.height(22.dp))
         SettingsInput(
             "API Key",
             apiKey,
-            { apiKey = it },
+            onApiKeyChange,
             visualTransformation = PasswordVisualTransformation(),
+            placeholder = "可留空",
         )
         Spacer(Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 "测试连接",
-                modifier = Modifier.clickable(enabled = !isTesting && endpoint.isNotBlank()) {
-                    isTesting = true
-                    connectionStatus = "正在连接…"
-                    val updated = AiSettings(endpoint.trim(), model.trim(), apiKey.trim())
-                    scope.launch {
-                        connectionStatus = OpenAiCompatibleClient(updated).testConnection().fold(
-                            onSuccess = { it },
-                            onFailure = { "连接失败：${it.message ?: it::class.java.simpleName}" },
-                        )
-                        isTesting = false
-                    }
-                },
+                modifier = Modifier.clickable(enabled = !isTesting && endpoint.isNotBlank(), onClick = onTest),
                 color = if (isTesting) SettingsMuted else SettingsWhite.copy(alpha = 0.68f),
             )
             Text(
                 "保存",
-                modifier = Modifier.clickable(enabled = endpoint.isNotBlank() && model.isNotBlank()) {
-                    onSave(AiSettings(endpoint.trim(), model.trim(), apiKey.trim()))
-                    connectionStatus = "已保存"
-                },
+                modifier = Modifier.clickable(enabled = endpoint.isNotBlank() && model.isNotBlank(), onClick = onSaveAi),
                 color = SettingsBlue,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -246,27 +434,19 @@ fun MaterialSettingsScreen(
             label = "clearLearningData",
         ) { confirming ->
             if (!confirming) {
-                Text(
-                    "清空学习记录",
-                    modifier = Modifier.clickable { confirmClearProgress = true },
-                    color = SettingsRed,
-                )
+                Text("清空学习记录", modifier = Modifier.clickable(onClick = onBeginClear), color = SettingsRed)
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("取消", modifier = Modifier.clickable { confirmClearProgress = false }, color = SettingsMuted)
+                    Text("取消", modifier = Modifier.clickable(onClick = onCancelClear), color = SettingsMuted)
                     Text(
                         "确认清空",
-                        modifier = Modifier.clickable {
-                            onClearProgress()
-                            confirmClearProgress = false
-                        },
+                        modifier = Modifier.clickable(onClick = onConfirmClear),
                         color = SettingsRed,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
         }
-        Spacer(Modifier.height(42.dp))
     }
 }
 
@@ -294,6 +474,7 @@ private fun SettingsInput(
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+    placeholder: String = "输入…",
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Text(label, color = SettingsMuted, style = MaterialTheme.typography.labelMedium)
@@ -307,7 +488,7 @@ private fun SettingsInput(
             visualTransformation = visualTransformation,
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) Text("输入…", color = SettingsWhite.copy(alpha = 0.2f), fontSize = 18.sp)
+                    if (value.isEmpty()) Text(placeholder, color = SettingsWhite.copy(alpha = 0.2f), fontSize = 18.sp)
                     inner()
                 }
             },
