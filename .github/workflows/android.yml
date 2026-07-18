@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version_name="0.21.1"
+          version_name="0.21.2"
           version_code=$((100000 + GITHUB_RUN_NUMBER))
           echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
           echo "version_name=$version_name" >> "$GITHUB_OUTPUT"
