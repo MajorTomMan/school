@@ -12,7 +12,8 @@ import org.junit.Test
 class BiologyCourseAndVerifierTest {
     @Test
     fun classifiesBiologyTextbookThemes() {
-        assertEquals(BiologyCourseCategory.CELL, BiologyCourseContentFactory.classify("观察植物细胞"))
+        assertEquals(BiologyCourseCategory.CELL, BiologyCourseContentFactory.classify("细胞的基本结构"))
+        assertEquals(BiologyCourseCategory.EXPERIMENT, BiologyCourseContentFactory.classify("观察植物细胞"))
         assertEquals(BiologyCourseCategory.GENETICS, BiologyCourseContentFactory.classify("基因在亲子代间的传递"))
         assertEquals(BiologyCourseCategory.ECOLOGY, BiologyCourseContentFactory.classify("生态系统中的食物链和食物网"))
         assertEquals(BiologyCourseCategory.HUMAN, BiologyCourseContentFactory.classify("人体内的血液循环"))
