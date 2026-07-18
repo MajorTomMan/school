@@ -106,7 +106,6 @@ class MaterialPackRepository(
             ExistingWorkPolicy.KEEP,
             importRequest,
         )
-            .then(prebuiltUpgradeRequest(slot))
             .then(analysisRequest(slot))
             .then(questionExtractionRequest(slot))
             .enqueue()
@@ -114,17 +113,10 @@ class MaterialPackRepository(
 
     fun enqueueAnalysis(slot: TextbookSlot) {
         val installed = installedSnapshot().firstOrNull { it.slot.key == slot.key } ?: return
+        if (installed.isCloudCourseOnly()) return
         ioScope.launch {
-            val upgraded = runCatching {
-                BundledMathKnowledgePack.upgradeIfMatched(appContext, installed)
-            }.getOrDefault(installed)
-            if (upgraded != installed) replaceCachedTextbook(upgraded)
-            if (upgraded.pack.manifest.version == PREBUILT_MATH_VERSION) {
-                publish(latestWorkInfos)
-                return@launch
-            }
-            File(upgraded.pack.rootPath, "generated/analysis").deleteRecursively()
-            File(upgraded.pack.rootPath, "generated/questions").deleteRecursively()
+            File(installed.pack.rootPath, "generated/analysis").deleteRecursively()
+            File(installed.pack.rootPath, "generated/questions").deleteRecursively()
             workManager.beginUniqueWork(
                 analysisWorkName(slot),
                 ExistingWorkPolicy.REPLACE,
@@ -145,16 +137,7 @@ class MaterialPackRepository(
         textbook: InstalledTextbook,
         lessonSourceId: String,
     ): LessonAnalysis? = withContext(Dispatchers.IO) {
-        val active = runCatching {
-            BundledMathKnowledgePack.upgradeIfMatched(appContext, textbook)
-        }.getOrDefault(textbook)
-        if (active != textbook) replaceCachedTextbook(active)
-        val root = File(active.pack.rootPath)
-        LessonAnalysisStore.read(root, lessonSourceId)?.let { return@withContext it }
-        if (active.pack.manifest.version != PREBUILT_MATH_VERSION) return@withContext null
-        active.lessons.firstOrNull { it.sourceId == lessonSourceId }
-            ?.let { lesson -> PrebuiltMathAnalysisFactory.create(active.slot, lesson) }
-            ?.also { analysis -> LessonAnalysisStore.write(root, analysis) }
+        LessonAnalysisStore.read(File(textbook.pack.rootPath), lessonSourceId)
     }
 
     fun analyzedLessonCount(textbook: InstalledTextbook): Int {
@@ -181,25 +164,11 @@ class MaterialPackRepository(
     }
 
     private fun reloadInstalledCache(): List<InstalledTextbook> {
-        val installed = MaterialLibraryStore.read(appContext).map { textbook ->
-            runCatching {
-                BundledMathKnowledgePack.upgradeIfMatched(appContext, textbook)
-            }.getOrDefault(textbook)
-        }
+        val installed = MaterialLibraryStore.read(appContext)
         synchronized(cacheLock) {
             installedCache = installed
         }
         return installed
-    }
-
-    private fun replaceCachedTextbook(textbook: InstalledTextbook) {
-        synchronized(cacheLock) {
-            val updated = installedCache.toMutableList()
-            val index = updated.indexOfFirst { it.key == textbook.key }
-            if (index >= 0) updated[index] = textbook else updated += textbook
-            installedCache = updated
-        }
-        publish(latestWorkInfos)
     }
 
     private fun installedSnapshot(): List<InstalledTextbook> = synchronized(cacheLock) {
@@ -207,7 +176,7 @@ class MaterialPackRepository(
     }
 
     private fun scheduleMissingAnalyses(textbooks: List<InstalledTextbook>) {
-        textbooks.forEach { textbook ->
+        textbooks.filterNot(InstalledTextbook::isCloudCourseOnly).forEach { textbook ->
             val root = File(textbook.pack.rootPath)
             val completed = LessonAnalysisStore.count(root, textbook.lessons)
             val needsAnalysis = completed < textbook.lessons.size
@@ -218,9 +187,8 @@ class MaterialPackRepository(
                 needsAnalysis -> workManager.beginUniqueWork(
                     TextbookProcessingContract.uniqueWorkName(textbook.slot),
                     ExistingWorkPolicy.KEEP,
-                    prebuiltUpgradeRequest(textbook.slot),
+                    analysisRequest(textbook.slot),
                 )
-                    .then(analysisRequest(textbook.slot))
                     .then(questionExtractionRequest(textbook.slot))
                     .enqueue()
 
@@ -233,12 +201,8 @@ class MaterialPackRepository(
         }
     }
 
-    private fun prebuiltUpgradeRequest(slot: TextbookSlot) =
-        OneTimeWorkRequestBuilder<PrebuiltMathKnowledgeWorker>()
-            .setInputData(slotInput(slot))
-            .addTag(TextbookProcessingContract.TAG)
-            .addTag(TextbookProcessingContract.slotTag(slot))
-            .build()
+    private fun InstalledTextbook.isCloudCourseOnly(): Boolean =
+        pack.manifest.version.startsWith(CLOUD_COURSE_VERSION_PREFIX) && !pack.pdfFile.isFile
 
     private fun analysisRequest(slot: TextbookSlot) = OneTimeWorkRequestBuilder<TextbookAnalysisWorker>()
         .setInputData(slotInput(slot))
@@ -329,6 +293,6 @@ class MaterialPackRepository(
     private fun questionWorkName(slot: TextbookSlot): String = "textbook-question-extraction-${slot.key}"
 
     private companion object {
-        const val PREBUILT_MATH_VERSION = "prebuilt-math-v1"
+        const val CLOUD_COURSE_VERSION_PREFIX = "cloud-course-"
     }
 }
