@@ -61,17 +61,10 @@ fun InteractiveLessonScreen(
     onComplete: () -> Unit,
 ) {
     var sourceExpanded by rememberSaveable(lesson.id) { mutableStateOf(true) }
-    val pageLabel = if (spec.sourcePage == spec.sourcePageEnd) {
-        "第 ${spec.sourcePage} 页"
-    } else {
-        "第 ${spec.sourcePage}—${spec.sourcePageEnd} 页"
-    }
+    val pageLabel = if (spec.sourcePage == spec.sourcePageEnd) "第 ${spec.sourcePage} 页" else "第 ${spec.sourcePage}—${spec.sourcePageEnd} 页"
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(InteractiveBlack)
-            .systemBarsPadding(),
+        modifier = Modifier.fillMaxSize().background(InteractiveBlack).systemBarsPadding(),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -84,28 +77,18 @@ fun InteractiveLessonScreen(
         }
 
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(18.dp))
             Text(spec.badge, color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(
-                spec.title,
-                color = InteractiveWhite,
-                fontSize = 42.sp,
-                lineHeight = 48.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Text(spec.title, color = InteractiveWhite, fontSize = 42.sp, lineHeight = 48.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             Text(spec.subtitle, color = InteractiveMuted, fontSize = 17.sp, lineHeight = 25.sp)
             Spacer(Modifier.height(26.dp))
 
             FormulaHero(spec.formula)
             Spacer(Modifier.height(22.dp))
-
             SourceSummarySection(
                 title = installedMaterial.manifest.title,
                 pageLabel = pageLabel,
@@ -128,26 +111,19 @@ fun InteractiveLessonScreen(
                 InteractiveLessonKind.NEWTON_FIRST_LAW -> NewtonFirstLawLab(lesson.id)
                 InteractiveLessonKind.MATH_GENERAL -> MathCourseWorkbench(spec)
                 InteractiveLessonKind.PHYSICS_GENERAL -> PhysicsCourseWorkbench(spec)
+                InteractiveLessonKind.SCIENCE_GENERAL -> ScienceCourseWorkbenchHost(spec)
             }
 
             Spacer(Modifier.height(36.dp))
             SectionTitle(spec.derivationTitle, InteractiveYellow)
             Spacer(Modifier.height(12.dp))
             DerivationSteps(spec.derivationSteps)
-
             Spacer(Modifier.height(36.dp))
             SectionTitle("背景知识", InteractivePurple)
             Spacer(Modifier.height(12.dp))
             spec.background.forEach { paragraph ->
-                Text(
-                    paragraph,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                    color = InteractiveWhite.copy(alpha = 0.80f),
-                    fontSize = 17.sp,
-                    lineHeight = 27.sp,
-                )
+                Text(paragraph, modifier = Modifier.padding(bottom = 16.dp), color = InteractiveWhite.copy(alpha = 0.80f), fontSize = 17.sp, lineHeight = 27.sp)
             }
-
             if (spec.enrichment.extensions.isNotEmpty()) {
                 Spacer(Modifier.height(22.dp))
                 SectionTitle("扩展知识 · 非本课必会", InteractiveBlue)
@@ -160,32 +136,17 @@ fun InteractiveLessonScreen(
                     }
                 }
             }
-
             Spacer(Modifier.height(20.dp))
             MisconceptionSection(spec.misconception)
             Spacer(Modifier.height(38.dp))
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(InteractiveBlack)
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxWidth().background(InteractiveBlack).navigationBarsPadding().padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            InteractiveAction(
-                label = "教材原页",
-                color = InteractiveYellow,
-                modifier = Modifier.weight(1f),
-                enabled = installedMaterial.pdfFile.isFile,
-            ) { onOpenTextbook(spec.sourcePage) }
-            InteractiveAction(
-                label = nextLessonTitle?.let { "完成并继续" } ?: "完成课程",
-                color = InteractiveBlue,
-                modifier = Modifier.weight(1f),
-                onClick = onComplete,
-            )
+            InteractiveAction("教材原页", InteractiveYellow, Modifier.weight(1f), installedMaterial.pdfFile.isFile) { onOpenTextbook(spec.sourcePage) }
+            InteractiveAction(nextLessonTitle?.let { "完成并继续" } ?: "完成课程", InteractiveBlue, Modifier.weight(1f), onClick = onComplete)
         }
     }
 }
@@ -194,15 +155,7 @@ fun InteractiveLessonScreen(
 private fun FormulaHero(formula: String) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveYellow.copy(alpha = 0.72f)))
-        Text(
-            formula,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp),
-            color = InteractiveYellow,
-            fontSize = 30.sp,
-            lineHeight = 38.sp,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
-        )
+        Text(formula, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp), color = InteractiveYellow, fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
         Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
     }
 }
@@ -218,11 +171,7 @@ private fun SourceSummarySection(
     sourceAvailable: Boolean,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("教材内容依据", color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
@@ -230,23 +179,14 @@ private fun SourceSummarySection(
             }
             Text(if (expanded) "收起" else "展开", color = InteractiveMuted, fontSize = 12.sp)
         }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(tween(220)) + expandVertically(tween(260)),
-            exit = fadeOut(tween(150)) + shrinkVertically(tween(210)),
-        ) {
+        AnimatedVisibility(visible = expanded, enter = fadeIn(tween(220)) + expandVertically(tween(260)), exit = fadeOut(tween(150)) + shrinkVertically(tween(210))) {
             Column {
                 Spacer(Modifier.height(8.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveBlue.copy(alpha = 0.35f)))
                 Spacer(Modifier.height(14.dp))
                 Text(summary, color = InteractiveWhite, fontSize = 17.sp, lineHeight = 28.sp)
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    if (sourceAvailable) "School 解释与教材原文分开；可打开原页核对。" else "尚未绑定 PDF；当前只展示页码约束下的 School 自有解释。",
-                    color = InteractiveMuted,
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp,
-                )
+                Text(if (sourceAvailable) "School 解释与教材原文分开；可打开原页核对。" else "尚未绑定 PDF；当前只展示页码约束下的 School 自有解释。", color = InteractiveMuted, fontSize = 13.sp, lineHeight = 20.sp)
                 if (sourceAvailable) {
                     Spacer(Modifier.height(10.dp))
                     TextAction("打开教材原页 →", InteractiveYellow, onOpenTextbook)
@@ -260,11 +200,7 @@ private fun SourceSummarySection(
 private fun DerivationSteps(steps: List<String>) {
     Column {
         steps.forEachIndexed { index, step ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
                 Text("%02d".format(index + 1), color = InteractiveBlue, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text(step, modifier = Modifier.weight(1f), color = InteractiveWhite.copy(alpha = 0.82f), fontSize = 17.sp, lineHeight = 27.sp)
             }
@@ -286,11 +222,7 @@ private fun MisconceptionSection(text: String) {
 
 @Composable
 internal fun SectionTitle(title: String, color: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.height(3.dp).weight(0.12f).background(color))
         Text(title, modifier = Modifier.weight(0.88f), color = InteractiveWhite, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
     }
@@ -302,18 +234,9 @@ private fun TextAction(label: String, color: Color, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun InteractiveAction(
-    label: String,
-    color: Color,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
+internal fun InteractiveAction(label: String, color: Color, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
-        modifier = modifier
-            .height(48.dp)
-            .border(1.dp, if (enabled) color.copy(alpha = 0.85f) else InteractiveLine, RoundedCornerShape(10.dp))
-            .clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(48.dp).border(1.dp, if (enabled) color.copy(alpha = 0.85f) else InteractiveLine, RoundedCornerShape(10.dp)).clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, color = if (enabled) color else InteractiveMuted.copy(alpha = 0.45f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
