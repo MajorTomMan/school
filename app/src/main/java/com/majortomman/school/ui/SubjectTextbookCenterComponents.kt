@@ -24,37 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.majortomman.school.data.material.TextbookProcessingState
-import com.majortomman.school.data.material.TextbookProcessingStatus
 
 private val CenterBlack = Color(0xFF050608)
 private val CenterWhite = Color(0xFFF5F7FA)
 private val CenterBlue = Color(0xFF2D7BFF)
-private val CenterRed = Color(0xFFFF453A)
-private val CenterYellow = Color(0xFFFFCC00)
 private val CenterMuted = CenterWhite.copy(alpha = 0.46f)
 private val CenterLine = CenterWhite.copy(alpha = 0.13f)
-
-@Composable
-internal fun ProcessingSection(state: TextbookProcessingState) {
-    val color = if (state.status == TextbookProcessingStatus.FAILED) CenterRed else CenterYellow
-    Text(
-        when (state.status) {
-            TextbookProcessingStatus.QUEUED -> "等待处理"
-            TextbookProcessingStatus.RUNNING -> state.stage.label
-            TextbookProcessingStatus.FAILED -> "处理未完成"
-        },
-        color = color,
-        fontSize = 14.sp,
-        fontWeight = FontWeight.Bold,
-    )
-    Spacer(Modifier.height(13.dp))
-    Text(state.message, color = CenterWhite, fontSize = 21.sp, lineHeight = 29.sp)
-    Spacer(Modifier.height(22.dp))
-    ProgressLine(state.progress, color)
-    Spacer(Modifier.height(9.dp))
-    Text("${state.progress}%", color = CenterMuted, fontSize = 13.sp)
-}
 
 @Composable
 fun NoActiveTextbookScreen(onOpenSubjects: () -> Unit) {
@@ -64,7 +39,7 @@ fun NoActiveTextbookScreen(onOpenSubjects: () -> Unit) {
     ) {
         Text("先选择教材", color = CenterWhite, fontSize = 42.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(14.dp))
-        Text("课程路径会根据预制课程或已绑定教材生成。", color = CenterMuted, fontSize = 18.sp, lineHeight = 27.sp)
+        Text("课程与教材 PDF 会从云端课程包生成。", color = CenterMuted, fontSize = 18.sp, lineHeight = 27.sp)
         Spacer(Modifier.height(30.dp))
         CenterOutlinedButton("前往学科", CenterBlue, onClick = onOpenSubjects)
     }
@@ -83,18 +58,10 @@ internal fun CenterScrollPage(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-internal fun StatusText(installedCount: Int, processingCount: Int) {
+internal fun StatusText(installedCount: Int) {
     Text(
-        when {
-            processingCount > 0 -> "$processingCount 本处理中"
-            installedCount > 0 -> "$installedCount 本教材"
-            else -> "尚未导入"
-        },
-        color = when {
-            processingCount > 0 -> CenterYellow
-            installedCount > 0 -> CenterBlue
-            else -> CenterMuted
-        },
+        if (installedCount > 0) "$installedCount 本教材" else "暂无缓存",
+        color = if (installedCount > 0) CenterBlue else CenterMuted,
         fontSize = 13.sp,
     )
 }
@@ -148,18 +115,6 @@ internal fun CenterOutlinedButton(
         textAlign = TextAlign.Center,
         fontWeight = FontWeight.SemiBold,
     )
-}
-
-@Composable
-internal fun ProgressLine(progress: Int, color: Color) {
-    Box(Modifier.fillMaxWidth().height(2.dp).background(CenterLine)) {
-        Box(
-            Modifier
-                .fillMaxWidth((progress.coerceIn(0, 100) / 100f).coerceAtLeast(0.01f))
-                .height(2.dp)
-                .background(color),
-        )
-    }
 }
 
 @Composable
