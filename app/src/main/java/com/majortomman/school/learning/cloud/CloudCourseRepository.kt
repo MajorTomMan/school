@@ -25,6 +25,24 @@ object CloudCourseRepository {
         appContext = context.applicationContext
     }
 
+    fun hasInstalledCourseContent(): Boolean {
+        val context = appContext ?: return false
+        val activeRoot = File(context.filesDir, ACTIVE_DIRECTORY)
+        return activeRoot.listFiles().orEmpty().any { directory ->
+            if (!directory.isDirectory) return@any false
+            runCatching {
+                val courseFile = File(directory, "course.json")
+                if (!courseFile.isFile) return@runCatching false
+                val course = JSONObject(courseFile.readText(Charsets.UTF_8))
+                val pdfPath = course.getJSONObject("textbook")
+                    .getJSONObject("pdf")
+                    .getString("path")
+                    .trim()
+                pdfPath.isNotBlank() && File(directory, pdfPath).isFile
+            }.getOrDefault(false)
+        }
+    }
+
     fun supports(title: String): Boolean =
         courseDocuments().any { document -> CloudCourseCodec.supports(document.root, title) }
 

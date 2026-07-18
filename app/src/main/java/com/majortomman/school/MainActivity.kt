@@ -14,6 +14,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.majortomman.school.data.PreferencesRepository
@@ -59,7 +67,12 @@ class MainActivity : ComponentActivity() {
         CloudCourseRepository.initialize(applicationContext)
         enableEdgeToEdge()
         val initialTextbookKey = intent.getStringExtra("open_textbook_slot")
+        val courseContentInstalled = CloudCourseRepository.hasInstalledCourseContent()
         setContent {
+            var showCourseDownloadPrompt by rememberSaveable {
+                mutableStateOf(!courseContentInstalled)
+            }
+
             SchoolTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
                     SchoolApp(
@@ -70,6 +83,17 @@ class MainActivity : ComponentActivity() {
                         initialTextbookKey = initialTextbookKey,
                     )
                     UpdateOverlayHost { updateCoordinator }
+                    if (showCourseDownloadPrompt) {
+                        CourseDownloadPrompt(
+                            onDownload = {
+                                showCourseDownloadPrompt = false
+                                StartupInitializationCoordinator.requestCourseSync(applicationContext) {
+                                    materialPackRepository.refreshCurrent()
+                                }
+                            },
+                            onLater = { showCourseDownloadPrompt = false },
+                        )
+                    }
                 }
             }
         }
@@ -84,7 +108,10 @@ class MainActivity : ComponentActivity() {
             requestNotificationPermissionOnce()
             updateCoordinator.onAppForeground()
         }
-        StartupInitializationCoordinator.start(applicationContext) {
+        StartupInitializationCoordinator.start(
+            context = applicationContext,
+            syncCoursesOnStartup = courseContentInstalled,
+        ) {
             materialPackRepository.refreshCurrent()
         }
     }
@@ -117,4 +144,31 @@ class MainActivity : ComponentActivity() {
         preferences.edit().putBoolean("notification_permission_requested", true).apply()
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
+}
+
+@Composable
+private fun CourseDownloadPrompt(
+    onDownload: () -> Unit,
+    onLater: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onLater,
+        title = { Text("下载课程包") },
+        text = {
+            Text(
+                "学习内容尚未下载。课程包和教材 PDF 共约 13 MB，下载完成后可以离线使用；" +
+                    "后续更新只会获取发生变化的内容。",
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDownload) {
+                Text("下载课程")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onLater) {
+                Text("稍后")
+            }
+        },
+    )
 }
