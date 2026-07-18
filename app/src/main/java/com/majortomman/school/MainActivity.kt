@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-import com.majortomman.school.data.ImportTutorialRepository
 import com.majortomman.school.data.PreferencesRepository
 import com.majortomman.school.data.curriculum.CurriculumRepository
 import com.majortomman.school.data.material.MaterialPackRepository
@@ -38,9 +37,6 @@ class MainActivity : ComponentActivity() {
     }
     private val materialPackRepository by lazy {
         MaterialPackRepository(applicationContext)
-    }
-    private val importTutorialRepository by lazy {
-        ImportTutorialRepository(applicationContext)
     }
     private val mathQuestionBankRepository by lazy {
         MathQuestionBankRepository(applicationContext, curriculumRepository)
@@ -70,7 +66,6 @@ class MainActivity : ComponentActivity() {
                         repository = preferencesRepository,
                         materialRepository = materialPackRepository,
                         curriculumRepository = curriculumRepository,
-                        tutorialRepository = importTutorialRepository,
                         mathQuestionRepository = mathQuestionBankRepository,
                         initialTextbookKey = initialTextbookKey,
                     )
