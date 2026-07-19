@@ -246,8 +246,8 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
             RationalVisualizationKind.HISTORY,
         )
         val visualHeight = when {
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION && compact -> 260.dp
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION -> 310.dp
+            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION && compact -> 520.dp
+            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION -> 620.dp
             compact -> 210.dp
             else -> 270.dp
         }
@@ -309,7 +309,7 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
                     fontWeight = FontWeight.Medium,
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
             Text(
                 "第 $pageNumber 页，共 $pageCount 页",
                 modifier = Modifier.fillMaxWidth(),
@@ -317,7 +317,7 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
                 fontSize = 11.sp,
                 textAlign = TextAlign.End,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
