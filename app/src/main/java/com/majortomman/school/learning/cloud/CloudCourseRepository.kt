@@ -1,6 +1,8 @@
 package com.majortomman.school.learning.cloud
 
 import android.content.Context
+import com.majortomman.school.learning.course.CoursePageBlock
+import com.majortomman.school.learning.course.CoursePageBlockKind
 import com.majortomman.school.learning.course.RationalLessonPage
 import com.majortomman.school.learning.course.RationalVisualizationKind
 import java.io.File
@@ -183,6 +185,7 @@ internal object CloudCourseCodec {
         sourcePages: IntRange,
     ): RationalLessonPage {
         val paragraphs = mutableListOf<String>()
+        val orderedBlocks = mutableListOf<CoursePageBlock>()
         var formula: String? = null
         var conclusion: String? = page.optString("conclusion").takeIf(String::isNotBlank)
         var visualization = RationalVisualizationKind.HISTORY
@@ -192,33 +195,78 @@ internal object CloudCourseCodec {
             val block = blocks.getJSONObject(index)
             when (block.getString("type")) {
                 "textbook_text", "explanation", "historical_note" -> {
-                    block.optString("text").takeIf(String::isNotBlank)?.let(paragraphs::add)
+                    block.optString("text").takeIf(String::isNotBlank)?.let { text ->
+                        paragraphs += text
+                        orderedBlocks += CoursePageBlock(CoursePageBlockKind.TEXTBOOK_TEXT, text = text)
+                    }
+                }
+                "prompt" -> {
+                    block.optString("text").takeIf(String::isNotBlank)?.let { text ->
+                        paragraphs += text
+                        orderedBlocks += CoursePageBlock(CoursePageBlockKind.PROMPT, text = text)
+                    }
                 }
                 "formula" -> {
                     val expression = block.optString("expression").trim()
                     val conditions = block.optJSONArray("conditions")?.strings().orEmpty()
-                    formula = buildString {
+                    val resolved = buildString {
                         append(expression)
                         if (conditions.isNotEmpty()) append("（${conditions.joinToString("，")}）")
                     }.takeIf(String::isNotBlank)
+                    formula = resolved
+                    resolved?.let { orderedBlocks += CoursePageBlock(CoursePageBlockKind.FORMULA, text = it) }
                 }
-                "summary" -> paragraphs += block.optJSONArray("items")?.strings().orEmpty()
+                "summary" -> {
+                    val items = block.optJSONArray("items")?.strings().orEmpty()
+                    paragraphs += items
+                    orderedBlocks += CoursePageBlock(CoursePageBlockKind.SUMMARY, items = items)
+                }
                 "worked_example" -> {
-                    block.optString("statement").takeIf(String::isNotBlank)?.let(paragraphs::add)
-                    paragraphs += block.optJSONArray("steps")?.strings().orEmpty()
-                    block.optString("result").takeIf(String::isNotBlank)?.let { paragraphs += "结果：$it" }
+                    val statement = block.optString("statement").trim()
+                    val steps = block.optJSONArray("steps")?.strings().orEmpty()
+                    val result = block.optString("result").trim()
+                    if (statement.isNotBlank()) paragraphs += statement
+                    paragraphs += steps
+                    if (result.isNotBlank()) paragraphs += "结果：$result"
+                    orderedBlocks += CoursePageBlock(
+                        kind = CoursePageBlockKind.WORKED_EXAMPLE,
+                        text = statement,
+                        items = buildList {
+                            addAll(steps)
+                            if (result.isNotBlank()) add("结果：$result")
+                        },
+                    )
                 }
                 "exercise" -> {
                     val number = block.optString("number").trim()
                     val stem = block.optString("stem").trim()
-                    if (stem.isNotBlank()) paragraphs += listOf(number, stem).filter(String::isNotBlank).joinToString(". ")
                     val choices = block.optJSONArray("choices")?.strings().orEmpty()
-                    if (choices.isNotEmpty()) paragraphs += choices
                     val hints = block.optJSONArray("hints")?.strings().orEmpty()
-                    if (hints.isNotEmpty()) paragraphs += hints.mapIndexed { hintIndex, hint -> "提示 ${hintIndex + 1}：$hint" }
+                    if (stem.isNotBlank()) paragraphs += listOf(number, stem).filter(String::isNotBlank).joinToString(". ")
+                    paragraphs += choices
+                    paragraphs += hints.mapIndexed { hintIndex, hint -> "提示 ${hintIndex + 1}：$hint" }
+                    orderedBlocks += CoursePageBlock(
+                        kind = CoursePageBlockKind.EXERCISE,
+                        text = stem,
+                        label = number.takeIf(String::isNotBlank),
+                        items = choices + hints.mapIndexed { hintIndex, hint -> "提示 ${hintIndex + 1}：$hint" },
+                    )
                 }
-                "conclusion" -> conclusion = block.optString("text").takeIf(String::isNotBlank)
-                "visualization" -> visualization = visualizationKind(block.optString("renderer"))
+                "conclusion" -> {
+                    block.optString("text").takeIf(String::isNotBlank)?.let { text ->
+                        conclusion = text
+                        orderedBlocks += CoursePageBlock(CoursePageBlockKind.CONCLUSION, text = text)
+                    }
+                }
+                "visualization" -> {
+                    val kind = visualizationKind(block.optString("renderer"))
+                    visualization = kind
+                    orderedBlocks += CoursePageBlock(
+                        kind = CoursePageBlockKind.VISUALIZATION,
+                        visualization = kind,
+                        visualizationParams = block.optJSONObject("params").toStringMap(),
+                    )
+                }
             }
         }
 
@@ -234,12 +282,14 @@ internal object CloudCourseCodec {
             visualization = visualization,
             formula = formula,
             conclusion = conclusion,
+            blocks = orderedBlocks,
         )
     }
 
     private fun visualizationKind(renderer: String): RationalVisualizationKind = when (renderer.trim().lowercase()) {
         "opposite_quantities" -> RationalVisualizationKind.OPPOSITE_QUANTITIES
         "rational_classification" -> RationalVisualizationKind.RATIONAL_CLASSIFICATION
+        "rational_definition_flow" -> RationalVisualizationKind.RATIONAL_DEFINITION_FLOW
         "number_line" -> RationalVisualizationKind.NUMBER_LINE
         "opposite_numbers" -> RationalVisualizationKind.OPPOSITE_NUMBERS
         "absolute_value" -> RationalVisualizationKind.ABSOLUTE_VALUE
@@ -249,7 +299,40 @@ internal object CloudCourseCodec {
         "multiplication_sign", "sign_rule" -> RationalVisualizationKind.MULTIPLICATION_SIGN
         "division_transform" -> RationalVisualizationKind.DIVISION_TRANSFORM
         "power_process" -> RationalVisualizationKind.POWER_PROCESS
+        "equation_balance" -> RationalVisualizationKind.EQUATION_BALANCE
+        "equation_system" -> RationalVisualizationKind.EQUATION_SYSTEM
+        "inequality_number_line" -> RationalVisualizationKind.INEQUALITY_NUMBER_LINE
+        "coordinate_plane" -> RationalVisualizationKind.COORDINATE_PLANE
+        "intersecting_lines" -> RationalVisualizationKind.INTERSECTING_LINES
+        "parallel_lines" -> RationalVisualizationKind.PARALLEL_LINES
+        "translation" -> RationalVisualizationKind.TRANSLATION
+        "triangle" -> RationalVisualizationKind.TRIANGLE
+        "congruent_triangles" -> RationalVisualizationKind.CONGRUENT_TRIANGLES
+        "axis_symmetry" -> RationalVisualizationKind.AXIS_SYMMETRY
+        "pythagorean" -> RationalVisualizationKind.PYTHAGOREAN
+        "quadrilateral" -> RationalVisualizationKind.QUADRILATERAL
+        "function_relation" -> RationalVisualizationKind.FUNCTION_RELATION
+        "function_graph" -> RationalVisualizationKind.FUNCTION_GRAPH
+        "statistics" -> RationalVisualizationKind.STATISTICS
+        "probability" -> RationalVisualizationKind.PROBABILITY
+        "rotation" -> RationalVisualizationKind.ROTATION
+        "circle" -> RationalVisualizationKind.CIRCLE
+        "similarity" -> RationalVisualizationKind.SIMILARITY
+        "right_triangle" -> RationalVisualizationKind.RIGHT_TRIANGLE
+        "projection" -> RationalVisualizationKind.PROJECTION
+        "algebra_process" -> RationalVisualizationKind.ALGEBRA_PROCESS
         else -> RationalVisualizationKind.HISTORY
+    }
+
+    private fun JSONObject?.toStringMap(): Map<String, String> {
+        if (this == null) return emptyMap()
+        return buildMap {
+            val keys = keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                put(key, opt(key)?.toString().orEmpty())
+            }
+        }
     }
 
     private fun namesOf(json: JSONObject, vararg defaults: String): List<String> = buildList {

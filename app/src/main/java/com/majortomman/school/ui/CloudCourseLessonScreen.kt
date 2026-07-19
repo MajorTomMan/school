@@ -43,6 +43,8 @@ import com.majortomman.school.data.material.InstalledMaterialPack
 import com.majortomman.school.learning.cloud.CloudCourseRepository
 import com.majortomman.school.learning.cloud.CourseSyncManager
 import com.majortomman.school.learning.cloud.CourseSyncResult
+import com.majortomman.school.learning.course.CoursePageBlock
+import com.majortomman.school.learning.course.CoursePageBlockKind
 import com.majortomman.school.learning.course.RationalLessonPage
 import com.majortomman.school.learning.course.RationalVisualizationKind
 import kotlinx.coroutines.launch
@@ -76,6 +78,50 @@ fun CloudCourseLessonScreen(
         onBack = onBack,
         onComplete = onComplete,
     )
+}
+
+@Composable
+internal fun CloudCoursePreviewScreen(page: RationalLessonPage) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(InteractiveBlack)
+            .systemBarsPadding(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("返回", color = InteractiveMuted, fontSize = 13.sp)
+            Text(
+                page.section,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                color = InteractiveWhite,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+            Text("教材第 ${page.sourcePage} 页", color = InteractiveYellow, fontSize = 13.sp)
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
+        Box(Modifier.weight(1f)) {
+            CloudCoursePageContent(page, 1, 5)
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("上一页", modifier = Modifier.width(112.dp), color = InteractiveMuted.copy(alpha = 0.35f), fontSize = 14.sp)
+            Text("1 / 5", modifier = Modifier.width(72.dp), color = InteractiveMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+            Text("下一页", modifier = Modifier.width(112.dp), color = InteractiveBlue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.End)
+        }
+    }
 }
 
 @Composable
@@ -241,16 +287,6 @@ private fun CloudCoursePager(
 private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pageCount: Int) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxHeight < 620.dp
-        val hasVisualization = page.visualization !in setOf(
-            RationalVisualizationKind.NONE,
-            RationalVisualizationKind.HISTORY,
-        )
-        val visualHeight = when {
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION && compact -> 520.dp
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION -> 620.dp
-            compact -> 210.dp
-            else -> 270.dp
-        }
         val scrollState = rememberScrollState()
 
         Column(
@@ -268,47 +304,16 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
                 lineHeight = if (compact) 33.sp else 39.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(14.dp))
-            page.paragraphs.forEachIndexed { index, paragraph ->
-                Text(
-                    paragraph,
-                    color = InteractiveWhite.copy(alpha = 0.84f),
-                    fontSize = if (compact) 14.sp else 16.sp,
-                    lineHeight = if (compact) 21.sp else 25.sp,
-                )
-                if (index != page.paragraphs.lastIndex) Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(16.dp))
+
+            if (page.blocks.isNotEmpty()) {
+                page.blocks.forEach { block ->
+                    CourseBlockContent(block, compact)
+                }
+            } else {
+                LegacyPageContent(page, compact)
             }
-            if (!page.formula.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    page.formula,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, InteractiveYellow.copy(alpha = 0.22f))
-                        .padding(horizontal = 10.dp, vertical = 12.dp),
-                    color = InteractiveYellow,
-                    fontSize = if (compact) 18.sp else 22.sp,
-                    lineHeight = 28.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            if (hasVisualization) {
-                Spacer(Modifier.height(14.dp))
-                CloudVisualization(page, Modifier.fillMaxWidth().height(visualHeight))
-            }
-            if (!page.conclusion.isNullOrBlank()) {
-                Spacer(Modifier.height(16.dp))
-                Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    page.conclusion,
-                    color = InteractiveWhite,
-                    fontSize = if (compact) 14.sp else 16.sp,
-                    lineHeight = 23.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
+
             Spacer(Modifier.height(32.dp))
             Text(
                 "第 $pageNumber 页，共 $pageCount 页",
@@ -323,17 +328,174 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
 }
 
 @Composable
-private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
-    Box(
-        modifier = modifier.background(InteractivePanel.copy(alpha = 0.52f)).border(1.dp, InteractiveLine),
-        contentAlignment = Alignment.Center,
-    ) {
-        when (page.visualization) {
+private fun CourseBlockContent(block: CoursePageBlock, compact: Boolean) {
+    val bodySize = if (compact) 14.sp else 16.sp
+    val bodyLineHeight = if (compact) 22.sp else 25.sp
+    when (block.kind) {
+        CoursePageBlockKind.TEXTBOOK_TEXT -> {
+            Text(
+                block.text,
+                color = InteractiveWhite.copy(alpha = 0.86f),
+                fontSize = bodySize,
+                lineHeight = bodyLineHeight,
+            )
+            Spacer(Modifier.height(11.dp))
+        }
+        CoursePageBlockKind.PROMPT -> {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveBlue.copy(alpha = 0.55f)))
+            Spacer(Modifier.height(7.dp))
+            Text("思考", color = InteractiveBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(5.dp))
+            Text(block.text, color = InteractiveWhite, fontSize = bodySize, lineHeight = bodyLineHeight)
+            Spacer(Modifier.height(13.dp))
+        }
+        CoursePageBlockKind.FORMULA -> {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                block.text,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                color = InteractiveYellow,
+                fontSize = if (compact) 18.sp else 22.sp,
+                lineHeight = 29.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+        CoursePageBlockKind.WORKED_EXAMPLE -> {
+            Text("例题", color = InteractiveYellow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(5.dp))
+            if (block.text.isNotBlank()) {
+                Text(block.text, color = InteractiveWhite, fontSize = bodySize, lineHeight = bodyLineHeight)
+            }
+            block.items.forEach { item ->
+                Spacer(Modifier.height(6.dp))
+                Text(item, color = InteractiveWhite.copy(alpha = 0.86f), fontSize = bodySize, lineHeight = bodyLineHeight)
+            }
+            Spacer(Modifier.height(13.dp))
+        }
+        CoursePageBlockKind.EXERCISE -> {
+            Text(
+                listOfNotNull("练习", block.label).joinToString(" "),
+                color = InteractiveBlue,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(5.dp))
+            if (block.text.isNotBlank()) {
+                Text(block.text, color = InteractiveWhite, fontSize = bodySize, lineHeight = bodyLineHeight)
+            }
+            block.items.forEach { item ->
+                Spacer(Modifier.height(6.dp))
+                Text(item, color = InteractiveWhite.copy(alpha = 0.78f), fontSize = bodySize, lineHeight = bodyLineHeight)
+            }
+            Spacer(Modifier.height(13.dp))
+        }
+        CoursePageBlockKind.SUMMARY -> {
+            block.items.forEach { item ->
+                Text("• $item", color = InteractiveWhite, fontSize = bodySize, lineHeight = bodyLineHeight)
+                Spacer(Modifier.height(6.dp))
+            }
+            Spacer(Modifier.height(7.dp))
+        }
+        CoursePageBlockKind.CONCLUSION -> {
+            Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
+            Spacer(Modifier.height(9.dp))
+            Text(
+                block.text,
+                color = InteractiveWhite,
+                fontSize = bodySize,
+                lineHeight = bodyLineHeight,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+        CoursePageBlockKind.VISUALIZATION -> {
+            if (block.visualization !in setOf(RationalVisualizationKind.NONE, RationalVisualizationKind.HISTORY)) {
+                val height = visualizationHeight(block.visualization, compact)
+                CloudVisualization(
+                    kind = block.visualization,
+                    params = block.visualizationParams,
+                    modifier = Modifier.fillMaxWidth().height(height),
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegacyPageContent(page: RationalLessonPage, compact: Boolean) {
+    page.paragraphs.forEachIndexed { index, paragraph ->
+        Text(
+            paragraph,
+            color = InteractiveWhite.copy(alpha = 0.84f),
+            fontSize = if (compact) 14.sp else 16.sp,
+            lineHeight = if (compact) 21.sp else 25.sp,
+        )
+        if (index != page.paragraphs.lastIndex) Spacer(Modifier.height(7.dp))
+    }
+    if (!page.formula.isNullOrBlank()) {
+        Spacer(Modifier.height(12.dp))
+        Text(
+            page.formula,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            color = InteractiveYellow,
+            fontSize = if (compact) 18.sp else 22.sp,
+            lineHeight = 28.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        )
+    }
+    if (page.visualization !in setOf(RationalVisualizationKind.NONE, RationalVisualizationKind.HISTORY)) {
+        Spacer(Modifier.height(14.dp))
+        CloudVisualization(
+            kind = page.visualization,
+            params = emptyMap(),
+            modifier = Modifier.fillMaxWidth().height(visualizationHeight(page.visualization, compact)),
+        )
+    }
+    if (!page.conclusion.isNullOrBlank()) {
+        Spacer(Modifier.height(16.dp))
+        Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
+        Spacer(Modifier.height(10.dp))
+        Text(
+            page.conclusion,
+            color = InteractiveWhite,
+            fontSize = if (compact) 14.sp else 16.sp,
+            lineHeight = 23.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+private fun visualizationHeight(kind: RationalVisualizationKind, compact: Boolean) = when (kind) {
+    RationalVisualizationKind.FUNCTION_GRAPH,
+    RationalVisualizationKind.COORDINATE_PLANE,
+    RationalVisualizationKind.PROJECTION,
+    RationalVisualizationKind.CIRCLE,
+    RationalVisualizationKind.ROTATION,
+    RationalVisualizationKind.SIMILARITY,
+    RationalVisualizationKind.RIGHT_TRIANGLE,
+    RationalVisualizationKind.PYTHAGOREAN,
+    -> if (compact) 260.dp else 320.dp
+    RationalVisualizationKind.RATIONAL_DEFINITION_FLOW -> if (compact) 250.dp else 285.dp
+    else -> if (compact) 215.dp else 260.dp
+}
+
+@Composable
+private fun CloudVisualization(
+    kind: RationalVisualizationKind,
+    params: Map<String, String>,
+    modifier: Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        when (kind) {
             RationalVisualizationKind.NONE,
             RationalVisualizationKind.HISTORY,
             -> Unit
             RationalVisualizationKind.OPPOSITE_QUANTITIES -> SignedMovementNumberLineVisual()
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> RationalExamplesVisual()
+            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> TextbookMathVisualization(kind, params, Modifier.fillMaxSize())
             RationalVisualizationKind.NUMBER_LINE -> AdjustableNumberLine(NumberLineMode.VALUE)
             RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
             RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
@@ -341,9 +503,10 @@ private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
             RationalVisualizationKind.ADDITION_PROCESS -> SignedUnitVisual()
             RationalVisualizationKind.SUBTRACTION_TRANSFORM,
             RationalVisualizationKind.DIVISION_TRANSFORM,
-            -> FormulaProcessVisual(page.formula)
+            -> TextbookMathVisualization(kind, params, Modifier.fillMaxSize())
             RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
             RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
+            else -> TextbookMathVisualization(kind, params, Modifier.fillMaxSize())
         }
     }
 }
