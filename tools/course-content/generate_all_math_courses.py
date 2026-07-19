@@ -400,6 +400,10 @@ def clean_text(value: str) -> str:
             continue
         if cjk_count == 0 and len(line) > 60:
             continue
+        # Vector-drawing export placeholders such as ``3D=`` are not textbook prose or
+        # mathematical formulas. They otherwise survive because the equals sign is meaningful.
+        if re.fullmatch(r"\d+[A-Za-z]=", line):
+            continue
         lines.append(line)
 
     # Join ordinary wrapped lines while preserving explicit textbook stage headings.
@@ -594,8 +598,42 @@ def visualization_for(book: Book, chapter: Chapter, entry: Entry, page_no: int, 
     if chunk_index != 0:
         return None, {}
     current = text[:900]
+    topic = f"{chapter.title} {entry.title}"
     if book.id == "pep-math-7-1" and entry.number == "1.2" and page_no == 7:
         return "rational_definition_flow", {}
+
+    # The textbook chapter/section heading is the strongest semantic signal. It must win over
+    # incidental comparison words in an introduction (for example, the axis-symmetry chapter
+    # mentions translation, and the quadratic-function introduction mentions equations).
+    topic_mappings: list[tuple[tuple[str, ...], str, dict[str, object]]] = [
+        (("反比例函数",), "function_graph", {"mode": "inverse"}),
+        (("二次函数",), "function_graph", {"mode": "quadratic"}),
+        (("一次函数",), "function_graph", {"mode": "linear"}),
+        (("轴对称",), "axis_symmetry", {}),
+        (("旋转",), "rotation", {}),
+        (("相似", "位似"), "similarity", {}),
+        (("勾股定理",), "pythagorean", {}),
+        (("锐角三角函数",), "right_triangle", {}),
+        (("投影与视图", "投影", "三视图"), "projection", {}),
+        (("圆",), "circle", {}),
+        (("平行四边形", "四边形", "矩形", "菱形", "正方形"), "quadrilateral", {}),
+        (("全等三角形",), "congruent_triangles", {}),
+        (("平移",), "translation", {}),
+        (("平面直角坐标系",), "coordinate_plane", {}),
+        (("相交线",), "intersecting_lines", {}),
+        (("平行线",), "parallel_lines", {}),
+        (("概率",), "probability", {}),
+        (("数据", "统计"), "statistics", {}),
+        (("二元一次方程组",), "equation_system", {}),
+        (("不等式",), "inequality_number_line", {}),
+        (("一元一次方程", "一元二次方程"), "equation_balance", {}),
+        (("三角形",), "triangle", {}),
+        (("整式", "因式分解", "乘法公式", "分式", "二次根式", "代数式"), "algebra_process", {}),
+    ]
+    for needles, renderer, params in topic_mappings:
+        if any(needle in topic for needle in needles):
+            return renderer, params
+
     mappings: list[tuple[tuple[str, ...], str, dict[str, object]]] = [
         (("数轴", "原点、正方向和单位长度"), "number_line", {"min": -5, "max": 5, "draggable": True}),
         (("相反数", "互为相反数"), "opposite_numbers", {}), (("绝对值", "到原点的距离"), "absolute_value", {}),
@@ -605,17 +643,19 @@ def visualization_for(book: Book, chapter: Chapter, entry: Entry, page_no: int, 
         (("有理数的乘法", "乘法法则"), "multiplication_sign", {}), (("有理数的除法", "除以一个数"), "division_transform", {}),
         (("有理数的乘方", "幂的运算", "负数的奇次幂"), "power_process", {}),
         (("二元一次方程组", "消元"), "equation_system", {}), (("不等式", "解集"), "inequality_number_line", {}),
-        (("方程", "等式的性质"), "equation_balance", {}), (("平面直角坐标系", "横轴", "纵轴"), "coordinate_plane", {}),
+        (("平面直角坐标系", "横轴", "纵轴"), "coordinate_plane", {}),
+        (("轴对称", "对称轴"), "axis_symmetry", {}), (("旋转", "中心对称"), "rotation", {}),
+        (("相似", "位似"), "similarity", {}), (("勾股定理",), "pythagorean", {}),
+        (("锐角三角函数", "正弦", "余弦", "正切"), "right_triangle", {}),
+        (("投影", "三视图"), "projection", {}), (("圆", "弧长", "扇形"), "circle", {}),
+        (("平行四边形", "矩形", "菱形", "正方形", "四边形"), "quadrilateral", {}),
+        (("全等三角形", "全等"), "congruent_triangles", {}), (("平移",), "translation", {}),
         (("对顶角", "邻补角", "相交线"), "intersecting_lines", {}), (("平行线", "同位角"), "parallel_lines", {}),
-        (("平移",), "translation", {}), (("全等三角形", "全等"), "congruent_triangles", {}),
-        (("轴对称", "对称轴"), "axis_symmetry", {}), (("三角形", "内角", "外角"), "triangle", {}),
-        (("勾股定理",), "pythagorean", {}), (("平行四边形", "矩形", "菱形", "正方形", "四边形"), "quadrilateral", {}),
         (("一次函数",), "function_graph", {"mode": "linear"}), (("二次函数",), "function_graph", {"mode": "quadratic"}),
         (("反比例函数",), "function_graph", {"mode": "inverse"}), (("函数", "变量"), "function_relation", {}),
         (("统计", "数据", "频数分布"), "statistics", {}), (("概率", "随机事件"), "probability", {}),
-        (("旋转", "中心对称"), "rotation", {}), (("圆", "弧长", "扇形"), "circle", {}),
-        (("相似", "位似"), "similarity", {}), (("锐角三角函数", "正弦", "余弦", "正切"), "right_triangle", {}),
-        (("投影", "三视图"), "projection", {}),
+        (("三角形", "内角", "外角"), "triangle", {}),
+        (("方程", "等式的性质"), "equation_balance", {}),
         (("整式", "因式分解", "乘法公式", "分式", "二次根式", "代数式"), "algebra_process", {}),
     ]
     for needles, renderer, params in mappings:

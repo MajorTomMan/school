@@ -369,7 +369,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "statistics",
+                  "renderer": "rotation",
                   "params": {}
                 }
               ]
@@ -3790,7 +3790,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -4319,7 +4319,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -4449,7 +4449,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -4620,7 +4620,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -4678,6 +4678,11 @@
                 {
                   "type": "textbook_text",
                   "text": "像这样,两个相关联的量,一个量变化,另一个量也随着变化,且这两个量的乘积一定,这两个量就叫作成反比例的量,它们之间的关系叫作反比例关系.如果用字母x和y表示两个相关联的量,用k表示它们的积(k是一个确定的值,且k≠0),反比例关系可以用xy=k来表示."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -4835,7 +4840,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -4985,7 +4990,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5136,7 +5141,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5250,7 +5255,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5317,7 +5322,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5368,7 +5373,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5404,6 +5409,11 @@
                 {
                   "type": "textbook_text",
                   "text": "请将密文破译成用英文字母表示的明文.(2)请你和同学利用数学式子来设计一种明文与密文的关系,并互相合作,通过游戏试一试如何进行保密通信."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             }
@@ -5598,7 +5608,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "quadrilateral",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -5650,7 +5660,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5745,7 +5755,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5806,7 +5816,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5866,7 +5876,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -6085,6 +6095,11 @@
                 {
                   "type": "textbook_text",
                   "text": "通常我们把一个多项式的各项按照某个字母的指数从大到小(降幂)或者从小到大(升幂)的顺序排列."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6143,6 +6158,11 @@
                 {
                   "type": "textbook_text",
                   "text": "-2a+0.5a=(-2+0.5)a=-1.5a可知,这两天水位总的变化情况为下降了1.5acm."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6206,7 +6226,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -6559,7 +6579,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -6670,6 +6690,11 @@
                 {
                   "type": "textbook_text",
                   "text": "5)仿照上述探究的方法,请你在月历中画出一个图形,例如,图3中的“+”形,图4中的“H”形.图形中的数有什么关系?先从具体的图形开始研究,进而猜想一般结论,并说明结论成立的理由."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6700,6 +6725,11 @@
                 {
                   "type": "textbook_text",
                   "text": "请你用类似的方法表示三位数、四位数,并说明前面结论的道理.你还可以继续研究五位数、六位数等情形吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             }
@@ -6756,7 +6786,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "equation_balance",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -6878,7 +6908,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "quadrilateral",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -7622,7 +7652,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "absolute_value",
+                  "renderer": "equation_balance",
                   "params": {}
                 }
               ]
@@ -8894,6 +8924,11 @@
                 {
                   "type": "textbook_text",
                   "text": "2600+0.5×800t,"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "equation_balance",
+                  "params": {}
                 }
               ]
             },
@@ -9008,7 +9043,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "statistics",
+                  "renderer": "equation_balance",
                   "params": {}
                 }
               ]
@@ -9102,6 +9137,11 @@
                 {
                   "type": "textbook_text",
                   "text": "吗?通过计算验证你的想法."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "equation_balance",
+                  "params": {}
                 }
               ]
             }
@@ -9143,7 +9183,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
+                  "renderer": "equation_balance",
                   "params": {}
                 }
               ]
@@ -9461,6 +9501,11 @@
               {
                 "type": "textbook_text",
                 "text": "油菜籽比“丰收1号”平均每公顷的产量提高了300kg,含油率提高了10个百分点.某村去年种植“丰收1号”油菜,今年改种“丰收2号”油菜,虽然种植面积比去年减少了3hm2,但是所产油菜籽的总产油量比去年提高了3750kg.这个村去年和今年油菜的种植面积各是多少公顷?"
+              },
+              {
+                "type": "visualization",
+                "renderer": "equation_balance",
+                "params": {}
               }
             ]
           }
@@ -9541,7 +9586,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -9576,7 +9621,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -9828,7 +9873,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "rotation",
                   "params": {}
                 }
               ]
@@ -9877,7 +9922,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "rotation",
                   "params": {}
                 }
               ]
@@ -9981,7 +10026,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -11108,7 +11153,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -11634,7 +11679,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "circle",
                 "params": {}
               }
             ]

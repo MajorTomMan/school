@@ -295,7 +295,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
+                  "renderer": "triangle",
                   "params": {}
                 }
               ]
@@ -669,7 +669,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "triangle",
                   "params": {}
                 }
               ]
@@ -1197,6 +1197,11 @@
                 {
                   "type": "textbook_text",
                   "text": "图3图4图5工程中使用的许多物体具有均匀的质地,如工程中常用的工字钢、角钢、槽钢等型钢(图6).你能通过数学的方法确定工程中薄板、薄壳等匀质物体的重心吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "triangle",
+                  "params": {}
                 }
               ]
             },
@@ -1311,7 +1316,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "triangle",
                   "params": {}
                 }
               ]
@@ -1384,7 +1389,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "triangle",
                   "params": {}
                 }
               ]
@@ -1438,6 +1443,11 @@
                 {
                   "type": "textbook_text",
                   "text": "通过成果展示与交流,基于各组完成的研究报告,根据情况选择任务完成表、表现评分表、自我反思表等进行评价.与老师和全班同学一起,通过质疑、辩论、评价,总结成果,分享体会,分析不足,开展自我评价、同学评价和教师评价,完成本次综合与实践活动."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "triangle",
+                  "params": {}
                 }
               ]
             }
@@ -1482,7 +1492,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "parallel_lines",
+                "renderer": "triangle",
                 "params": {}
               }
             ]
@@ -1625,6 +1635,11 @@
               {
                 "type": "textbook_text",
                 "text": "第9题)9.如图,连接AC,AD,BD,BE,CE,求证∠A+∠B+∠C+∠D+∠E=180°."
+              },
+              {
+                "type": "visualization",
+                "renderer": "triangle",
+                "params": {}
               }
             ]
           }
@@ -1714,7 +1729,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "congruent_triangles",
                   "params": {}
                 }
               ]
@@ -2366,7 +2381,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "congruent_triangles",
                   "params": {}
                 }
               ]
@@ -2571,6 +2586,11 @@
                 {
                   "type": "textbook_text",
                   "text": "′A(第3题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             },
@@ -2646,7 +2666,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "congruent_triangles",
                   "params": {}
                 }
               ]
@@ -2708,6 +2728,11 @@
                 {
                   "type": "textbook_text",
                   "text": "平分线.求证AD=A′D′."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             }
@@ -2944,7 +2969,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "congruent_triangles",
                   "params": {}
                 }
               ]
@@ -2998,6 +3023,11 @@
                 {
                   "type": "textbook_text",
                   "text": "我们知道,角的平分线上的点到角两边的距离相等.反过来,交换这个性质的题设和结论,得到的命题还成立吗?也就是说,到角两边距离相等的点一定在角的平分线上吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             },
@@ -3124,6 +3154,11 @@
                 {
                   "type": "textbook_text",
                   "text": "BC(第4题)4.如图,在Rt△ABC中,∠C=90°,在边AC上求作一点P,使点P到边BC和边AB的距离相等."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             },
@@ -3176,6 +3211,11 @@
                 {
                   "type": "textbook_text",
                   "text": "∠DAB.(提示:过点E作EF⊥AD,垂足为F.)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             }
@@ -3214,6 +3254,11 @@
                 {
                   "type": "textbook_text",
                   "text": "最早的《原本》(前六卷)汉译本是1607年由徐光启(1562—1633)和利玛窦(MatteoRicci,1552—1610)合译的,翻译时使用了“几何原本”这个名称."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "congruent_triangles",
+                  "params": {}
                 }
               ]
             },
@@ -3267,7 +3312,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "congruent_triangles",
                   "params": {}
                 }
               ]
@@ -3465,6 +3510,11 @@
                 "number": "",
                 "stem": "9.如图,两车从路段AB的两端同时出发,沿平行路线以相同的速度行驶,相同时间",
                 "answerMode": "text"
+              },
+              {
+                "type": "visualization",
+                "renderer": "congruent_triangles",
+                "params": {}
               }
             ]
           },
@@ -3576,7 +3626,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -3619,7 +3669,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -3662,7 +3712,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -3851,7 +3901,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "intersecting_lines",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -3912,7 +3962,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "absolute_value",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4121,7 +4171,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4231,7 +4281,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4335,7 +4385,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4411,7 +4461,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4535,7 +4585,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4577,6 +4627,11 @@
                 {
                   "type": "textbook_text",
                   "text": "第8题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "axis_symmetry",
+                  "params": {}
                 }
               ]
             }
@@ -4638,7 +4693,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4759,7 +4814,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4824,7 +4879,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -4941,7 +4996,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5023,7 +5078,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5084,7 +5139,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5165,7 +5220,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5294,7 +5349,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5340,6 +5395,11 @@
                 {
                   "type": "textbook_text",
                   "text": "图2提示:从数学的角度看,如果把河边l近似地看成一条直线,问题就是要在直线l上找一点C,使AC与CB的和最小(图2)."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "axis_symmetry",
+                  "params": {}
                 }
               ]
             },
@@ -5462,7 +5522,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "axis_symmetry",
                   "params": {}
                 }
               ]
@@ -5516,7 +5576,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "translation",
+                "renderer": "axis_symmetry",
                 "params": {}
               }
             ]
@@ -5573,7 +5633,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "coordinate_plane",
+                "renderer": "axis_symmetry",
                 "params": {}
               }
             ]
@@ -5652,7 +5712,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "translation",
+                "renderer": "axis_symmetry",
                 "params": {}
               }
             ]
@@ -5723,7 +5783,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "translation",
+                "renderer": "axis_symmetry",
                 "params": {}
               }
             ]
@@ -5842,7 +5902,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -5893,6 +5953,11 @@
                 {
                   "type": "textbook_text",
                   "text": "2×(-12)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -5978,6 +6043,11 @@
                 {
                   "type": "textbook_text",
                   "text": "三个或三个以上的积的乘方,也具有这一性质."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6059,6 +6129,11 @@
                 {
                   "type": "textbook_text",
                   "text": "1)[(-2a2b3)3]2; (2)(-2xy2)6+(-3x2y4)3."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6097,6 +6172,11 @@
                 {
                   "type": "textbook_text",
                   "text": "2)已知x+2y-7=0(x,y都是正整数),求2x·4y的值.9.若am=an(a>0,a≠1),则m=n.请利用上面的结论解决下面的问题:(1)如果2×8x×16x=222,求x的值;(2)如果(9x)2=38,求x的值."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             }
@@ -6162,7 +6242,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -6255,6 +6335,11 @@
                 {
                   "type": "textbook_text",
                   "text": "p(a+b+c).1401"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6383,6 +6468,11 @@
                 {
                   "type": "textbook_text",
                   "text": "a(p+q)+b(p+q)=ap+aq+bp+bq.601"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6466,6 +6556,11 @@
                 {
                   "type": "textbook_text",
                   "text": "15,y=5."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6553,6 +6648,11 @@
                 {
                   "type": "textbook_text",
                   "text": "1)(6ab+5a)÷a;(2)(15x2y-10xy2)÷(5xy)."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6609,6 +6709,11 @@
                 {
                   "type": "textbook_text",
                   "text": "1)[5a4·a2-(3a3)2]÷(2a2)2;(2)[(ab+1)(ab-1)-2a2b2+1]÷(-ab)2."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6652,7 +6757,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -6788,6 +6893,11 @@
                   "number": "",
                   "stem": "1.下面的计算是否正确?如果不正确,应当怎样改正?",
                   "answerMode": "text"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6844,6 +6954,11 @@
                 {
                   "type": "textbook_text",
                   "text": "(p+q)中p=a,q=b的特殊情形."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -6900,6 +7015,11 @@
                 {
                   "type": "textbook_text",
                   "text": "1)(a+b)2=a2+b2; (2)(a-b)2=a2-ab+b2."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -7037,7 +7157,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -7114,7 +7234,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -7217,7 +7337,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "power_process",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -7290,7 +7410,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "quadrilateral",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -7316,6 +7436,11 @@
               {
                 "type": "textbook_text",
                 "text": "1)第一次提价p%,第二次提价q%;(2)第一次提价q%,第二次提价p%;(3)第一、二次提价均为p+q2%.其中p,q是不相等的正数.三种方案哪种提价最多?(提示:因为p≠q,(p-q)2=p2-2pq+q2>0,所以p2+q2>2pq.)"
+              },
+              {
+                "type": "visualization",
+                "renderer": "algebra_process",
+                "params": {}
               }
             ]
           }
@@ -7622,7 +7747,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -7818,6 +7943,11 @@
                 {
                   "type": "textbook_text",
                   "text": "=(4x)2-2·4x·3+32=(4x-3)2."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -8017,7 +8147,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "multiplication_sign",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -8161,7 +8291,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "circle",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -8209,7 +8339,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -8849,7 +8979,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -8920,7 +9050,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "multiplication_sign",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -8972,7 +9102,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -9038,6 +9168,11 @@
                 {
                   "type": "textbook_text",
                   "text": "效率是小拖拉机工作效率的多少倍?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -9145,7 +9280,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "multiplication_sign",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -9598,6 +9733,11 @@
                 {
                   "type": "textbook_text",
                   "text": "(a+b)s2ab-2sa+b=a+b()2s-4abs2aba+b()=(a2-2ab+b2)s2aba+b()=(a-b)2s2aba+b(),因为s,a,b均大于0,且a≠b,所以(a-b)2s2aba+b()>0,即(a+b)s2ab>2sa+b.因此,李明先到达乙地.451"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -9708,6 +9848,11 @@
                 {
                   "type": "textbook_text",
                   "text": "a2-b2÷ab."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -9775,7 +9920,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -9838,7 +9983,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -9913,7 +10058,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -9984,7 +10129,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10076,7 +10221,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10137,7 +10282,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "power_process",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10179,7 +10324,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10279,6 +10424,11 @@
                 {
                   "type": "textbook_text",
                   "text": "水(以20滴水为1g计)中大约有多少个水分子?假设10亿人来数1滴水中的水分子,每人每分数100个,日夜不停,大约需要多长时间才能数完?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             }
@@ -10336,7 +10486,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10379,7 +10529,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10457,7 +10607,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10504,7 +10654,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10588,7 +10738,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10651,7 +10801,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -10792,7 +10942,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "equation_balance",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -10887,7 +11037,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "equation_balance",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -10958,7 +11108,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "circle",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -10990,6 +11140,11 @@
               {
                 "type": "textbook_text",
                 "text": "人民教育出版社 课程教材研究所"
+              },
+              {
+                "type": "visualization",
+                "renderer": "algebra_process",
+                "params": {}
               }
             ]
           }

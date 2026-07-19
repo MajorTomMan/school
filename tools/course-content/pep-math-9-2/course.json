@@ -60,7 +60,7 @@
                   "type": "visualization",
                   "renderer": "function_graph",
                   "params": {
-                    "mode": "linear"
+                    "mode": "inverse"
                   }
                 }
               ]
@@ -131,8 +131,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             },
@@ -257,7 +259,7 @@
                   "type": "visualization",
                   "renderer": "function_graph",
                   "params": {
-                    "mode": "linear"
+                    "mode": "inverse"
                   }
                 }
               ]
@@ -655,8 +657,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "axis_symmetry",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             },
@@ -826,8 +830,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             },
@@ -1037,8 +1043,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             },
@@ -1187,6 +1195,13 @@
                 {
                   "type": "textbook_text",
                   "text": "v=PF.从上面的式子可以看出,当汽车的功率P一定时,汽车的负载越大,阻力F就越大,行驶速度v就会越小.你还能举出生活中可以用反比例关系解释的例子吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             }
@@ -1228,8 +1243,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "inverse"
+                  }
                 }
               ]
             }
@@ -1288,7 +1305,7 @@
                 "type": "visualization",
                 "renderer": "function_graph",
                 "params": {
-                  "mode": "linear"
+                  "mode": "inverse"
                 }
               }
             ]
@@ -1371,8 +1388,10 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
-                "params": {}
+                "renderer": "function_graph",
+                "params": {
+                  "mode": "inverse"
+                }
               }
             ]
           },
@@ -1482,7 +1501,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1611,7 +1630,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1713,7 +1732,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1764,7 +1783,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1831,7 +1850,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1874,7 +1893,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1929,7 +1948,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -1976,7 +1995,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2019,7 +2038,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2113,7 +2132,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2157,7 +2176,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2210,7 +2229,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2257,7 +2276,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2309,7 +2328,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2368,7 +2387,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2423,7 +2442,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "statistics",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2488,6 +2507,11 @@
                 {
                   "type": "textbook_text",
                   "text": "E(第2题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "similarity",
+                  "params": {}
                 }
               ]
             },
@@ -2541,7 +2565,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2600,7 +2624,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2633,7 +2657,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2676,7 +2700,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2746,7 +2770,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2787,7 +2811,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2834,7 +2858,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2924,7 +2948,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -2995,7 +3019,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -3038,7 +3062,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -3091,7 +3115,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -3134,7 +3158,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "similarity",
                   "params": {}
                 }
               ]
@@ -3195,7 +3219,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "translation",
+                "renderer": "similarity",
                 "params": {}
               }
             ]
@@ -3278,7 +3302,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "similarity",
                 "params": {}
               }
             ]
@@ -3331,7 +3355,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "similarity",
                 "params": {}
               }
             ]
@@ -3357,6 +3381,11 @@
               {
                 "type": "textbook_text",
                 "text": "杆的高都是3丈,D,F两处相隔1000步(1丈=10尺,1步=6尺),并且AB,CD和EF在同一平面内.从标杆CD后退123步的G处,可以看到顶峰A和标杆顶端C在一条直线上;从标杆EF后退127步的H处,可以看到顶峰A和标杆顶端E在一条直线上.山峰的高度AB及它和标杆CD的水平距离BD各是多少步?(提示:连接EC并延长交AB于点K,用含AK的式子表示KC和KE.)(本题原出自我国魏晋时期数学家刘徽所著《重差》,后作为唐代的《海岛算经》中的第一题:今有望海岛,立两表齐高三丈,前后相去千步,令后表与前表参相直.从前表却行一百二十三步,人目着地,取望岛峰,与表末参合.从后表却行一百二十七步,人目着地,取望岛峰,亦与表末参合.问岛高及去表各几何.唐代的1尺约等于现在的31cm.)"
+              },
+              {
+                "type": "visualization",
+                "renderer": "similarity",
+                "params": {}
               }
             ]
           }
@@ -3399,7 +3428,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3454,7 +3483,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3505,7 +3534,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3565,7 +3594,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "pythagorean",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3620,7 +3649,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3674,7 +3703,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3718,7 +3747,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "pythagorean",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3790,7 +3819,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3858,7 +3887,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -3963,7 +3992,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4024,7 +4053,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "pythagorean",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4055,7 +4084,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4118,7 +4147,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4167,7 +4196,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4211,7 +4240,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4263,7 +4292,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4310,6 +4339,11 @@
                 {
                   "type": "textbook_text",
                   "text": "=80×cos25°≈72.505.在Rt△BPC中,∠B=34°,∵ sinB=PCPB,∴ PB=PCsinB=72.505sin34°≈130(nmile).因此,当海轮到达位于灯塔P的南偏东34°方向时,它距离灯塔P大约130nmile."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "right_triangle",
+                  "params": {}
                 }
               ]
             },
@@ -4353,7 +4387,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4462,7 +4496,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4525,7 +4559,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4564,7 +4598,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4611,7 +4645,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "right_triangle",
                   "params": {}
                 }
               ]
@@ -4631,6 +4665,11 @@
                 {
                   "type": "textbook_text",
                   "text": "3)量出A,B两点间的距离;(4)计算塔的高度."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "right_triangle",
+                  "params": {}
                 }
               ]
             }
@@ -4679,7 +4718,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "congruent_triangles",
+                "renderer": "right_triangle",
                 "params": {}
               }
             ]
@@ -4744,7 +4783,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "right_triangle",
                 "params": {}
               }
             ]
@@ -4811,7 +4850,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "quadrilateral",
+                "renderer": "right_triangle",
                 "params": {}
               }
             ]
@@ -4902,7 +4941,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -4984,7 +5023,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5063,7 +5102,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5116,7 +5155,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5157,7 +5196,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5307,7 +5346,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "axis_symmetry",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5351,7 +5390,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5387,7 +5426,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5442,7 +5481,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5630,7 +5669,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "statistics",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5767,7 +5806,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "projection",
                   "params": {}
                 }
               ]
@@ -5938,7 +5977,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "circle",
+                "renderer": "projection",
                 "params": {}
               }
             ]
@@ -5994,7 +6033,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "projection",
                 "params": {}
               }
             ]
@@ -6074,6 +6113,11 @@
               {
                 "type": "textbook_text",
                 "text": "中学数学课程教材研究开发中心"
+              },
+              {
+                "type": "visualization",
+                "renderer": "projection",
+                "params": {}
               }
             ]
           },
@@ -6096,6 +6140,11 @@
               {
                 "type": "textbook_text",
                 "text": "绿色印刷产品 绿色印刷产品"
+              },
+              {
+                "type": "visualization",
+                "renderer": "projection",
+                "params": {}
               }
             ]
           }

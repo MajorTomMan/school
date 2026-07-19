@@ -261,6 +261,11 @@
                 {
                   "type": "textbook_text",
                   "text": "因为 ∠AOD=90°,所以 AB⊥CD.在日常生活中,两条直线互相垂直的情形很常见,例如图7.1-6中窗户上互相垂直的木条、网球拍上互相垂直的网线.你能再举出其他例子吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             },
@@ -299,6 +304,11 @@
                 {
                   "type": "textbook_text",
                   "text": "图7.1-8解:如图7.1-9所示."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             },
@@ -376,7 +386,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -427,7 +437,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -601,6 +611,11 @@
                 {
                   "type": "textbook_text",
                   "text": "线.射线OE,OF在同一条直线上吗?为什么?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             }
@@ -642,7 +657,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -736,7 +751,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -791,7 +806,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -861,7 +876,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -920,7 +935,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -1032,7 +1047,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -1121,7 +1136,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -1209,6 +1224,11 @@
                 {
                   "type": "textbook_text",
                   "text": "第7题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             },
@@ -1308,6 +1328,11 @@
                 {
                   "type": "textbook_text",
                   "text": "第14题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             }
@@ -1349,12 +1374,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             },
@@ -1408,7 +1429,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -1568,6 +1589,11 @@
                 {
                   "type": "textbook_text",
                   "text": "第4题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             }
@@ -1703,7 +1729,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "translation",
                   "params": {}
                 }
               ]
@@ -1927,7 +1953,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "intersecting_lines",
                   "params": {}
                 }
               ]
@@ -1955,6 +1981,11 @@
                 {
                   "type": "textbook_text",
                   "text": "图5你能用交错的线段设计一些窗格图案吗?请在图6中试一试."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "intersecting_lines",
+                  "params": {}
                 }
               ]
             }
@@ -2157,7 +2188,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "parallel_lines",
+                "renderer": "intersecting_lines",
                 "params": {}
               }
             ]
@@ -2218,7 +2249,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "parallel_lines",
+                "renderer": "intersecting_lines",
                 "params": {}
               }
             ]
@@ -3962,12 +3993,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "coordinate_plane",
+                  "params": {}
                 }
               ]
             },
@@ -4013,12 +4040,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "coordinate_plane",
+                  "params": {}
                 }
               ]
             },
@@ -4066,12 +4089,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "coordinate_plane",
+                  "params": {}
                 }
               ]
             },
@@ -4201,7 +4220,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "coordinate_plane",
                   "params": {}
                 }
               ]
@@ -4371,6 +4390,11 @@
                 {
                   "type": "textbook_text",
                   "text": "你能从中找出哪几种表示位置的方法?你能借助地球仪,找到这次台风的中心在上述两个时刻的位置吗?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "coordinate_plane",
+                  "params": {}
                 }
               ]
             }
@@ -4740,7 +4764,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
+                  "renderer": "coordinate_plane",
                   "params": {}
                 }
               ]
@@ -5838,7 +5862,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "absolute_value",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -5909,7 +5933,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -5994,7 +6018,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6085,7 +6109,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6168,7 +6192,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "opposite_numbers",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6374,7 +6398,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6430,6 +6454,11 @@
                 {
                   "type": "textbook_text",
                   "text": "九百九十九文钱,甜果苦果买一千.甜果九个十一文,苦果七个四文钱.试问甜苦果几个,又问各该几个钱.意思是:九百九十九文钱买了甜果和苦果共一千个,已知十一文钱可以买九个甜果,四文钱可以买七个苦果,那么甜果、苦果各买了多少个?买甜果、苦果分别花了多少文钱?请你解决这个问题."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "equation_system",
+                  "params": {}
                 }
               ]
             }
@@ -6542,7 +6571,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6599,7 +6628,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "algebra_process",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6658,7 +6687,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6747,7 +6776,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -6796,7 +6825,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7022,7 +7051,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7190,7 +7219,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7249,7 +7278,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7292,7 +7321,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7355,7 +7384,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "equation_system",
                   "params": {}
                 }
               ]
@@ -7438,6 +7467,11 @@
                 {
                   "type": "textbook_text",
                   "text": "资料显示:汽车前轮轮胎一般应在汽车行驶达到60000km时报废,而后轮轮胎应在汽车行驶达到80000km时报废.如果在轮胎的使用寿命内只交换一次前、后轮轮胎,那么应在汽车行驶里程达到多少时,交换前、后轮轮胎,能使汽车的两对轮胎同时报废?并求出轮胎报废时汽车的行驶里程."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "equation_system",
+                  "params": {}
                 }
               ]
             }
@@ -7689,6 +7723,11 @@
               {
                 "type": "textbook_text",
                 "text": "计划全部用于从这家电脑公司购进36台两种型号的电脑.请你设计几种不同的购买方案供这所学校选择,并说明理由."
+              },
+              {
+                "type": "visualization",
+                "renderer": "equation_system",
+                "params": {}
               }
             ]
           }
@@ -7844,12 +7883,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -7921,12 +7956,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -7984,12 +8015,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8128,12 +8155,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8277,12 +8300,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8368,12 +8387,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             }
@@ -8582,12 +8597,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8781,6 +8792,11 @@
                 {
                   "type": "textbook_text",
                   "text": "x=150.即x=150时,到甲、乙两超市购物花费相同.答:当累计购物不超过50元或等于150元时,到两家超市购物花费相同;当累计购物超过50元而不到150元时,到乙超市购物花费较少;当累计购物超过150元时,到甲超市购物花费较少."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8826,12 +8842,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -8970,12 +8982,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9046,12 +9054,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9133,12 +9137,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9321,6 +9321,11 @@
                 {
                   "type": "textbook_text",
                   "text": "任务1 分享交流分享课前查阅的相关资料,对“碳中和”“碳交易”等相关概念,以及在当前国际、国内背景下二氧化碳减排发展情况等进行组内交流分享."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9355,6 +9360,11 @@
                 {
                   "type": "textbook_text",
                   "text": "12长途飞机(1000km以上)次..............."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9421,6 +9431,11 @@
                 {
                   "type": "textbook_text",
                   "text": "按照小组设计的方案进行任务分工,使每位成员都有明确的任务.根据规841"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             },
@@ -9453,6 +9468,11 @@
                 {
                   "type": "textbook_text",
                   "text": "通过成果展示与交流,基于各组完成的研究报告,根据情况选择任务完成表、表现评分表、自我反思表等进行评价.与老师和全班同学一起,通过质疑、辩论、评价,总结成果,分享体会,分析不足,开展自我评价、同学评价和教师评价,完成本次综合与实践活动."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "inequality_number_line",
+                  "params": {}
                 }
               ]
             }
@@ -9576,12 +9596,8 @@
               },
               {
                 "type": "visualization",
-                "renderer": "number_line",
-                "params": {
-                  "min": -5,
-                  "max": 5,
-                  "draggable": true
-                }
+                "renderer": "inequality_number_line",
+                "params": {}
               }
             ]
           },
@@ -9640,6 +9656,11 @@
               {
                 "type": "textbook_text",
                 "text": "间和(包含等待时间)较少?"
+              },
+              {
+                "type": "visualization",
+                "renderer": "inequality_number_line",
+                "params": {}
               }
             ]
           }
@@ -9838,6 +9859,11 @@
                 {
                   "type": "textbook_text",
                   "text": "(A)读课外书 (B)体育活动 (C)看电视 (D)踢足球3.举出一些生活中运用全面调查的例子."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -10610,7 +10636,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -10824,7 +10850,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -10856,6 +10882,11 @@
                 {
                   "type": "textbook_text",
                   "text": "图12.2-12要画出“尽可能靠近所有散点的直线”,可以有很多种画法,上面的几种画法都有一定的道理.到了高中,我们将学习计算“竖直距离”的平方和,当这个平方和最小时,可以求出一条直线来描述饮品店一天卖出的冷饮杯数与当"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -11604,6 +11635,11 @@
                 {
                   "type": "textbook_text",
                   "text": "通过成果展示与交流,基于各组完成的研究报告,根据情况选择任务完成表、表现评分表、自我反思表等进行评价.与老师和全班同学一起,通过质疑、辩论、评价,总结成果,分享体会,分析不足,开展自我评价、同学评价和教师评价,完成本次综合与实践活动."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -11642,6 +11678,11 @@
                 {
                   "type": "textbook_text",
                   "text": "人民教育出版社 课程教材研究所"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             }

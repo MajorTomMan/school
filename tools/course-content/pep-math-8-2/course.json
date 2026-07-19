@@ -58,7 +58,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -113,7 +113,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -300,6 +300,11 @@
                 {
                   "type": "textbook_text",
                   "text": "2; (3)-(-π)√2; (4)10√-2."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             },
@@ -377,7 +382,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "circle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -432,7 +437,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "multiplication_sign",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -788,7 +793,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -837,7 +842,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -973,7 +978,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -1035,7 +1040,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "multiplication_sign",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -1141,7 +1146,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -1232,7 +1237,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "algebra_process",
                   "params": {}
                 }
               ]
@@ -1272,6 +1277,11 @@
                 {
                   "type": "textbook_text",
                   "text": "2若按图3所示的方式折叠纸片ABCD,长方形GHID是否仍为“长与宽的比值为√2的长方形”?为什么?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "algebra_process",
+                  "params": {}
                 }
               ]
             }
@@ -1383,7 +1393,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "quadrilateral",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -1436,7 +1446,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "circle",
+                "renderer": "algebra_process",
                 "params": {}
               }
             ]
@@ -1476,7 +1486,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -1531,7 +1541,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -1570,7 +1580,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -1628,7 +1638,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -1690,7 +1700,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -1831,12 +1841,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "pythagorean",
+                  "params": {}
                 }
               ]
             },
@@ -1884,12 +1890,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "pythagorean",
+                  "params": {}
                 }
               ]
             },
@@ -1955,12 +1957,8 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "number_line",
-                  "params": {
-                    "min": -5,
-                    "max": 5,
-                    "draggable": true
-                  }
+                  "renderer": "pythagorean",
+                  "params": {}
                 }
               ]
             },
@@ -2032,7 +2030,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2097,7 +2095,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2213,7 +2211,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2240,7 +2238,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2353,7 +2351,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2431,7 +2429,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2496,7 +2494,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2547,7 +2545,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "pythagorean",
                   "params": {}
                 }
               ]
@@ -2687,7 +2685,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "pythagorean",
                 "params": {}
               }
             ]
@@ -2776,7 +2774,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "pythagorean",
                 "params": {}
               }
             ]
@@ -2950,7 +2948,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -2997,7 +2995,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3059,7 +3057,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3104,7 +3102,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3151,7 +3149,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3210,7 +3208,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "intersecting_lines",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3274,7 +3272,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3341,7 +3339,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3402,7 +3400,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3437,14 +3435,6 @@
                 },
                 {
                   "type": "textbook_text",
-                  "text": "3D="
-                },
-                {
-                  "type": "textbook_text",
-                  "text": "3D="
-                },
-                {
-                  "type": "textbook_text",
                   "text": "21.2.1 平行四边形及其性质"
                 },
                 {
@@ -3457,7 +3447,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3508,7 +3498,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3581,7 +3571,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3617,7 +3607,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "parallel_lines",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3944,7 +3934,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -3995,7 +3985,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4030,7 +4020,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4101,7 +4091,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4180,7 +4170,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4354,7 +4344,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "axis_symmetry",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4421,7 +4411,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4490,7 +4480,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4541,7 +4531,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "axis_symmetry",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4606,7 +4596,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4659,7 +4649,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4763,7 +4753,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4843,7 +4833,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -4901,7 +4891,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "congruent_triangles",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -5037,7 +5027,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -5126,7 +5116,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -5201,7 +5191,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -5343,7 +5333,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "pythagorean",
+                  "renderer": "quadrilateral",
                   "params": {}
                 }
               ]
@@ -5385,7 +5375,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "parallel_lines",
+                "renderer": "quadrilateral",
                 "params": {}
               }
             ]
@@ -5462,7 +5452,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "triangle",
+                "renderer": "quadrilateral",
                 "params": {}
               }
             ]
@@ -5553,7 +5543,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "intersecting_lines",
+                "renderer": "quadrilateral",
                 "params": {}
               }
             ]
@@ -5622,7 +5612,7 @@
               },
               {
                 "type": "visualization",
-                "renderer": "congruent_triangles",
+                "renderer": "quadrilateral",
                 "params": {}
               }
             ]
@@ -5721,7 +5711,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -6048,7 +6038,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "circle",
                   "params": {}
                 }
               ]
@@ -6121,7 +6111,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "function_relation",
                   "params": {}
                 }
               ]
@@ -6731,7 +6721,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "triangle",
+                  "renderer": "function_relation",
                   "params": {}
                 }
               ]
@@ -7023,8 +7013,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -7090,8 +7082,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7270,8 +7264,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7321,8 +7317,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7415,8 +7413,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7499,8 +7499,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7565,8 +7567,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_system",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7671,8 +7675,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_balance",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7756,8 +7762,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "translation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -7822,8 +7830,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -7946,8 +7956,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8001,8 +8013,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_system",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8053,8 +8067,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "equation_system",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8136,8 +8152,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -8268,8 +8286,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "inequality_number_line",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8315,8 +8335,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8362,8 +8384,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8466,8 +8490,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8507,8 +8533,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -8558,8 +8586,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -8605,8 +8635,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8647,6 +8679,13 @@
                 {
                   "type": "textbook_text",
                   "text": "1)查阅资料,了解十二平均律的制谱方法.(2)由前面的研究可知,十二平均律中相邻两个音的频率之比相等,朱载癱称之为“密率” (见《律吕精义》).事实上,“密率”是一个无理数.朱载癱通过他自制的一个81档双排位大算盘(图1)成功地算出了“密率”的估计值,将其精确到了25位有效数字,这在当时条件下是难以想象的.他是世界历史上"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8688,8 +8727,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8765,8 +8806,10 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
-                  "params": {}
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             },
@@ -8785,6 +8828,13 @@
                 {
                   "type": "textbook_text",
                   "text": "通过成果展示与交流,基于各组完成的研究报告,根据情况选择任务完成表、作品评分表、表现评分表、自我反思表等进行评价.与老师(包括音乐老师)和全班同学一起,通过质疑、辩论、评价,总结成果,分享体会,分析不足,开展自我评价、同学评价和教师评价,完成本次综合与实践活动."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "function_graph",
+                  "params": {
+                    "mode": "linear"
+                  }
                 }
               ]
             }
@@ -8829,8 +8879,10 @@
               },
               {
                 "type": "visualization",
-                "renderer": "inequality_number_line",
-                "params": {}
+                "renderer": "function_graph",
+                "params": {
+                  "mode": "linear"
+                }
               }
             ]
           },
@@ -8898,8 +8950,10 @@
               },
               {
                 "type": "visualization",
-                "renderer": "inequality_number_line",
-                "params": {}
+                "renderer": "function_graph",
+                "params": {
+                  "mode": "linear"
+                }
               }
             ]
           },
@@ -8969,8 +9023,10 @@
               },
               {
                 "type": "visualization",
-                "renderer": "function_relation",
-                "params": {}
+                "renderer": "function_graph",
+                "params": {
+                  "mode": "linear"
+                }
               }
             ]
           },
@@ -9021,6 +9077,13 @@
               {
                 "type": "textbook_text",
                 "text": "第10题)"
+              },
+              {
+                "type": "visualization",
+                "renderer": "function_graph",
+                "params": {
+                  "mode": "linear"
+                }
               }
             ]
           }
@@ -9302,6 +9365,11 @@
                 {
                   "type": "textbook_text",
                   "text": "动占20%,期中考试成绩占30%,期末考试成绩占50%.刘伟的三项成绩(百分制)依次是95,90,85,他这学期的体育成绩是多少?"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -9572,6 +9640,11 @@
                 {
                   "type": "textbook_text",
                   "text": "35 40 45 50 55 J cm(第2题)"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -10192,7 +10265,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "function_relation",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -10489,7 +10562,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "absolute_value",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -10857,7 +10930,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "quadrilateral",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -11025,6 +11098,11 @@
                 {
                   "type": "textbook_text",
                   "text": "168 167 180 171 168 172请结合男生身高的四分位数和箱线图比较这两个班级男生的身高差异."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             }
@@ -11232,6 +11310,11 @@
                 {
                   "type": "textbook_text",
                   "text": "城市ABCDE人均生活用电量/(kW·h)910886847812788根据人均生活用电量的组内离差平方和最小的原则,把这5个城市分为两组."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             }
@@ -11399,7 +11482,7 @@
                 },
                 {
                   "type": "visualization",
-                  "renderer": "coordinate_plane",
+                  "renderer": "statistics",
                   "params": {}
                 }
               ]
@@ -11610,6 +11693,11 @@
                 {
                   "type": "textbook_text",
                   "text": "通过成果展示与交流,基于完成的研究报告,根据情况选择任务完成表、表现评分表、自我反思表等进行评价.与老师和全班同学一起,通过质疑、辩论、评价,总结成果,分享体会,分析不足,开展自我评价、同学评价和教师评价,完成本次综合与实践活动."
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             },
@@ -11648,6 +11736,11 @@
                 {
                   "type": "textbook_text",
                   "text": "人民教育出版社 课程教材研究所"
+                },
+                {
+                  "type": "visualization",
+                  "renderer": "statistics",
+                  "params": {}
                 }
               ]
             }
@@ -11789,6 +11882,11 @@
               {
                 "type": "textbook_text",
                 "text": "炮弹落点与目标的距离/m403020100甲炮发射的炮弹数量/发013739乙炮发射的炮弹数量/发132341"
+              },
+              {
+                "type": "visualization",
+                "renderer": "statistics",
+                "params": {}
               }
             ]
           },
