@@ -203,7 +203,7 @@ private fun CloudCoursePager(
         Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
 
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { index ->
-            CloudCoursePageContent(pages[index], index + 1, pages.size)
+            CloudCoursePageContent(pages[index], index + 1, pages.size, installedMaterial)
         }
 
         Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
@@ -238,19 +238,14 @@ private fun CloudCoursePager(
 }
 
 @Composable
-private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pageCount: Int) {
+private fun CloudCoursePageContent(
+    page: RationalLessonPage,
+    pageNumber: Int,
+    pageCount: Int,
+    installedMaterial: InstalledMaterialPack,
+) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxHeight < 620.dp
-        val hasVisualization = page.visualization !in setOf(
-            RationalVisualizationKind.NONE,
-            RationalVisualizationKind.HISTORY,
-        )
-        val visualHeight = when {
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION && compact -> 520.dp
-            page.visualization == RationalVisualizationKind.RATIONAL_CLASSIFICATION -> 620.dp
-            compact -> 210.dp
-            else -> 270.dp
-        }
         val scrollState = rememberScrollState()
 
         Column(
@@ -269,45 +264,32 @@ private fun CloudCoursePageContent(page: RationalLessonPage, pageNumber: Int, pa
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(14.dp))
-            page.paragraphs.forEachIndexed { index, paragraph ->
-                Text(
-                    paragraph,
-                    color = InteractiveWhite.copy(alpha = 0.84f),
-                    fontSize = if (compact) 14.sp else 16.sp,
-                    lineHeight = if (compact) 21.sp else 25.sp,
-                )
-                if (index != page.paragraphs.lastIndex) Spacer(Modifier.height(7.dp))
-            }
-            if (!page.formula.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    page.formula,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, InteractiveYellow.copy(alpha = 0.22f))
-                        .padding(horizontal = 10.dp, vertical = 12.dp),
-                    color = InteractiveYellow,
-                    fontSize = if (compact) 18.sp else 22.sp,
-                    lineHeight = 28.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            if (hasVisualization) {
-                Spacer(Modifier.height(14.dp))
-                CloudVisualization(page, Modifier.fillMaxWidth().height(visualHeight))
-            }
-            if (!page.conclusion.isNullOrBlank()) {
-                Spacer(Modifier.height(16.dp))
-                Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    page.conclusion,
-                    color = InteractiveWhite,
-                    fontSize = if (compact) 14.sp else 16.sp,
-                    lineHeight = 23.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+            if (page.blocks.isNotEmpty()) {
+                CloudCourseOrderedBlocks(page, installedMaterial, compact)
+            } else {
+                page.paragraphs.forEachIndexed { index, paragraph ->
+                    Text(
+                        paragraph,
+                        color = InteractiveWhite.copy(alpha = 0.84f),
+                        fontSize = if (compact) 14.sp else 16.sp,
+                        lineHeight = if (compact) 21.sp else 25.sp,
+                    )
+                    if (index != page.paragraphs.lastIndex) Spacer(Modifier.height(7.dp))
+                }
+                if (!page.formula.isNullOrBlank()) {
+                    Spacer(Modifier.height(12.dp))
+                    FormulaProcessVisual(page.formula)
+                }
+                if (page.visualization !in setOf(RationalVisualizationKind.NONE, RationalVisualizationKind.HISTORY)) {
+                    Spacer(Modifier.height(14.dp))
+                    CloudVisualization(page, Modifier.fillMaxWidth().height(if (compact) 220.dp else 280.dp))
+                }
+                page.conclusion?.takeIf(String::isNotBlank)?.let {
+                    Spacer(Modifier.height(16.dp))
+                    Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
+                    Spacer(Modifier.height(10.dp))
+                    Text(it, color = InteractiveWhite, fontSize = 16.sp, lineHeight = 24.sp)
+                }
             }
             Spacer(Modifier.height(32.dp))
             Text(
@@ -333,7 +315,9 @@ private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
             RationalVisualizationKind.HISTORY,
             -> Unit
             RationalVisualizationKind.OPPOSITE_QUANTITIES -> SignedMovementNumberLineVisual()
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> RationalExamplesVisual()
+            RationalVisualizationKind.RATIONAL_CLASSIFICATION,
+            RationalVisualizationKind.INTEGER_TO_FRACTION,
+            -> IntegerToFractionTextbookVisual()
             RationalVisualizationKind.NUMBER_LINE -> AdjustableNumberLine(NumberLineMode.VALUE)
             RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
             RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
@@ -344,6 +328,7 @@ private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
             -> FormulaProcessVisual(page.formula)
             RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
             RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
+            else -> TextbookMathVisual(page.visualization, emptyMap())
         }
     }
 }

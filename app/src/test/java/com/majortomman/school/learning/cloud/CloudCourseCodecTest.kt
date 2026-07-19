@@ -1,5 +1,8 @@
 package com.majortomman.school.learning.cloud
 
+import com.majortomman.school.learning.course.CourseSourceExcerptBlock
+import com.majortomman.school.learning.course.CourseTextBlock
+import com.majortomman.school.learning.course.CourseVisualizationBlock
 import com.majortomman.school.learning.course.RationalVisualizationKind
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -26,6 +29,18 @@ class CloudCourseCodecTest {
         assertTrue(pages.any { it.title == "章末练习" })
     }
 
+
+    @Test
+    fun orderedBlocksPreserveTextbookSequenceAndVisualizationParameters() {
+        val page = CloudCourseCodec.pagesFor(JSONObject(ORDERED_BLOCK_COURSE), "有理数的概念", 7..7).single()
+
+        assertTrue(page.blocks[0] is CourseTextBlock)
+        assertTrue(page.blocks[1] is CourseSourceExcerptBlock)
+        val visual = page.blocks[2] as CourseVisualizationBlock
+        assertEquals(RationalVisualizationKind.INTEGER_TO_FRACTION, visual.kind)
+        assertEquals("整数写成分数形式", visual.params["title"])
+    }
+
     @Test
     fun googleDriveShareLinkBecomesDirectDownloadLink() {
         assertEquals(
@@ -43,6 +58,25 @@ class CloudCourseCodecTest {
     }
 
     private companion object {
+
+        val ORDERED_BLOCK_COURSE = """
+            {
+              "schemaVersion": 1,
+              "textbook": {"id":"pep-math-7-1","title":"数学七年级上册"},
+              "chapters": [{
+                "id":"chapter-01","title":"有理数","sections":[{
+                  "id":"1.2.1","title":"有理数的概念","pages":[{
+                    "id":"concept","title":"有理数的概念","sourcePage":7,
+                    "blocks":[
+                      {"type":"textbook_text","text":"正整数、0、负整数统称为整数。"},
+                      {"type":"source_excerpt","sourcePage":7,"bbox":[10,20,100,80],"fallbackText":"教材原式"},
+                      {"type":"visualization","renderer":"integer_to_fraction","params":{"title":"整数写成分数形式"}}
+                    ]
+                  }]
+                }]
+              }]
+            }
+        """.trimIndent()
         val SAMPLE_COURSE = """
             {
               "schemaVersion": 1,
