@@ -1,0 +1,192 @@
+name: Math UI screenshots
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  screenshot:
+    if: github.head_ref == 'agent/full-math-course-pack-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.4.1"
+
+      - name: Add screenshot-only direct lesson entry
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          main = Path('app/src/main/java/com/majortomman/school/MainActivity.kt')
+          text = main.read_text(encoding='utf-8')
+          text = text.replace(
+              'val initialTextbookKey = intent.getStringExtra("open_textbook_slot")',
+              'val initialTextbookKey = intent.getStringExtra("open_textbook_slot")\n' \
+              '        val initialLessonTitle = intent.getStringExtra("open_lesson_title")',
+          )
+          text = text.replace(
+              'initialTextbookKey = initialTextbookKey,\n                    )',
+              'initialTextbookKey = initialTextbookKey,\n' \
+              '                        initialLessonTitle = initialLessonTitle,\n                    )',
+          )
+          main.write_text(text, encoding='utf-8')
+
+          app = Path('app/src/main/java/com/majortomman/school/ui/SchoolApp.kt')
+          text = app.read_text(encoding='utf-8')
+          text = text.replace(
+              'initialTextbookKey: String? = null,\n)',
+              'initialTextbookKey: String? = null,\n' \
+              '    initialLessonTitle: String? = null,\n)',
+          )
+          marker = '''    LaunchedEffect(libraryState.installedTextbooks.map { textbook ->\n'''
+          insertion = '''    LaunchedEffect(initialLessonTitle, activeTextbook?.key, lessons.map { it.id }) {\n        if (!initialLessonTitle.isNullOrBlank() && activeTextbook != null && openedLessonId == null) {\n            val target = lessons.firstOrNull { it.title == initialLessonTitle }\n                ?: lessons.firstOrNull { it.title.contains(initialLessonTitle) }\n            if (target != null) {\n                selectedTabName = MainTab.TODAY.name\n                openedLessonId = target.id\n            }\n        }\n    }\n\n'''
+          if marker not in text:
+              raise SystemExit('SchoolApp insertion marker not found')
+          text = text.replace(marker, insertion + marker, 1)
+          app.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Build screenshot APK
+        env:
+          SCHOOL_VERSION_CODE: 999999
+          SCHOOL_VERSION_NAME: 0.22.0-ui-check
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Download representative textbooks
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/ui-textbooks
+          download() {
+            local id="$1" name="$2" size="$3" digest="$4"
+            local target="build/ui-textbooks/$name"
+            curl --fail --location --retry 4 --retry-delay 2 \
+              --output "$target" \
+              "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
+            test "$(stat -c%s "$target")" = "$size"
+            printf '%s  %s\n' "$digest" "$target" | sha256sum --check --strict
+          }
+          download 1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N 'pep-math-7-1.pdf' 12915486 11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9
+          download 1spnH7HoU9wSX_J3HqdClU8an4wsWNTB6 'pep-math-8-1.pdf' 10148104 e21e7094a470f74a5be947e5fa8a9eee57bd6a4deaaaba3dbd09b811590838ed
+          download 1lJJzJupEt6FThZDB6WMH8AI09W2fT20D 'pep-math-8-2.pdf' 20284130 4979e490f518912473519aafc2b7e016aa804741ac7efbaa4156d230d9dc8b3c
+          download 1ArtD3pcWtIeawWPNSAVudUVk1X0hqWKx 'pep-math-9-1.pdf' 9609936 b6d43c0601c07a6a6f68d3be065c863b41529745e739b4496154c90ecbe7140d
+          download 12p2aGGugc_EvrO-Kqb17MHzMAqXvHTBn 'pep-math-9-2.pdf' 11303872 a71d30eb32b0e43737c88ada99a76ae6b5959050dc53c491b5206bae2d31b0ce
+
+      - name: Run app and capture representative screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: |
+            set -euo pipefail
+            pkg=com.majortomman.school
+            apk=app/build/outputs/apk/debug/app-debug.apk
+            mkdir -p build/ui-screenshots
+            adb install -r "$apk"
+
+            seed_book() {
+              local id="$1" pdf="$2"
+              adb shell "run-as $pkg mkdir -p files/course-packs/active/$id/assets"
+              adb push "tools/course-content/$id/course.json" "/data/local/tmp/$id-course.json" >/dev/null
+              adb push "build/ui-textbooks/$pdf" "/data/local/tmp/$id-textbook.pdf" >/dev/null
+              adb shell "run-as $pkg cp /data/local/tmp/$id-course.json files/course-packs/active/$id/course.json"
+              adb shell "run-as $pkg cp /data/local/tmp/$id-textbook.pdf files/course-packs/active/$id/assets/textbook.pdf"
+            }
+
+            seed_book pep-math-7-1 pep-math-7-1.pdf
+            seed_book pep-math-8-1 pep-math-8-1.pdf
+            seed_book pep-math-8-2 pep-math-8-2.pdf
+            seed_book pep-math-9-1 pep-math-9-1.pdf
+            seed_book pep-math-9-2 pep-math-9-2.pdf
+
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            adb shell svc wifi disable || true
+            adb shell svc data disable || true
+
+            size="$(adb shell wm size | tail -1 | tr -d '\r')"
+            width="${size##* }"; width="${width%x*}"
+            height="${size##*x}"
+            next_x=$((width * 88 / 100))
+            next_y=$((height * 92 / 100))
+            center_x=$((width / 2))
+            swipe_from=$((height * 78 / 100))
+            swipe_to=$((height * 28 / 100))
+
+            open_lesson() {
+              local slot="$1" title="$2"
+              adb shell am force-stop "$pkg"
+              adb shell am start -W -n "$pkg/.MainActivity" \
+                --es open_textbook_slot "$slot" \
+                --es open_lesson_title "$title" >/dev/null
+              sleep 8
+            }
+
+            shot() {
+              local name="$1"
+              adb exec-out screencap -p > "build/ui-screenshots/$name.png"
+            }
+
+            open_lesson math-7-1 '1.2.1有理数的概念'
+            shot 01-rational-overview
+            adb shell input tap "$next_x" "$next_y"; sleep 2
+            shot 02-rational-integer-to-fraction
+            adb shell input tap "$next_x" "$next_y"; sleep 2
+            shot 03-rational-definition
+            adb shell input tap "$next_x" "$next_y"; sleep 2
+            shot 04-rational-example-top
+            adb shell input swipe "$center_x" "$swipe_from" "$center_x" "$swipe_to" 700; sleep 2
+            shot 05-rational-example-bottom
+
+            open_lesson math-8-2 '23.2一次函数的图象和性质'
+            shot 06-linear-function-top
+            adb shell input swipe "$center_x" "$swipe_from" "$center_x" "$swipe_to" 700; sleep 2
+            shot 07-linear-function-bottom
+
+            open_lesson math-8-1 '14.2三角形全等的判定'
+            shot 08-congruence-top
+            adb shell input swipe "$center_x" "$swipe_from" "$center_x" "$swipe_to" 700; sleep 2
+            shot 09-congruence-bottom
+
+            open_lesson math-9-1 '25.1.2概率'
+            shot 10-probability-top
+            adb shell input swipe "$center_x" "$swipe_from" "$center_x" "$swipe_to" 700; sleep 2
+            shot 11-probability-bottom
+
+            open_lesson math-9-2 '29.1投影'
+            shot 12-projection-top
+            adb shell input swipe "$center_x" "$swipe_from" "$center_x" "$swipe_to" 700; sleep 2
+            shot 13-projection-bottom
+
+            adb shell dumpsys window windows > build/ui-screenshots/window-dump.txt
+            adb logcat -d > build/ui-screenshots/logcat.txt
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-math-ui-screenshots
+          path: build/ui-screenshots/
+          if-no-files-found: error
