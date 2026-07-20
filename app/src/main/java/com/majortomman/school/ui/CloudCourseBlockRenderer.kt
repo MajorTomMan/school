@@ -1,29 +1,19 @@
 package com.majortomman.school.ui
 
-import android.graphics.Bitmap
-import android.graphics.Matrix
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -43,9 +33,6 @@ import com.majortomman.school.learning.course.CourseVisualizationBlock
 import com.majortomman.school.learning.course.CourseWorkedExampleBlock
 import com.majortomman.school.learning.course.RationalLessonPage
 import com.majortomman.school.learning.course.RationalVisualizationKind
-import java.io.File
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 internal fun CloudCourseOrderedBlocks(
@@ -84,7 +71,7 @@ private fun CloudCourseBlock(
         is CourseExerciseBlock -> TextbookExercise(block, compact)
         is CourseConclusionBlock -> TextbookConclusion(block.text, compact)
         is CourseVisualizationBlock -> CloudVisualizationBlock(block, page, compact)
-        is CourseSourceExcerptBlock -> TextbookPdfExcerpt(block, installedMaterial)
+        is CourseSourceExcerptBlock -> LegacySourceText(block, installedMaterial, compact)
     }
 }
 
@@ -250,7 +237,7 @@ private fun CloudVisualizationBlock(
             RationalVisualizationKind.NONE,
             RationalVisualizationKind.HISTORY,
             -> Unit
-            RationalVisualizationKind.OPPOSITE_QUANTITIES -> SignedMovementNumberLineVisual()
+            RationalVisualizationKind.OPPOSITE_QUANTITIES -> OppositeQuantitiesSceneVisual(block.params)
             RationalVisualizationKind.RATIONAL_CLASSIFICATION,
             RationalVisualizationKind.INTEGER_TO_FRACTION,
             -> IntegerToFractionTextbookVisual()
@@ -270,6 +257,7 @@ private fun CloudVisualizationBlock(
 }
 
 private fun visualizationHeight(kind: RationalVisualizationKind, compact: Boolean) = when (kind) {
+    RationalVisualizationKind.OPPOSITE_QUANTITIES,
     RationalVisualizationKind.INTEGER_TO_FRACTION,
     RationalVisualizationKind.RATIONAL_CLASSIFICATION,
     -> if (compact) 360.dp else 420.dp
@@ -285,106 +273,19 @@ private fun visualizationHeight(kind: RationalVisualizationKind, compact: Boolea
     else -> if (compact) 220.dp else 280.dp
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
-private fun TextbookPdfExcerpt(
+private fun LegacySourceText(
     block: CourseSourceExcerptBlock,
     installedMaterial: InstalledMaterialPack,
+    compact: Boolean,
 ) {
-    val pdf = installedMaterial.pdfFile
-    val pdfIndex = installedMaterial.printedPageToPdfIndex(block.sourcePage)
-    val key = "${pdf.absolutePath}:${pdf.lastModified()}:$pdfIndex:${block.left}:${block.top}:${block.right}:${block.bottom}"
-    val bitmap by produceState<Bitmap?>(initialValue = null, key1 = key) {
-        value = withContext(Dispatchers.IO) { renderPdfExcerpt(pdf, pdfIndex, block) }
-    }
-    val image = bitmap
-    if (image != null) {
-        Column(Modifier.fillMaxWidth()) {
-            Text(
-                block.altText,
-                color = InteractiveMuted,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(bottom = 7.dp),
-            )
-            Image(
-                bitmap = image.asImageBitmap(),
-                contentDescription = block.altText,
-                modifier = Modifier.fillMaxWidth().aspectRatio(image.width.toFloat() / image.height.toFloat()),
-                contentScale = ContentScale.Fit,
-            )
-        }
-    } else if (block.fallbackText.isNotBlank()) {
+    if (block.fallbackText.isNotBlank()) {
         Text(
-            block.fallbackText,
-            color = InteractiveWhite.copy(alpha = 0.84f),
-            fontSize = 15.sp,
-            lineHeight = 24.sp,
+            text = block.fallbackText,
+            color = InteractiveWhite.copy(alpha = 0.88f),
+            fontSize = if (compact) 15.sp else 16.sp,
+            lineHeight = if (compact) 24.sp else 27.sp,
         )
     }
-}
-
-private fun renderPdfExcerpt(
-    file: File,
-    pageIndex: Int,
-    block: CourseSourceExcerptBlock,
-): Bitmap? = runCatching {
-    if (!file.isFile) return@runCatching null
-    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use descriptorUse@ { descriptor ->
-        PdfRenderer(descriptor).use rendererUse@ { renderer ->
-            if (pageIndex !in 0 until renderer.pageCount) return@rendererUse null
-            renderer.openPage(pageIndex).use pageUse@ { page ->
-                val scale = 2.2f
-                val full = Bitmap.createBitmap(
-                    (page.width * scale).toInt().coerceAtLeast(1),
-                    (page.height * scale).toInt().coerceAtLeast(1),
-                    Bitmap.Config.ARGB_8888,
-                )
-                full.eraseColor(android.graphics.Color.WHITE)
-                page.render(
-                    full,
-                    null,
-                    Matrix().apply { postScale(scale, scale) },
-                    PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY,
-                )
-                val x = (block.left * scale).toInt().coerceIn(0, full.width - 1)
-                val y = (block.top * scale).toInt().coerceIn(0, full.height - 1)
-                val right = (block.right * scale).toInt().coerceIn(x + 1, full.width)
-                val bottom = (block.bottom * scale).toInt().coerceIn(y + 1, full.height)
-                val crop = Bitmap.createBitmap(full, x, y, right - x, bottom - y)
-                if (crop !== full) full.recycle()
-                crop.toDarkCourseExcerpt()
-            }
-        }
-    }
-}.getOrNull()
-
-
-private fun Bitmap.toDarkCourseExcerpt(): Bitmap {
-    val output = copy(Bitmap.Config.ARGB_8888, true)
-    val pixels = IntArray(width * height)
-    output.getPixels(pixels, 0, width, 0, 0, width, height)
-    for (index in pixels.indices) {
-        val color = pixels[index]
-        val red = android.graphics.Color.red(color)
-        val green = android.graphics.Color.green(color)
-        val blue = android.graphics.Color.blue(color)
-        val maximum = maxOf(red, green, blue)
-        val minimum = minOf(red, green, blue)
-        pixels[index] = if (minimum >= 246) {
-            android.graphics.Color.TRANSPARENT
-        } else if (maximum - minimum <= 18) {
-            val value = (255 - ((red + green + blue) / 3)).coerceIn(36, 245)
-            android.graphics.Color.argb(255, value, value, value)
-        } else {
-            val brighten = 1.18f
-            android.graphics.Color.argb(
-                255,
-                (red * brighten).toInt().coerceIn(0, 255),
-                (green * brighten).toInt().coerceIn(0, 255),
-                (blue * brighten).toInt().coerceIn(0, 255),
-            )
-        }
-    }
-    output.setPixels(pixels, 0, width, 0, 0, width, height)
-    if (output !== this) recycle()
-    return output
 }
