@@ -1,0 +1,56 @@
+name: Export local Android environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  export-android-env:
+    if: github.head_ref == 'agent/full-math-course-pack-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install runtime components
+        shell: bash
+        run: |
+          set -euxo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "emulator" \
+            "cmdline-tools;latest" \
+            "system-images;android-30;aosp_atd;x86_64"
+
+      - name: Package portable environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          root="$ANDROID_HOME"
+          mkdir -p build/android-local-env
+          cp -a "$root/platform-tools" build/android-local-env/
+          cp -a "$root/emulator" build/android-local-env/
+          mkdir -p build/android-local-env/cmdline-tools
+          cp -a "$root/cmdline-tools/latest" build/android-local-env/cmdline-tools/
+          mkdir -p build/android-local-env/system-images/android-30/aosp_atd
+          cp -a "$root/system-images/android-30/aosp_atd/x86_64" \
+            build/android-local-env/system-images/android-30/aosp_atd/
+          if [ -d "$root/licenses" ]; then cp -a "$root/licenses" build/android-local-env/; fi
+          tar -C build -I 'zstd -10 -T0' -cf android-local-env.tar.zst android-local-env
+          sha256sum build/android-local-env.tar.zst > build/android-local-env.tar.zst.sha256
+          du -sh build/android-local-env build/android-local-env.tar.zst
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-local-env
+          path: |
+            build/android-local-env.tar.zst
+            build/android-local-env.tar.zst.sha256
+          compression-level: 0
+          if-no-files-found: error
