@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Deep audit of generated mathematics course files against the source PDFs."""
+"""Deep audit of native mathematics course files against the source PDFs."""
 
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
-import re
-import unicodedata
 
 import fitz
 
-from generate_math_courses import BOOKS, display_text, normalized_anchor
+from generate_math_courses import BOOKS, normalized_anchor
 
 TEXT_TYPES = {"textbook_text", "prompt", "caption", "historical_note"}
 
@@ -38,7 +36,6 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
     try:
         ids: set[str] = set()
         native_text_blocks = 0
-        excerpt_blocks = 0
         visualization_blocks = 0
         pages_count = 0
         page_text: dict[int, str] = {}
@@ -57,25 +54,30 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
                 raise SystemExit(f"{spec.textbook_id}: {page_id} has no blocks")
             for block in page["blocks"]:
                 kind = block["type"]
+                if kind == "source_excerpt":
+                    raise SystemExit(
+                        f"{spec.textbook_id}: {page_id} still contains a PDF crop; "
+                        "published lessons must use native text and School visualizations"
+                    )
                 if kind in TEXT_TYPES:
                     native_text_blocks += 1
                     text = normalize(block.get("text", ""))
-                    # Generated textbook text must remain a contiguous textbook phrase. Manual pages
-                    # are still protected by sourceAnchors because mathematical fractions are repaired.
-                    if not page_id.startswith("1.2.1-p07-") and len(text) >= 12 and text not in source:
+                    # Generated textbook text must remain a contiguous textbook phrase. Curated pages
+                    # are protected by sourceAnchors because fraction notation is repaired for mobile.
+                    if (
+                        not page_id.startswith("1.2.1-p07-")
+                        and page_id not in {
+                            "pep-math-7-1-01-01-p001-1",
+                            "pep-math-7-1-01-02-p002-1",
+                            "pep-math-7-1-01-02-p003-1",
+                        }
+                        and len(text) >= 12
+                        and text not in source
+                    ):
                         raise SystemExit(
                             f"{spec.textbook_id}: {page_id} textbook text is not found on printed page {printed}: "
-                            f"{block.get('text','')[:80]}"
+                            f"{block.get('text', '')[:80]}"
                         )
-                elif kind == "source_excerpt":
-                    excerpt_blocks += 1
-                    bbox = block.get("bbox") or []
-                    if len(bbox) != 4:
-                        raise SystemExit(f"{spec.textbook_id}: {page_id} invalid excerpt bbox")
-                    x0, y0, x1, y1 = map(float, bbox)
-                    rect = document[pdf_index].rect
-                    if not (0 <= x0 < x1 <= rect.width + 20 and 0 <= y0 < y1 <= rect.height + 20):
-                        raise SystemExit(f"{spec.textbook_id}: {page_id} excerpt outside PDF page: {bbox}")
                 elif kind == "visualization":
                     visualization_blocks += 1
                     if not str(block.get("renderer") or "").strip():
@@ -85,7 +87,7 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
         return {
             "pages": pages_count,
             "nativeTextBlocks": native_text_blocks,
-            "sourceExcerpts": excerpt_blocks,
+            "sourceExcerpts": 0,
             "visualizations": visualization_blocks,
         }
     finally:

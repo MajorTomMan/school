@@ -1,6 +1,5 @@
 package com.majortomman.school.learning.cloud
 
-import com.majortomman.school.learning.course.CourseSourceExcerptBlock
 import com.majortomman.school.learning.course.CourseTextBlock
 import com.majortomman.school.learning.course.CourseVisualizationBlock
 import com.majortomman.school.learning.course.RationalVisualizationKind
@@ -29,13 +28,13 @@ class CloudCourseCodecTest {
         assertTrue(pages.any { it.title == "章末练习" })
     }
 
-
     @Test
-    fun orderedBlocksPreserveTextbookSequenceAndVisualizationParameters() {
+    fun legacySourceExcerptBecomesNativeTextAndKeepsVisualizationOrder() {
         val page = CloudCourseCodec.pagesFor(JSONObject(ORDERED_BLOCK_COURSE), "有理数的概念", 7..7).single()
 
         assertTrue(page.blocks[0] is CourseTextBlock)
-        assertTrue(page.blocks[1] is CourseSourceExcerptBlock)
+        assertTrue(page.blocks[1] is CourseTextBlock)
+        assertEquals("教材原式", (page.blocks[1] as CourseTextBlock).text)
         val visual = page.blocks[2] as CourseVisualizationBlock
         assertEquals(RationalVisualizationKind.INTEGER_TO_FRACTION, visual.kind)
         assertEquals("整数写成分数形式", visual.params["title"])
@@ -58,7 +57,6 @@ class CloudCourseCodecTest {
     }
 
     private companion object {
-
         val ORDERED_BLOCK_COURSE = """
             {
               "schemaVersion": 1,
@@ -77,6 +75,7 @@ class CloudCourseCodecTest {
               }]
             }
         """.trimIndent()
+
         val SAMPLE_COURSE = """
             {
               "schemaVersion": 1,

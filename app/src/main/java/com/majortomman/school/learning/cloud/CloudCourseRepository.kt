@@ -6,7 +6,6 @@ import com.majortomman.school.learning.course.CourseExerciseBlock
 import com.majortomman.school.learning.course.CourseFormulaBlock
 import com.majortomman.school.learning.course.CourseHeadingBlock
 import com.majortomman.school.learning.course.CoursePageBlock
-import com.majortomman.school.learning.course.CourseSourceExcerptBlock
 import com.majortomman.school.learning.course.CourseSummaryBlock
 import com.majortomman.school.learning.course.CourseTextBlock
 import com.majortomman.school.learning.course.CourseTextRole
@@ -122,7 +121,11 @@ internal object CloudCourseCodec {
                 require(section.getString("title").isNotBlank()) { "小节标题不能为空" }
                 decodePages(section.optJSONArray("pages"), section.getString("title"), 1..1)
             }
-            decodePages(chapter.optJSONObject("review")?.optJSONArray("pages"), "${chapter.getString("title")} 小结", 1..1)
+            decodePages(
+                chapter.optJSONObject("review")?.optJSONArray("pages"),
+                "${chapter.getString("title")} 小结",
+                1..1,
+            )
         }
     }
 
@@ -145,7 +148,13 @@ internal object CloudCourseCodec {
                         val section = sections.getJSONObject(sectionIndex)
                         addAll(decodePages(section.optJSONArray("pages"), section.getString("title"), sourcePages))
                     }
-                    addAll(decodePages(chapter.optJSONObject("review")?.optJSONArray("pages"), "$chapterTitle 小结", sourcePages))
+                    addAll(
+                        decodePages(
+                            chapter.optJSONObject("review")?.optJSONArray("pages"),
+                            "$chapterTitle 小结",
+                            sourcePages,
+                        ),
+                    )
                 }
             }
 
@@ -207,6 +216,7 @@ internal object CloudCourseCodec {
                 "heading" -> block.optString("text").takeIf(String::isNotBlank)?.let {
                     decodedBlocks += CourseHeadingBlock(it)
                 }
+
                 "textbook_text", "explanation", "historical_note", "prompt", "caption" -> {
                     val text = block.optString("text").trim()
                     if (text.isNotBlank()) {
@@ -221,6 +231,7 @@ internal object CloudCourseCodec {
                         paragraphs += text
                     }
                 }
+
                 "formula" -> {
                     val expression = block.optString("expression").trim()
                     val conditions = block.optJSONArray("conditions")?.strings().orEmpty()
@@ -234,6 +245,7 @@ internal object CloudCourseCodec {
                         }
                     }
                 }
+
                 "summary" -> {
                     val items = block.optJSONArray("items")?.strings().orEmpty()
                     if (items.isNotEmpty()) {
@@ -241,6 +253,7 @@ internal object CloudCourseCodec {
                         paragraphs += items
                     }
                 }
+
                 "worked_example" -> {
                     val statement = block.optString("statement").trim()
                     val steps = block.optJSONArray("steps")?.strings().orEmpty()
@@ -257,6 +270,7 @@ internal object CloudCourseCodec {
                         result?.let { paragraphs += "结果：$it" }
                     }
                 }
+
                 "exercise" -> {
                     val number = block.optString("number").trim()
                     val stem = block.optString("stem").trim()
@@ -267,12 +281,12 @@ internal object CloudCourseCodec {
                         paragraphs += listOf(number, stem).filter(String::isNotBlank).joinToString(". ")
                     }
                 }
-                "conclusion" -> {
-                    block.optString("text").trim().takeIf(String::isNotBlank)?.let {
-                        decodedBlocks += CourseConclusionBlock(it)
-                        conclusion = it
-                    }
+
+                "conclusion" -> block.optString("text").trim().takeIf(String::isNotBlank)?.let {
+                    decodedBlocks += CourseConclusionBlock(it)
+                    conclusion = it
                 }
+
                 "visualization" -> {
                     val renderer = block.optString("renderer").trim()
                     val kind = visualizationKind(renderer)
@@ -280,18 +294,15 @@ internal object CloudCourseCodec {
                     decodedBlocks += CourseVisualizationBlock(renderer, kind, params)
                     if (visualization == RationalVisualizationKind.HISTORY) visualization = kind
                 }
+
                 "source_excerpt" -> {
-                    val bbox = block.optJSONArray("bbox")
-                    if (bbox != null && bbox.length() == 4) {
-                        decodedBlocks += CourseSourceExcerptBlock(
-                            sourcePage = block.optInt("sourcePage", pageSource).coerceAtLeast(1),
-                            left = bbox.optDouble(0).toFloat(),
-                            top = bbox.optDouble(1).toFloat(),
-                            right = bbox.optDouble(2).toFloat(),
-                            bottom = bbox.optDouble(3).toFloat(),
-                            fallbackText = block.optString("fallbackText").trim(),
-                            altText = block.optString("altText", "教材原图").ifBlank { "教材原图" },
-                        )
+                    // Legacy packages used PDF crops for formula-rich or diagram-heavy regions.
+                    // The app now presents their verified fallback wording as native textbook text.
+                    // The original layout remains one tap away through the page link in the header.
+                    val text = block.optString("fallbackText").trim()
+                    if (text.isNotBlank()) {
+                        decodedBlocks += CourseTextBlock(text, CourseTextRole.TEXTBOOK)
+                        paragraphs += text
                     }
                 }
             }

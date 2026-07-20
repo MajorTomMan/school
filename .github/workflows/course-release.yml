@@ -54,11 +54,13 @@ jobs:
           download 1ArtD3pcWtIeawWPNSAVudUVk1X0hqWKx '义务教育教科书·数学九年级上册.pdf' 9609936 b6d43c0601c07a6a6f68d3be065c863b41529745e739b4496154c90ecbe7140d
           download 12p2aGGugc_EvrO-Kqb17MHzMAqXvHTBn '义务教育教科书·数学九年级下册.pdf' 11303872 a71d30eb32b0e43737c88ada99a76ae6b5959050dc53c491b5206bae2d31b0ce
 
-      - name: Regenerate courses from textbook originals
+      - name: Regenerate native courses from textbook originals
         run: |
           python3 tools/course-content/generate_math_courses.py \
             --pdf-root build/course-source \
             --output-root build/generated-course
+          python3 tools/course-content/postprocess_math_courses.py \
+            --source-root build/generated-course
           for id in pep-math-7-1 pep-math-7-2 pep-math-8-1 pep-math-8-2 pep-math-9-1 pep-math-9-2; do
             diff -u "tools/course-content/$id/course.json" "build/generated-course/$id/course.json"
           done
@@ -81,7 +83,7 @@ jobs:
           validate pep-math-9-1 '义务教育教科书·数学九年级上册.pdf' 163
           validate pep-math-9-2 '义务教育教科书·数学九年级下册.pdf' 122
 
-      - name: Audit textbook wording, excerpts and renderer coverage
+      - name: Audit textbook wording and renderer coverage
         run: |
           python3 tools/course-content/audit_math_courses.py \
             --source-root tools/course-content \
@@ -116,7 +118,15 @@ jobs:
               assert files['assets/textbook.pdf']['inFullPackage'] is False
               with zipfile.ZipFile(root / f"{textbook['id']}.zip") as archive:
                   assert archive.namelist() == ['course.json']
-          print('six-book course release validated')
+              course = json.loads((root / f"{textbook['id']}-course.json").read_text(encoding='utf-8'))
+              assert not any(
+                  block.get('type') == 'source_excerpt'
+                  for chapter in course['chapters']
+                  for section in chapter.get('sections', [])
+                  for page in section.get('pages', [])
+                  for block in page.get('blocks', [])
+              )
+          print('six-book native course release validated')
           PY
 
       - name: Upload course diagnostics
