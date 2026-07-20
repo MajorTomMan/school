@@ -179,7 +179,7 @@ class UpdateDownloadWorker(
         ensureDownloadNotificationChannel()
         val notification = NotificationCompat.Builder(applicationContext, UPDATE_NOTIFICATION_CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("正在下载 School $versionName")
+            .setContentTitle("正在下载 School $versionName · $progress%")
             .setContentText("已完成 $progress%")
             .setOnlyAlertOnce(true)
             .setOngoing(true)
