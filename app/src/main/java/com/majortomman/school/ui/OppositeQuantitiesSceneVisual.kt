@@ -73,28 +73,23 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
     val scene = oppositeQuantityScenes.firstOrNull { it.id == selectedId } ?: requestedScene
     val animatedValue by animateFloatAsState(targetValue = value, label = "opposite-quantity-value")
     val isZero = abs(animatedValue) < 0.0001f
-    val direction = when {
-        animatedValue > 0f -> scene.positiveMeaning
-        animatedValue < 0f -> scene.negativeMeaning
-        else -> "基准"
-    }
     val signedValue = displaySignedQuantity(animatedValue, scene.unit)
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             oppositeQuantityScenes.forEach { option ->
                 val selected = option.id == scene.id
                 Column(
-                    modifier = Modifier.clickable {
-                        selectedId = option.id
-                        value = option.initialValue
-                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            selectedId = option.id
+                            value = option.initialValue
+                        }
+                        .padding(horizontal = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -102,6 +97,7 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
                         color = if (selected) InteractiveWhite else InteractiveMuted,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1,
                     )
                     Spacer(Modifier.height(5.dp))
                     Box(
@@ -121,7 +117,7 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
         ) {
             Text("以 0 为基准", color = InteractiveMuted, fontSize = 12.sp)
             Text(
-                "$direction  $signedValue",
+                signedValue,
                 color = valueColor(animatedValue),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -252,7 +248,7 @@ private fun DrawScope.drawTemperatureScene(value: Float) {
         value < 0f -> "零下 ${displayQuantity(abs(value))}℃"
         else -> "0℃"
     }
-    drawSceneLabel(meaning, centerX, 18f, color, 27f)
+    drawSceneLabel(meaning, centerX, 32f, color, 27f)
 }
 
 private fun DrawScope.drawHorizontalOppositeScene(
