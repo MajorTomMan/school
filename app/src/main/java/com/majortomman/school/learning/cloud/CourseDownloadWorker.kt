@@ -102,17 +102,26 @@ class CourseDownloadWorker(
         )
     }
 
-    private fun progressNotification(percent: Int, text: String, indeterminate: Boolean) =
-        NotificationCompat.Builder(applicationContext, DOWNLOAD_CHANNEL_ID)
+    private fun progressNotification(percent: Int, text: String, indeterminate: Boolean): android.app.Notification {
+        val displayedPercent = percent.coerceIn(0, 100)
+        val title = if (indeterminate) {
+            "正在下载课程内容"
+        } else {
+            "正在下载课程内容 · $displayedPercent%"
+        }
+        val detail = if (indeterminate) text else "$text · $displayedPercent%"
+        return NotificationCompat.Builder(applicationContext, DOWNLOAD_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("正在下载课程内容")
-            .setContentText(text)
+            .setContentTitle(title)
+            .setContentText(detail)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(detail))
             .setContentIntent(openAppIntent())
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .setProgress(100, percent.coerceIn(0, 100), indeterminate)
+            .setProgress(100, displayedPercent, indeterminate)
             .build()
+    }
 
     private fun showResultNotification(success: Boolean, message: String) {
         val notification = NotificationCompat.Builder(applicationContext, RESULT_CHANNEL_ID)
