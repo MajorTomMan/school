@@ -107,9 +107,9 @@ class CourseDownloadWorker(
         val title = if (indeterminate) {
             "正在下载课程内容"
         } else {
-            "正在下载课程内容 · $displayedPercent%"
+            "课程下载 $displayedPercent%"
         }
-        val detail = if (indeterminate) text else "$text · $displayedPercent%"
+        val detail = if (indeterminate) text else "$text · 已完成 $displayedPercent%"
         return NotificationCompat.Builder(applicationContext, DOWNLOAD_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle(title)
