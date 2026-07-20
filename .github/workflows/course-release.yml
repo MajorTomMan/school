@@ -54,16 +54,31 @@ jobs:
           download 1ArtD3pcWtIeawWPNSAVudUVk1X0hqWKx '义务教育教科书·数学九年级上册.pdf' 9609936 b6d43c0601c07a6a6f68d3be065c863b41529745e739b4496154c90ecbe7140d
           download 12p2aGGugc_EvrO-Kqb17MHzMAqXvHTBn '义务教育教科书·数学九年级下册.pdf' 11303872 a71d30eb32b0e43737c88ada99a76ae6b5959050dc53c491b5206bae2d31b0ce
 
-      - name: Regenerate native courses from textbook originals
+      - name: Build course skeleton and apply manually reviewed sections
         run: |
           python3 tools/course-content/generate_math_courses.py \
             --pdf-root build/course-source \
             --output-root build/generated-course
           python3 tools/course-content/postprocess_math_courses.py \
             --source-root build/generated-course
-          for id in pep-math-7-1 pep-math-7-2 pep-math-8-1 pep-math-8-2 pep-math-9-1 pep-math-9-2; do
-            diff -u "tools/course-content/$id/course.json" "build/generated-course/$id/course.json"
-          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          course = json.loads(Path('build/generated-course/pep-math-7-1/course.json').read_text(encoding='utf-8'))
+          section = next(
+              section
+              for chapter in course['chapters']
+              for section in chapter.get('sections', [])
+              if section.get('id') == '1.1'
+          )
+          assert section.get('manualReview', {}).get('printedPages') == [2, 3, 4, 5, 6]
+          titles = [page['title'] for page in section['pages']]
+          assert len(titles) == 12
+          assert all(not title.startswith('教材第') for title in titles)
+          assert titles[0] == '为什么需要负数'
+          assert titles[-1] == '阅读与思考：允许偏差'
+          print('manual section 1.1 applied:', titles)
+          PY
 
       - name: Validate every source anchor against its textbook
         shell: bash
@@ -71,7 +86,7 @@ jobs:
           set -euo pipefail
           validate() {
             python3 tools/course-content/validate_course_sources.py \
-              --source "tools/course-content/$1/course.json" \
+              --source "build/generated-course/$1/course.json" \
               --pdf "build/course-source/$2" \
               --page-index-offset 7 \
               --expected-page-count "$3"
@@ -83,16 +98,16 @@ jobs:
           validate pep-math-9-1 '义务教育教科书·数学九年级上册.pdf' 163
           validate pep-math-9-2 '义务教育教科书·数学九年级下册.pdf' 122
 
-      - name: Audit textbook wording and renderer coverage
+      - name: Audit packaged wording and renderer coverage
         run: |
           python3 tools/course-content/audit_math_courses.py \
-            --source-root tools/course-content \
+            --source-root build/generated-course \
             --pdf-root build/course-source
 
       - name: Build combined course release
         run: |
           python3 tools/course-content/build_all_math_course_release.py \
-            --source-root tools/course-content \
+            --source-root build/generated-course \
             --pdf-root build/course-source \
             --output build/course-release \
             --textbook-version "${GITHUB_RUN_NUMBER}" \
@@ -126,7 +141,7 @@ jobs:
                   for page in section.get('pages', [])
                   for block in page.get('blocks', [])
               )
-          print('six-book native course release validated')
+          print('six-book course release validated')
           PY
 
       - name: Upload course diagnostics
@@ -146,8 +161,8 @@ jobs:
           if ! gh release view course-latest >/dev/null 2>&1; then
             gh release create course-latest \
               --target "${GITHUB_SHA}" \
-              --title "School 初中数学完整课程包" \
-              --notes "七年级上册至九年级下册六册教材课程数据。教材 PDF 仍由课程清单引用，不包含在 Release 中。" \
+              --title "School 初中数学课程包" \
+              --notes "课程按教材逐节人工校对并持续更新；教材 PDF 由课程清单引用，不包含在 Release 中。" \
               --prerelease
           fi
           gh release upload course-latest build/course-release/* --clobber

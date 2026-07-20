@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Turn textbook-derived course data into native School lessons.
+"""Prepare textbook-derived course data for School.
 
-The PDF remains the authority for wording, page numbers and source anchors. Published course JSON never
-contains PDF crop instructions: verified fallback wording becomes native text, while School-owned
-explanations and visualizations provide the learning experience.
+Textbook wording, instructional stages and visual design are authored and reviewed manually.
+This module only performs packaging work: it converts legacy crop placeholders and overlays
+manually reviewed section files onto the generated course skeleton.
 """
 
 from __future__ import annotations
@@ -21,8 +21,7 @@ GENERIC_EXCERPT_TEXTS = (
     "教材例",
 )
 
-APP_EXPLANATION = "先把0看成共同基准：数值落在基准的哪一边，由正负号表示；离基准有多远，由数的大小表示。"
-APP_CONCLUSION = "正负号表示相反方向，数值大小表示相对0这个基准的变化量；0既不是正数，也不是负数。"
+MANUAL_ROOT = Path(__file__).resolve().parent / "manual"
 
 
 def iter_pages(course: dict[str, Any]):
@@ -68,6 +67,7 @@ def replace_page_blocks(page: dict[str, Any], blocks: list[dict[str, Any]]) -> N
 
 
 def curate_pep_7_1(course: dict[str, Any]) -> None:
+    """Keep previously reviewed pages outside the manually overlaid 1.1 section."""
     pages = {page["id"]: page for _, _, page in iter_pages(course)}
 
     intro = pages.get("pep-math-7-1-01-01-p001-1")
@@ -78,43 +78,6 @@ def curate_pep_7_1(course: dict[str, Any]) -> None:
             {"type": "prompt", "text": "（2）某公司今年7月份盈利50万元，8月份亏损10万元。该公司在记账时如何用数分别表示“盈利50万元”和“亏损10万元”？"},
             {"type": "prompt", "text": "（3）某年，我国棉花产量比上年增长7.8%，玉米产量比上年减少0.7%。统计这两种农作物产量的变化情况时，如何用数分别表示“增长7.8%”和“减少0.7%”？"},
             textbook_text("上面的问题都涉及意义相反的两个量，为了能用数表示像这样具有相反意义的两个量，需要引入负数。本章我们将认识负数的意义，把数的范围扩大到有理数，并在有理数范围内学习数的表示和大小比较等。"),
-        ])
-
-    positive_negative = pages.get("pep-math-7-1-01-02-p002-1")
-    if positive_negative:
-        replace_page_blocks(positive_negative, [
-            textbook_text("数的产生和发展离不开生活和生产的需要。人们对于数的认识就是伴随着记数、测量、运算等方面的需求不断拓展的。在小学，我们学过自然数、小数和分数，它们都是大于或等于0的数，但是在日常生活和生产实践中，为了表达和运算的需要，还有必要引入一类新的数。"),
-            textbook_text("在本章引言的问题中，温度比0℃高，称为零上温度；温度比0℃低，称为零下温度。零上温度和零下温度是以0℃为分界点的具有相反意义的量。零上3摄氏度用3℃表示，零下3摄氏度用−3℃表示。类似地，如果用50万元表示盈利50万元，就可以用−10万元表示亏损10万元；如果用7.8%表示增长7.8%，就可以用−0.7%表示减少0.7%。"),
-            textbook_text("在数学中，像3，50，7.8%这样大于0的数叫作正数，像−3，−10，−0.7%这样在正数前加上符号“−”的数叫作负数。一个数前面的“+”“−”号叫作这个数的符号。0既不是正数，也不是负数。"),
-            {"type": "explanation", "text": APP_EXPLANATION},
-            {"type": "visualization", "renderer": "opposite_quantities", "params": {"title": "以0为基准观察相反方向", "scene": "temperature"}},
-            {"type": "conclusion", "text": APP_CONCLUSION},
-        ])
-
-    for chapter in course.get("chapters", []):
-        for section in chapter.get("sections", []):
-            if section.get("title") == "1.1正数和负数":
-                section["pages"] = [
-                    page for page in section.get("pages", [])
-                    if page.get("id") != "pep-math-7-1-01-02-p002-2"
-                ]
-
-    example = pages.get("pep-math-7-1-01-02-p003-1")
-    if example:
-        replace_page_blocks(example, [
-            {"type": "historical_note", "text": "我国是历史上最早认识和使用负数的国家。至迟成书于东汉早期（约1世纪）的我国古代数学著作《九章算术》，在“方程”一章中提出了正数、负数的概念及其加减运算法则。魏晋时期的数学家刘徽在为《九章算术》作注时，用不同颜色的算筹分别表示正数和负数，红色为正，黑色为负。"},
-            textbook_text("如果一个问题中出现具有相反意义的量，就可以用正数和负数分别表示它们。"),
-            {
-                "type": "worked_example",
-                "label": "例1",
-                "statement": "一箱橘子的标准质量为2.5 kg。如果用正数表示超过标准质量的克数，比标准质量多65 g和比标准质量少30 g各怎么表示？50 g，−27 g各表示什么意思？",
-                "steps": [
-                    "比标准质量多65 g用+65 g表示，比标准质量少30 g用−30 g表示。",
-                    "50 g表示这箱橘子的质量比标准质量多50 g；−27 g表示比标准质量少27 g。",
-                ],
-                "result": "先确定标准，再用正负号表示相对标准的两个方向。",
-            },
-            {"type": "visualization", "renderer": "opposite_quantities", "params": {"title": "相对标准质量的偏差", "scene": "deviation"}},
         ])
 
     rational_intro = pages.get("1.2.1-p07-a")
@@ -159,13 +122,46 @@ def curate_pep_7_1(course: dict[str, Any]) -> None:
         ])
 
 
-def process_course(path: Path) -> tuple[int, int]:
+def apply_manual_sections(course: dict[str, Any]) -> int:
+    textbook_id = str(course.get("textbook", {}).get("id") or "").strip()
+    directory = MANUAL_ROOT / textbook_id
+    if not directory.is_dir():
+        return 0
+
+    sections_by_id = {
+        str(section.get("id")): (chapter, index)
+        for chapter in course.get("chapters", [])
+        for index, section in enumerate(chapter.get("sections", []))
+    }
+    applied = 0
+    for path in sorted(directory.glob("*.json")):
+        override = json.loads(path.read_text(encoding="utf-8"))
+        section_id = str(override.get("id") or "").strip()
+        if not section_id:
+            raise SystemExit(f"{path}: manual section id is empty")
+        target = sections_by_id.get(section_id)
+        if target is None:
+            raise SystemExit(f"{path}: section {section_id!r} was not found in generated course")
+        chapter, index = target
+        pages = override.get("pages")
+        if not isinstance(pages, list) or not pages:
+            raise SystemExit(f"{path}: manual section has no pages")
+        chapter["sections"][index] = override
+        applied += 1
+    return applied
+
+
+def process_course(path: Path) -> tuple[int, int, int]:
     course = json.loads(path.read_text(encoding="utf-8"))
     converted = 0
     for _, _, page in iter_pages(course):
         converted += convert_excerpts(page)
+
     if course.get("textbook", {}).get("id") == "pep-math-7-1":
         curate_pep_7_1(course)
+
+    manual_sections = apply_manual_sections(course)
+
     remaining = sum(
         block.get("type") == "source_excerpt"
         for _, _, page in iter_pages(course)
@@ -173,20 +169,27 @@ def process_course(path: Path) -> tuple[int, int]:
     )
     if remaining:
         raise SystemExit(f"{path}: {remaining} source_excerpt blocks remain")
+
     path.write_text(json.dumps(course, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return converted, remaining
+    return converted, remaining, manual_sections
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-root", type=Path, required=True)
     args = parser.parse_args()
-    total = 0
+
+    total_converted = 0
+    total_manual = 0
     for path in sorted(args.source_root.glob("pep-math-*/course.json")):
-        converted, _ = process_course(path)
-        total += converted
-        print(f"{path.parent.name}: converted {converted} textbook excerpts to native content")
-    print(f"converted total: {total}")
+        converted, _, manual_sections = process_course(path)
+        total_converted += converted
+        total_manual += manual_sections
+        print(
+            f"{path.parent.name}: converted {converted} legacy excerpts, "
+            f"applied {manual_sections} manually reviewed sections"
+        )
+    print(f"converted total: {total_converted}; manual sections total: {total_manual}")
     return 0
 
 

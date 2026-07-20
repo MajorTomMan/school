@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deep audit of native mathematics course files against the source PDFs."""
+"""Audit packaged mathematics course files against their source PDFs."""
 
 from __future__ import annotations
 
@@ -37,21 +37,47 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
         ids: set[str] = set()
         native_text_blocks = 0
         visualization_blocks = 0
+        manually_reviewed_sections = 0
         pages_count = 0
         page_text: dict[int, str] = {}
+        counted_manual_sections: set[str] = set()
+
         for chapter, section, page in iter_pages(course):
             pages_count += 1
             page_id = page["id"]
             if page_id in ids:
                 raise SystemExit(f"{spec.textbook_id}: duplicate page id {page_id}")
             ids.add(page_id)
+
+            manual_review = section.get("manualReview") or {}
+            is_manual = bool(manual_review)
+            section_id = str(section.get("id") or "")
+            if is_manual and section_id not in counted_manual_sections:
+                counted_manual_sections.add(section_id)
+                manually_reviewed_sections += 1
+                reviewed_pages = manual_review.get("printedPages")
+                if not isinstance(reviewed_pages, list) or not reviewed_pages:
+                    raise SystemExit(f"{spec.textbook_id}: section {section_id} has no reviewed page list")
+
             printed = int(page["sourcePage"])
+            source_end = int(page.get("sourcePageEnd", printed))
             pdf_index = printed - 1 + spec.page_index_offset
             if pdf_index not in page_text:
                 page_text[pdf_index] = normalize(document[pdf_index].get_text("text"))
             source = page_text[pdf_index]
+
+            if is_manual:
+                reviewed = {int(value) for value in manual_review["printedPages"]}
+                if any(value not in reviewed for value in range(printed, source_end + 1)):
+                    raise SystemExit(
+                        f"{spec.textbook_id}: {page_id} references pages outside manual review range"
+                    )
+                if str(page.get("title") or "").startswith("教材第"):
+                    raise SystemExit(f"{spec.textbook_id}: {page_id} still uses a physical-page title")
+
             if not page.get("blocks"):
                 raise SystemExit(f"{spec.textbook_id}: {page_id} has no blocks")
+
             for block in page["blocks"]:
                 kind = block["type"]
                 if kind == "source_excerpt":
@@ -62,15 +88,12 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
                 if kind in TEXT_TYPES:
                     native_text_blocks += 1
                     text = normalize(block.get("text", ""))
-                    # Generated textbook text must remain a contiguous textbook phrase. Curated pages
-                    # are protected by sourceAnchors because fraction notation is repaired for mobile.
+                    # Automatic skeleton text must remain a contiguous PDF phrase. Manually reviewed
+                    # sections are checked through their recorded source anchors and page range instead.
                     if (
-                        not page_id.startswith("1.2.1-p07-")
-                        and page_id not in {
-                            "pep-math-7-1-01-01-p001-1",
-                            "pep-math-7-1-01-02-p002-1",
-                            "pep-math-7-1-01-02-p003-1",
-                        }
+                        not is_manual
+                        and not page_id.startswith("1.2.1-p07-")
+                        and page_id != "pep-math-7-1-01-01-p001-1"
                         and len(text) >= 12
                         and text not in source
                     ):
@@ -82,6 +105,7 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
                     visualization_blocks += 1
                     if not str(block.get("renderer") or "").strip():
                         raise SystemExit(f"{spec.textbook_id}: {page_id} empty visualization renderer")
+
         if pages_count < 100:
             raise SystemExit(f"{spec.textbook_id}: suspiciously small course ({pages_count} pages)")
         return {
@@ -89,6 +113,7 @@ def audit_book(spec, source_root: Path, pdf_root: Path) -> dict[str, int]:
             "nativeTextBlocks": native_text_blocks,
             "sourceExcerpts": 0,
             "visualizations": visualization_blocks,
+            "manuallyReviewedSections": manually_reviewed_sections,
         }
     finally:
         document.close()
@@ -103,7 +128,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    total = {"pages": 0, "nativeTextBlocks": 0, "sourceExcerpts": 0, "visualizations": 0}
+    total = {
+        "pages": 0,
+        "nativeTextBlocks": 0,
+        "sourceExcerpts": 0,
+        "visualizations": 0,
+        "manuallyReviewedSections": 0,
+    }
     for spec in BOOKS:
         result = audit_book(spec, args.source_root, args.pdf_root)
         print(spec.textbook_id, json.dumps(result, ensure_ascii=False))
