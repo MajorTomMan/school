@@ -69,6 +69,7 @@ class UpdateCoordinator private constructor(context: Context) {
             mutableSettings.value = repository.settings()
             val shouldShow = when (result) {
                 is UpdateState.Available,
+                is UpdateState.Downloading,
                 is UpdateState.Ready,
                 -> true
                 is UpdateState.Error,
