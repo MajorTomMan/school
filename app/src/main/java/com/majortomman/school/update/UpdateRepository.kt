@@ -13,6 +13,8 @@ internal class UpdateRepository(context: Context) {
     private val preferences = UpdatePreferences(appContext)
 
     suspend fun check(force: Boolean = false): UpdateState = withContext(Dispatchers.IO) {
+        val current = UpdateRuntimeBus.state.value
+        if (current is UpdateState.Downloading) return@withContext current
         UpdateRuntimeBus.publish(UpdateState.Checking)
         runCatching {
             val manifestBytes = downloadBytes(BuildConfig.UPDATE_MANIFEST_URL, MAX_MANIFEST_SIZE)
