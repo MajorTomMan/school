@@ -33,6 +33,7 @@ jobs:
         run: |
           set -euxo pipefail
           root="$ANDROID_HOME"
+          find "$root" -maxdepth 5 -type d | sort | tail -n 120
           mkdir -p build/android-local-env
           cp -a "$root/platform-tools" build/android-local-env/
           cp -a "$root/emulator" build/android-local-env/
@@ -42,15 +43,15 @@ jobs:
           cp -a "$root/system-images/android-30/aosp_atd/x86_64" \
             build/android-local-env/system-images/android-30/aosp_atd/
           if [ -d "$root/licenses" ]; then cp -a "$root/licenses" build/android-local-env/; fi
-          tar -C build -I 'zstd -10 -T0' -cf android-local-env.tar.zst android-local-env
-          sha256sum build/android-local-env.tar.zst > build/android-local-env.tar.zst.sha256
-          du -sh build/android-local-env build/android-local-env.tar.zst
+          tar -C build -czf android-local-env.tar.gz android-local-env
+          sha256sum build/android-local-env.tar.gz > build/android-local-env.tar.gz.sha256
+          du -sh build/android-local-env build/android-local-env.tar.gz
 
       - uses: actions/upload-artifact@v4
         with:
           name: android-local-env
           path: |
-            build/android-local-env.tar.zst
-            build/android-local-env.tar.zst.sha256
+            build/android-local-env.tar.gz
+            build/android-local-env.tar.gz.sha256
           compression-level: 0
           if-no-files-found: error
