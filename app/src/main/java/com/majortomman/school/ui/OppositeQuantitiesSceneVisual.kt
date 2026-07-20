@@ -35,7 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.round
 import kotlin.math.roundToInt
 
 private data class OppositeQuantityScene(
@@ -44,12 +46,16 @@ private data class OppositeQuantityScene(
     val unit: String,
     val positiveMeaning: String,
     val negativeMeaning: String,
+    val bound: Float,
+    val step: Float,
+    val initialValue: Float,
 )
 
 private val oppositeQuantityScenes = listOf(
-    OppositeQuantityScene("temperature", "温度", "℃", "零上", "零下"),
-    OppositeQuantityScene("account", "收支", "万元", "盈利", "亏损"),
-    OppositeQuantityScene("change", "变化", "%", "增长", "减少"),
+    OppositeQuantityScene("temperature", "温度", "℃", "零上", "零下", 10f, 1f, 3f),
+    OppositeQuantityScene("account", "收支", "万元", "盈利", "亏损", 50f, 10f, 50f),
+    OppositeQuantityScene("change", "变化", "%", "增长", "减少", 10f, 0.1f, -0.7f),
+    OppositeQuantityScene("deviation", "偏差", "g", "超过", "不足", 100f, 5f, -30f),
 )
 
 /**
@@ -60,21 +66,19 @@ private val oppositeQuantityScenes = listOf(
  */
 @Composable
 internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMap()) {
-    var selectedId by rememberSaveable { mutableStateOf(params["scene"] ?: "temperature") }
-    var value by rememberSaveable { mutableFloatStateOf(3f) }
-    val animatedValue by animateFloatAsState(targetValue = value)
-    val scene = oppositeQuantityScenes.firstOrNull { it.id == selectedId } ?: oppositeQuantityScenes.first()
-    val roundedValue = animatedValue.roundToInt()
+    val requestedScene = oppositeQuantityScenes.firstOrNull { it.id == params["scene"] }
+        ?: oppositeQuantityScenes.first()
+    var selectedId by rememberSaveable { mutableStateOf(requestedScene.id) }
+    var value by rememberSaveable { mutableFloatStateOf(requestedScene.initialValue) }
+    val scene = oppositeQuantityScenes.firstOrNull { it.id == selectedId } ?: requestedScene
+    val animatedValue by animateFloatAsState(targetValue = value, label = "opposite-quantity-value")
+    val isZero = abs(animatedValue) < 0.0001f
     val direction = when {
-        roundedValue > 0 -> scene.positiveMeaning
-        roundedValue < 0 -> scene.negativeMeaning
+        animatedValue > 0f -> scene.positiveMeaning
+        animatedValue < 0f -> scene.negativeMeaning
         else -> "基准"
     }
-    val signedValue = when {
-        roundedValue > 0 -> "+$roundedValue${scene.unit}"
-        roundedValue < 0 -> "$roundedValue${scene.unit}"
-        else -> "0${scene.unit}"
-    }
+    val signedValue = displaySignedQuantity(animatedValue, scene.unit)
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp),
@@ -82,18 +86,14 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             oppositeQuantityScenes.forEach { option ->
                 val selected = option.id == scene.id
                 Column(
                     modifier = Modifier.clickable {
                         selectedId = option.id
-                        value = when (option.id) {
-                            "account" -> 5f
-                            "change" -> -4f
-                            else -> 3f
-                        }
+                        value = option.initialValue
                     },
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -122,44 +122,36 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
             Text("以 0 为基准", color = InteractiveMuted, fontSize = 12.sp)
             Text(
                 "$direction  $signedValue",
-                color = when {
-                    roundedValue > 0 -> InteractiveBlue
-                    roundedValue < 0 -> InteractiveYellow
-                    else -> InteractiveWhite
-                },
+                color = valueColor(animatedValue),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
             )
         }
 
         Canvas(Modifier.fillMaxWidth().weight(1f)) {
-            when (scene.id) {
-                "temperature" -> drawTemperatureScene(animatedValue)
-                "account" -> drawHorizontalOppositeScene(
+            if (scene.id == "temperature") {
+                drawTemperatureScene(animatedValue)
+            } else {
+                drawHorizontalOppositeScene(
                     value = animatedValue,
-                    negativeLabel = "亏损",
-                    positiveLabel = "盈利",
-                    unit = "万元",
-                )
-                else -> drawHorizontalOppositeScene(
-                    value = animatedValue,
-                    negativeLabel = "减少",
-                    positiveLabel = "增长",
-                    unit = "%",
+                    bound = scene.bound,
+                    negativeLabel = scene.negativeMeaning,
+                    positiveLabel = scene.positiveMeaning,
+                    unit = scene.unit,
                 )
             }
         }
 
         Slider(
-            value = value,
-            onValueChange = { value = it.roundToInt().toFloat() },
-            valueRange = -10f..10f,
-            steps = 19,
+            value = value.coerceIn(-scene.bound, scene.bound),
+            onValueChange = { raw -> value = snapToStep(raw, scene.step) },
+            valueRange = -scene.bound..scene.bound,
+            steps = ((scene.bound * 2f / scene.step).roundToInt() - 1).coerceAtLeast(0),
         )
         Text(
             text = when {
-                roundedValue > 0 -> "+ 表示相对基准向“${scene.positiveMeaning}”的方向变化。"
-                roundedValue < 0 -> "− 表示相对基准向“${scene.negativeMeaning}”的方向变化。"
+                !isZero && animatedValue > 0f -> "+ 表示相对基准向“${scene.positiveMeaning}”的方向变化。"
+                !isZero && animatedValue < 0f -> "− 表示相对基准向“${scene.negativeMeaning}”的方向变化。"
                 else -> "0 是正、负两个方向共同的基准，不表示任何一边。"
             },
             modifier = Modifier.fillMaxWidth(),
@@ -171,21 +163,40 @@ internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMa
     }
 }
 
+private fun snapToStep(value: Float, step: Float): Float = round(value / step) * step
+
+private fun valueColor(value: Float): Color = when {
+    value > 0.0001f -> InteractiveBlue
+    value < -0.0001f -> InteractiveYellow
+    else -> InteractiveWhite
+}
+
+private fun displayQuantity(value: Float): String {
+    val rounded = value.roundToInt()
+    return if (abs(value - rounded) < 0.0001f) {
+        rounded.toString()
+    } else {
+        String.format(Locale.US, "%.1f", value).trimEnd('0').trimEnd('.')
+    }
+}
+
+private fun displaySignedQuantity(value: Float, unit: String): String = when {
+    value > 0.0001f -> "+${displayQuantity(value)}$unit"
+    value < -0.0001f -> "${displayQuantity(value)}$unit"
+    else -> "0$unit"
+}
+
 private fun DrawScope.drawTemperatureScene(value: Float) {
     val minValue = -10f
     val maxValue = 10f
-    val top = 18f
-    val bottom = size.height - 30f
+    val top = 22f
+    val bottom = size.height - 34f
     val centerX = size.width * 0.48f
     val tubeWidth = 32f
     val bulbRadius = 24f
     val zeroY = bottom - (0f - minValue) / (maxValue - minValue) * (bottom - top)
     val valueY = bottom - (value - minValue) / (maxValue - minValue) * (bottom - top)
-    val valueColor = when {
-        value > 0f -> InteractiveBlue
-        value < 0f -> InteractiveYellow
-        else -> InteractiveWhite
-    }
+    val color = valueColor(value)
 
     drawLine(
         color = InteractiveWhite.copy(alpha = 0.45f),
@@ -202,9 +213,9 @@ private fun DrawScope.drawTemperatureScene(value: Float) {
         cap = StrokeCap.Round,
     )
     drawCircle(InteractiveWhite.copy(alpha = 0.45f), bulbRadius + 4f, Offset(centerX, bottom + 5f))
-    drawCircle(valueColor, bulbRadius, Offset(centerX, bottom + 5f))
+    drawCircle(color, bulbRadius, Offset(centerX, bottom + 5f))
     drawLine(
-        color = valueColor,
+        color = color,
         start = Offset(centerX, bottom),
         end = Offset(centerX, valueY),
         strokeWidth = tubeWidth - 12f,
@@ -237,15 +248,16 @@ private fun DrawScope.drawTemperatureScene(value: Float) {
     )
     drawSceneLabel("0℃ 基准", centerX - 110f, zeroY + 7f, InteractiveWhite, 23f, Paint.Align.RIGHT)
     val meaning = when {
-        value > 0f -> "零上 ${abs(value).roundToInt()}℃"
-        value < 0f -> "零下 ${abs(value).roundToInt()}℃"
+        value > 0f -> "零上 ${displayQuantity(abs(value))}℃"
+        value < 0f -> "零下 ${displayQuantity(abs(value))}℃"
         else -> "0℃"
     }
-    drawSceneLabel(meaning, centerX, top - 1f, valueColor, 27f)
+    drawSceneLabel(meaning, centerX, 18f, color, 27f)
 }
 
 private fun DrawScope.drawHorizontalOppositeScene(
     value: Float,
+    bound: Float,
     negativeLabel: String,
     positiveLabel: String,
     unit: String,
@@ -254,12 +266,8 @@ private fun DrawScope.drawHorizontalOppositeScene(
     val right = size.width - 28f
     val centerX = size.width / 2f
     val y = size.height * 0.55f
-    val endX = centerX + value / 10f * (right - centerX)
-    val color = when {
-        value > 0f -> InteractiveBlue
-        value < 0f -> InteractiveYellow
-        else -> InteractiveWhite
-    }
+    val endX = centerX + value / bound * (right - centerX)
+    val color = valueColor(value)
 
     drawLine(
         color = InteractiveWhite.copy(alpha = 0.52f),
@@ -286,16 +294,10 @@ private fun DrawScope.drawHorizontalOppositeScene(
     drawSceneLabel(negativeLabel, left, y - 42f, InteractiveYellow, 25f, Paint.Align.LEFT)
     drawSceneLabel(positiveLabel, right, y - 42f, InteractiveBlue, 25f, Paint.Align.RIGHT)
     drawSceneLabel("0", centerX, y + 54f, InteractiveWhite, 23f)
+    drawSceneLabel(displaySignedQuantity(value, unit), endX, y - 26f, color, 28f)
 
-    val signed = when {
-        value > 0f -> "+${value.roundToInt()}$unit"
-        value < 0f -> "${value.roundToInt()}$unit"
-        else -> "0$unit"
-    }
-    drawSceneLabel(signed, endX, y - 26f, color, 28f)
-
-    val arrowDirection = if (value >= 0f) 1f else -1f
-    if (value != 0f) {
+    if (abs(value) > 0.0001f) {
+        val arrowDirection = if (value > 0f) 1f else -1f
         drawLine(
             color = color,
             start = Offset(endX, y),
@@ -320,7 +322,7 @@ private fun DrawScope.drawHorizontalOppositeScene(
             size = Size(distanceWidth, 32f),
         )
         drawSceneLabel(
-            "离基准 ${abs(value).roundToInt()}$unit",
+            "离基准 ${displayQuantity(abs(value))}$unit",
             (centerX + endX) / 2f,
             y + 41f,
             InteractiveMuted,
