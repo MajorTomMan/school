@@ -26,6 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export PATH="$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
           mkdir -p "$HOME/.android"
           touch "$HOME/.android/repositories.cfg"
           echo no | avdmanager create avd \
@@ -34,7 +35,7 @@ jobs:
             --device pixel \
             --force
           sudo chmod 666 /dev/kvm || true
-          nohup emulator -avd school_api26_ready \
+          nohup "$ANDROID_SDK_ROOT/emulator/emulator" -avd school_api26_ready \
             -no-window -no-audio -no-boot-anim -no-metrics \
             -gpu swiftshader_indirect -no-snapshot \
             > "$RUNNER_TEMP/preboot-emulator.log" 2>&1 &
@@ -54,7 +55,7 @@ jobs:
           adb shell sync
           adb shell setprop sys.powerctl shutdown || true
           timeout 90 bash -c 'while kill -0 "$(cat "$RUNNER_TEMP/preboot-emulator.pid")" 2>/dev/null; do sleep 2; done' || true
-          cat "$RUNNER_TEMP/preboot-emulator.log" | tail -80
+          tail -80 "$RUNNER_TEMP/preboot-emulator.log"
 
       - name: Package initialized AVD
         shell: bash
