@@ -238,9 +238,8 @@ private fun CloudVisualizationBlock(
             RationalVisualizationKind.HISTORY,
             -> Unit
             RationalVisualizationKind.OPPOSITE_QUANTITIES -> OppositeQuantitiesSceneVisual(block.params)
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION,
-            RationalVisualizationKind.INTEGER_TO_FRACTION,
-            -> IntegerToFractionTextbookVisual()
+            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> RationalConceptFlowVisual(block.params)
+            RationalVisualizationKind.INTEGER_TO_FRACTION -> IntegerToFractionTextbookVisual()
             RationalVisualizationKind.NUMBER_LINE -> AdjustableNumberLine(NumberLineMode.VALUE)
             RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
             RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
