@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "emulator" "system-images;android-26;default;x86_64"
+          sdkmanager "platform-tools" "emulator" "system-images;android-26;default;x86"
 
       - name: Create and initialize AVD
         shell: bash
@@ -35,15 +35,16 @@ jobs:
           echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
 
           echo no | avdmanager create avd \
-            -n school_api26_ready \
-            -k "system-images;android-26;default;x86_64" \
+            -n school_api26_x86_ready \
+            -k "system-images;android-26;default;x86" \
             --device pixel \
             --force
 
           sudo chmod 666 /dev/kvm || true
-          nohup "$ANDROID_SDK_ROOT/emulator/emulator" -avd school_api26_ready \
+          nohup "$ANDROID_SDK_ROOT/emulator/emulator" -avd school_api26_x86_ready \
             -no-window -no-audio -no-boot-anim -no-metrics \
             -gpu swiftshader_indirect -no-snapshot \
+            -memory 768 -cores 2 \
             > "$RUNNER_TEMP/preboot-emulator.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/preboot-emulator.pid"
 
@@ -71,8 +72,8 @@ jobs:
           set -euo pipefail
           mkdir -p export
           tar -C "$ANDROID_USER_HOME" -czf export/prebooted-avd.tar.gz \
-            avd/school_api26_ready.ini \
-            avd/school_api26_ready.avd
+            avd/school_api26_x86_ready.ini \
+            avd/school_api26_x86_ready.avd
           sha256sum export/prebooted-avd.tar.gz > export/SHA256SUMS
           split -b 240M -d -a 2 export/prebooted-avd.tar.gz export/part-
           ls -lh export
@@ -80,14 +81,14 @@ jobs:
       - name: Upload checksum
         uses: actions/upload-artifact@v4
         with:
-          name: prebooted-api26-avd-manifest
+          name: prebooted-api26-x86-avd-manifest
           path: export/SHA256SUMS
           compression-level: 0
 
       - name: Upload part 00
         uses: actions/upload-artifact@v4
         with:
-          name: prebooted-api26-avd-part-00
+          name: prebooted-api26-x86-avd-part-00
           path: export/part-00
           compression-level: 0
           if-no-files-found: ignore
@@ -95,7 +96,7 @@ jobs:
       - name: Upload part 01
         uses: actions/upload-artifact@v4
         with:
-          name: prebooted-api26-avd-part-01
+          name: prebooted-api26-x86-avd-part-01
           path: export/part-01
           compression-level: 0
           if-no-files-found: ignore
@@ -103,7 +104,7 @@ jobs:
       - name: Upload part 02
         uses: actions/upload-artifact@v4
         with:
-          name: prebooted-api26-avd-part-02
+          name: prebooted-api26-x86-avd-part-02
           path: export/part-02
           compression-level: 0
           if-no-files-found: ignore
@@ -112,6 +113,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: prebooted-api26-avd-diagnostics
+          name: prebooted-api26-x86-avd-diagnostics
           path: ${{ runner.temp }}/preboot-emulator.log
           if-no-files-found: ignore
