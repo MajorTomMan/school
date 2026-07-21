@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 
 private data class RationalFormExample(
     val id: String,
+    val tabLabel: String,
     val display: String,
     val sourceKind: String,
     val numerator: String,
@@ -35,14 +36,14 @@ private data class RationalFormExample(
 )
 
 private val integerFractionExamples = listOf(
-    RationalFormExample("positive_integer", "2", "正整数", "2", "1"),
-    RationalFormExample("negative_integer", "−3", "负整数", "−3", "1"),
-    RationalFormExample("zero", "0", "0", "0", "1"),
+    RationalFormExample("positive_integer", "2", "2", "正整数", "2", "1"),
+    RationalFormExample("negative_integer", "−3", "−3", "负整数", "−3", "1"),
+    RationalFormExample("zero", "0", "0", "0", "0", "1"),
 )
 
 private val rationalDefinitionExamples = integerFractionExamples + listOf(
-    RationalFormExample("finite_decimal", "0.5", "有限小数", "1", "2"),
-    RationalFormExample("repeating_decimal", "0.3̇", "无限循环小数", "1", "3"),
+    RationalFormExample("finite_decimal", "0.5", "0.5", "有限小数", "1", "2"),
+    RationalFormExample("repeating_decimal", "0.3循环", "0.3（3循环）", "无限循环小数", "1", "3"),
 )
 
 /**
@@ -77,9 +78,9 @@ internal fun RationalConceptFlowVisual(params: Map<String, String> = emptyMap())
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = example.display,
+                        text = example.tabLabel,
                         color = if (active) InteractiveWhite else InteractiveMuted,
-                        fontSize = if (definitionMode) 13.sp else 15.sp,
+                        fontSize = if (definitionMode) 12.sp else 15.sp,
                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 1,
                     )
@@ -110,7 +111,7 @@ internal fun RationalConceptFlowVisual(params: Map<String, String> = emptyMap())
             Text(
                 text = selected.display,
                 color = InteractiveWhite,
-                fontSize = 34.sp,
+                fontSize = if (selected.id == "repeating_decimal") 25.sp else 34.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
