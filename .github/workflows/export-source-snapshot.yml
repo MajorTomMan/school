@@ -1,0 +1,28 @@
+name: Export source snapshot
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package relevant source
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf school-source-snapshot.tar.gz \
+            app/src/main \
+            app/build.gradle.kts \
+            tools/course-content \
+            .release-notes/current.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: school-source-snapshot
+          path: school-source-snapshot.tar.gz
+          compression-level: 0
