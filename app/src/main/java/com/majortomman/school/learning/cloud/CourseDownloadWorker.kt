@@ -61,12 +61,7 @@ class CourseDownloadWorker(
                     "课程内容已经是最新版本"
                 }
                 showResultNotification(success = true, message = message)
-                Result.success(
-                    workDataOf(
-                        KEY_UPDATED_TEXTBOOKS to result.updatedTextbooks,
-                        KEY_CONTENT_VERSION to result.contentVersion,
-                    ),
-                )
+                Result.success(workDataOf(KEY_UPDATED_TEXTBOOKS to result.updatedTextbooks))
             }
         }
     }
@@ -197,7 +192,6 @@ class CourseDownloadWorker(
         const val KEY_PERCENT = "percent"
         const val KEY_ERROR = "error"
         const val KEY_UPDATED_TEXTBOOKS = "updated_textbooks"
-        const val KEY_CONTENT_VERSION = "content_version"
 
         private const val DOWNLOAD_CHANNEL_ID = "school_course_downloads"
         private const val RESULT_CHANNEL_ID = "school_course_download_results"

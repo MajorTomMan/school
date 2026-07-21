@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.majortomman.school.learning.course.CourseSceneData
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.round
@@ -69,20 +70,16 @@ private val oppositeQuantityScenes = listOf(
  * 场景由课程页参数选择，不复刻教材图片。
  */
 @Composable
-internal fun OppositeQuantitiesSceneVisual(params: Map<String, String> = emptyMap()) {
-    val requestedScene = oppositeQuantityScenes.firstOrNull { it.id == params["scene"] }
+internal fun OppositeQuantitiesSceneVisual(data: CourseSceneData) {
+    val requestedScene = oppositeQuantityScenes.firstOrNull { it.id == data.string("scene") }
         ?: oppositeQuantityScenes.first()
-    val allowedIds = params["scenes"]
-        ?.split(",")
-        ?.map(String::trim)
-        ?.filter(String::isNotBlank)
-        .orEmpty()
+    val allowedIds = data.strings("scenes")
     val availableScenes = allowedIds
         .mapNotNull { id -> oppositeQuantityScenes.firstOrNull { it.id == id } }
         .distinctBy { it.id }
         .ifEmpty { listOf(requestedScene) }
 
-    var selectedId by rememberSaveable(params["scene"], params["scenes"]) {
+    var selectedId by rememberSaveable(data.string("scene"), allowedIds.joinToString("|")) {
         mutableStateOf(requestedScene.id)
     }
     val selectedScene = availableScenes.firstOrNull { it.id == selectedId }

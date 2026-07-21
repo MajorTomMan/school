@@ -1,43 +1,55 @@
 package com.majortomman.school.learning.cloud
 
-import com.majortomman.school.learning.course.CourseTextBlock
-import com.majortomman.school.learning.course.CourseVisualizationBlock
-import com.majortomman.school.learning.course.RationalVisualizationKind
-import org.json.JSONObject
+import com.majortomman.school.learning.course.CourseSceneBlock
+import com.majortomman.school.learning.course.CourseSceneTemplate
+import com.majortomman.school.learning.course.CourseText
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CloudCourseCodecTest {
     @Test
-    fun lessonAliasLoadsPagedCourseWithExercise() {
-        val pages = CloudCourseCodec.pagesFor(JSONObject(SAMPLE_COURSE), "有理数的大小比较", 14..24)
+    fun businessOnlyCourseDecodesOrderedBlocksAndTypedSceneData() {
+        val document = CourseDocumentParser.decode(SAMPLE_COURSE)
+        val page = document.chapters.single().sections.single().pages.single()
 
-        assertEquals("有理数", pages.first().title)
-        assertTrue(pages.any { it.title == "随堂练习" })
-        assertTrue(pages.any { it.visualization == RationalVisualizationKind.NUMBER_COMPARISON })
-        assertTrue(pages.all { it.sourcePage in 14..24 })
-        assertEquals(22, pages.first { it.title == "大小比较" }.sourcePageEnd)
+        assertEquals("有理数的概念", page.title)
+        assertTrue(page.blocks[0] is CourseText)
+        val scene = (page.blocks[1] as CourseSceneBlock).scene
+        assertEquals(CourseSceneTemplate.NUMBER_LINE, scene.template)
+        assertTrue(scene.data.boolean("signed"))
+        assertEquals(6.5, scene.data.number("initial"), 0.0)
+        assertEquals(listOf("定义", "例题"), page.aliases)
     }
 
     @Test
-    fun chapterRouteIncludesReviewPages() {
-        val pages = CloudCourseCodec.pagesFor(JSONObject(SAMPLE_COURSE), "有理数", 1..24)
-
-        assertTrue(pages.any { it.title == "本章知识结构" })
-        assertTrue(pages.any { it.title == "章末练习" })
+    fun oldProtocolFieldsAreRejectedInsteadOfSilentlyDowngraded() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            CourseDocumentParser.decode(SAMPLE_COURSE.replaceFirst("{", "{\"schemaVersion\":1,"))
+        }
+        assertTrue(error.message.orEmpty().contains("不识别的字段"))
     }
 
     @Test
-    fun legacySourceExcerptBecomesNativeTextAndKeepsVisualizationOrder() {
-        val page = CloudCourseCodec.pagesFor(JSONObject(ORDERED_BLOCK_COURSE), "有理数的概念", 7..7).single()
+    fun unsupportedSceneAndInvalidDataAreRejectedByApk() {
+        assertThrows(IllegalStateException::class.java) {
+            CourseDocumentParser.decode(SAMPLE_COURSE.replace("number_line", "unknown_scene"))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            CourseDocumentParser.decode(SAMPLE_COURSE.replace("\"signed\":true", "\"signed\":\"true\""))
+        }
+    }
 
-        assertTrue(page.blocks[0] is CourseTextBlock)
-        assertTrue(page.blocks[1] is CourseTextBlock)
-        assertEquals("教材原式", (page.blocks[1] as CourseTextBlock).text)
-        val visual = page.blocks[2] as CourseVisualizationBlock
-        assertEquals(RationalVisualizationKind.INTEGER_TO_FRACTION, visual.kind)
-        assertEquals("整数写成分数形式", visual.params["title"])
+
+    @Test
+    fun missingRequiredBusinessFieldIsRejected() {
+        val withoutSubject = SAMPLE_COURSE.replace("\"subject\":\"数学\",", "")
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            CourseDocumentParser.decode(withoutSubject)
+        }
+        assertTrue(error.message.orEmpty().contains("缺少必需字段"))
     }
 
     @Test
@@ -56,99 +68,48 @@ class CloudCourseCodecTest {
         )
     }
 
+    @Test
+    fun courseContainsNoUpdateMetadata() {
+        assertFalse(SAMPLE_COURSE.contains("sha256"))
+        assertFalse(SAMPLE_COURSE.contains("minimumAppVersion"))
+        assertFalse(SAMPLE_COURSE.contains("schemaVersion"))
+    }
+
     private companion object {
-        val ORDERED_BLOCK_COURSE = """
+        val SAMPLE_COURSE = """
             {
-              "schemaVersion": 1,
-              "textbook": {"id":"pep-math-7-1","title":"数学七年级上册"},
+              "textbook": {
+                "id":"pep-math-7-1",
+                "title":"数学七年级上册",
+                "publisher":"人民教育出版社",
+                "edition":"人教版",
+                "grade":"七年级",
+                "semester":"上册",
+                "subject":"数学",
+                "pdf":{"path":"assets/textbook.pdf","pageCount":202,"pageIndexOffset":7}
+              },
               "chapters": [{
-                "id":"chapter-01","title":"有理数","sections":[{
-                  "id":"1.2.1","title":"有理数的概念","pages":[{
-                    "id":"concept","title":"有理数的概念","sourcePage":7,
+                "id":"chapter-01",
+                "number":"第一章",
+                "title":"有理数",
+                "aliases":[],
+                "sections":[{
+                  "id":"1.2.1",
+                  "number":"1.2.1",
+                  "title":"有理数的概念",
+                  "aliases":[],
+                  "pages":[{
+                    "id":"concept",
+                    "title":"有理数的概念",
+                    "aliases":["定义","例题"],
+                    "sourcePage":7,
                     "blocks":[
-                      {"type":"textbook_text","text":"正整数、0、负整数统称为整数。"},
-                      {"type":"source_excerpt","sourcePage":7,"bbox":[10,20,100,80],"fallbackText":"教材原式"},
-                      {"type":"visualization","renderer":"integer_to_fraction","params":{"title":"整数写成分数形式"}}
+                      {"type":"text","style":"textbook","text":"正整数、0、负整数统称为整数。"},
+                      {"type":"scene","template":"number_line","data":{"mode":"value","signed":true,"initial":6.5}}
                     ]
                   }]
                 }]
               }]
-            }
-        """.trimIndent()
-
-        val SAMPLE_COURSE = """
-            {
-              "schemaVersion": 1,
-              "textbook": {"id":"pep-math-7-1","title":"数学七年级上册"},
-              "chapters": [
-                {
-                  "id":"chapter-01",
-                  "number":"第一章",
-                  "title":"有理数",
-                  "sections":[
-                    {
-                      "id":"1.2",
-                      "number":"1.2",
-                      "title":"有理数及其大小比较",
-                      "aliases":["有理数的大小比较"],
-                      "pages":[
-                        {
-                          "id":"definition",
-                          "title":"有理数",
-                          "sourcePage":14,
-                          "blocks":[
-                            {"type":"textbook_text","text":"整数和分数统称为有理数。"},
-                            {"type":"visualization","renderer":"rational_classification"}
-                          ]
-                        },
-                        {
-                          "id":"comparison",
-                          "title":"大小比较",
-                          "sourcePage":21,
-                          "sourcePageEnd":22,
-                          "blocks":[
-                            {"type":"textbook_text","text":"数轴右边的数大于左边的数。"},
-                            {"type":"visualization","renderer":"number_comparison"}
-                          ]
-                        },
-                        {
-                          "id":"exercise",
-                          "title":"随堂练习",
-                          "sourcePage":22,
-                          "blocks":[
-                            {"type":"exercise","number":"1","stem":"比较 −4 与 −2 的大小。"},
-                            {"type":"visualization","renderer":"number_comparison"}
-                          ]
-                        }
-                      ]
-                    }
-                  ],
-                  "review": {
-                    "id":"chapter-01-review",
-                    "title":"第一章小结",
-                    "pages":[
-                      {
-                        "id":"summary",
-                        "title":"本章知识结构",
-                        "sourcePage":21,
-                        "blocks":[
-                          {"type":"summary","items":["正数和负数","数轴"]},
-                          {"type":"visualization","renderer":"rational_classification"}
-                        ]
-                      },
-                      {
-                        "id":"chapter-exercise",
-                        "title":"章末练习",
-                        "sourcePage":22,
-                        "blocks":[
-                          {"type":"exercise","number":"1","stem":"在数轴上表示各数。"},
-                          {"type":"visualization","renderer":"number_line"}
-                        ]
-                      }
-                    ]
-                  }
-                }
-              ]
             }
         """.trimIndent()
     }

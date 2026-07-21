@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.majortomman.school.learning.course.CourseSceneData
 
 private data class RationalFormExample(
     val id: String,
@@ -53,10 +54,10 @@ private val rationalDefinitionExamples = integerFractionExamples + listOf(
  * 再落到“有理数”这个共同概念上。
  */
 @Composable
-internal fun RationalConceptFlowVisual(params: Map<String, String> = emptyMap()) {
-    val definitionMode = params["mode"] == "definition"
+internal fun RationalConceptFlowVisual(data: CourseSceneData) {
+    val definitionMode = data.string("mode") == "definition"
     val examples = if (definitionMode) rationalDefinitionExamples else integerFractionExamples
-    var selectedId by rememberSaveable(params["mode"]) {
+    var selectedId by rememberSaveable(data.string("mode")) {
         mutableStateOf(examples.first().id)
     }
     val selected = examples.firstOrNull { it.id == selectedId } ?: examples.first()

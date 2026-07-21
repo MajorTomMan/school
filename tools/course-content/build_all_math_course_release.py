@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Build one manifest and six textbook course ZIPs for the junior-high mathematics set."""
+"""Build one file-integrity manifest and six business-only course packages."""
 
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 import shutil
 import zipfile
 
+from course_package import validate_course
 from generate_math_courses import BOOKS, file_sha256
 
 
@@ -18,13 +17,19 @@ def release_url(base_url: str, name: str) -> str:
     return f"{base_url.rstrip('/')}/{name}"
 
 
-def file_spec(path: str, source: Path, url: str, in_full_package: bool) -> dict[str, object]:
+def archive_spec(path: str, source: Path, url: str) -> dict[str, object]:
     return {
         "path": path,
         "url": url,
         "size": source.stat().st_size,
         "sha256": file_sha256(source),
-        "inFullPackage": in_full_package,
+    }
+
+
+def file_spec(path: str, source: Path, url: str, bundled: bool) -> dict[str, object]:
+    return {
+        **archive_spec(path, source, url),
+        "bundled": bundled,
     }
 
 
@@ -33,9 +38,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--pdf-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--textbook-version", type=int, required=True)
-    parser.add_argument("--content-version", type=int, required=True)
-    parser.add_argument("--minimum-app-version", type=int, default=26)
     parser.add_argument("--release-base-url", required=True)
     return parser.parse_args()
 
@@ -53,13 +55,11 @@ def main() -> int:
         pdf = args.pdf_root.resolve() / spec.filename
         if not source.is_file():
             raise SystemExit(f"missing course source: {source}")
-        if not pdf.is_file() or pdf.stat().st_size <= 0:
-            raise SystemExit(f"missing textbook PDF: {pdf}")
-        if file_sha256(pdf) != spec.sha256:
+        if not pdf.is_file() or file_sha256(pdf) != spec.sha256:
             raise SystemExit(f"textbook PDF digest mismatch: {pdf.name}")
         payload = json.loads(source.read_text(encoding="utf-8"))
-        textbook = payload["textbook"]
-        if textbook["id"] != spec.textbook_id:
+        validate_course(payload)
+        if payload["textbook"]["id"] != spec.textbook_id:
             raise SystemExit(f"textbook id mismatch: {source}")
 
         course_name = f"{spec.textbook_id}-course.json"
@@ -73,10 +73,7 @@ def main() -> int:
         pdf_url = f"https://drive.google.com/file/d/{spec.drive_id}/view"
         textbooks.append({
             "id": spec.textbook_id,
-            "title": spec.title,
-            "version": args.textbook_version,
-            "minimumAppVersion": args.minimum_app_version,
-            "fullPackage": file_spec(zip_name, zip_path, release_url(args.release_base_url, zip_name), True),
+            "package": archive_spec(zip_name, zip_path, release_url(args.release_base_url, zip_name)),
             "files": [
                 file_spec("course.json", course_output, release_url(args.release_base_url, course_name), True),
                 {
@@ -84,19 +81,15 @@ def main() -> int:
                     "url": pdf_url,
                     "size": pdf.stat().st_size,
                     "sha256": spec.sha256,
-                    "inFullPackage": False,
+                    "bundled": False,
                 },
             ],
-            "deletedFiles": [],
         })
 
-    manifest = {
-        "schemaVersion": 1,
-        "contentVersion": args.content_version,
-        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "textbooks": textbooks,
-    }
-    (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (output / "manifest.json").write_text(
+        json.dumps({"textbooks": textbooks}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     print(f"built {len(textbooks)} textbooks in {output}")
     return 0
 

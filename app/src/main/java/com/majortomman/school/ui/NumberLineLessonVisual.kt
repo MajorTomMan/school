@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.majortomman.school.learning.course.CourseSceneData
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.round
@@ -60,11 +61,11 @@ private val roadObjects = listOf(
 
 /** School 原创的数轴教学场景，不复刻教材插图。 */
 @Composable
-internal fun NumberLineLessonVisual(params: Map<String, String> = emptyMap()) {
-    when (params["mode"]) {
-        "road" -> RoadScene(signed = params["signed"] == "true")
+internal fun NumberLineLessonVisual(data: CourseSceneData) {
+    when (data.string("mode")) {
+        "road" -> RoadScene(signed = data.boolean("signed"))
         "construction" -> NumberLineConstruction()
-        "value" -> NumberLineValue(initial = params["initial"]?.toFloatOrNull() ?: 6.5f)
+        "value" -> NumberLineValue(initial = data.number("initial", 6.5).toFloat())
         "example" -> FixedPointsScene(readingExercise = false)
         "read_points" -> FixedPointsScene(readingExercise = true)
         else -> AdjustableNumberLine(NumberLineMode.VALUE)

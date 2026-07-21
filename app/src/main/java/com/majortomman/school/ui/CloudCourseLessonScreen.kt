@@ -1,7 +1,6 @@
 package com.majortomman.school.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,8 +42,7 @@ import com.majortomman.school.data.material.InstalledMaterialPack
 import com.majortomman.school.learning.cloud.CloudCourseRepository
 import com.majortomman.school.learning.cloud.CourseSyncManager
 import com.majortomman.school.learning.cloud.CourseSyncResult
-import com.majortomman.school.learning.course.RationalLessonPage
-import com.majortomman.school.learning.course.RationalVisualizationKind
+import com.majortomman.school.learning.course.CoursePage
 import kotlinx.coroutines.launch
 
 @Composable
@@ -156,7 +154,7 @@ private fun CourseDataUnavailableScreen(
 
 @Composable
 private fun CloudCoursePager(
-    pages: List<RationalLessonPage>,
+    pages: List<CoursePage>,
     installedMaterial: InstalledMaterialPack,
     nextLessonTitle: String?,
     onOpenTextbook: (Int) -> Unit,
@@ -203,7 +201,7 @@ private fun CloudCoursePager(
         Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
 
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { index ->
-            CloudCoursePageContent(pages[index], index + 1, pages.size, installedMaterial)
+            CloudCoursePageContent(pages[index], index + 1, pages.size)
         }
 
         Box(Modifier.fillMaxWidth().height(1.dp).background(InteractiveLine))
@@ -239,10 +237,9 @@ private fun CloudCoursePager(
 
 @Composable
 private fun CloudCoursePageContent(
-    page: RationalLessonPage,
+    page: CoursePage,
     pageNumber: Int,
     pageCount: Int,
-    installedMaterial: InstalledMaterialPack,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val compact = maxHeight < 620.dp
@@ -264,33 +261,7 @@ private fun CloudCoursePageContent(
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(14.dp))
-            if (page.blocks.isNotEmpty()) {
-                CloudCourseOrderedBlocks(page, installedMaterial, compact)
-            } else {
-                page.paragraphs.forEachIndexed { index, paragraph ->
-                    Text(
-                        paragraph,
-                        color = InteractiveWhite.copy(alpha = 0.84f),
-                        fontSize = if (compact) 14.sp else 16.sp,
-                        lineHeight = if (compact) 21.sp else 25.sp,
-                    )
-                    if (index != page.paragraphs.lastIndex) Spacer(Modifier.height(7.dp))
-                }
-                if (!page.formula.isNullOrBlank()) {
-                    Spacer(Modifier.height(12.dp))
-                    FormulaProcessVisual(page.formula)
-                }
-                if (page.visualization !in setOf(RationalVisualizationKind.NONE, RationalVisualizationKind.HISTORY)) {
-                    Spacer(Modifier.height(14.dp))
-                    CloudVisualization(page, Modifier.fillMaxWidth().height(if (compact) 220.dp else 280.dp))
-                }
-                page.conclusion?.takeIf(String::isNotBlank)?.let {
-                    Spacer(Modifier.height(16.dp))
-                    Box(Modifier.fillMaxWidth().height(2.dp).background(InteractiveBlue.copy(alpha = 0.68f)))
-                    Spacer(Modifier.height(10.dp))
-                    Text(it, color = InteractiveWhite, fontSize = 16.sp, lineHeight = 24.sp)
-                }
-            }
+            CloudCourseOrderedBlocks(page, compact)
             Spacer(Modifier.height(32.dp))
             Text(
                 "第 $pageNumber 页，共 $pageCount 页",
@@ -300,35 +271,6 @@ private fun CloudCoursePageContent(
                 textAlign = TextAlign.End,
             )
             Spacer(Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun CloudVisualization(page: RationalLessonPage, modifier: Modifier) {
-    Box(
-        modifier = modifier.background(InteractivePanel.copy(alpha = 0.52f)).border(1.dp, InteractiveLine),
-        contentAlignment = Alignment.Center,
-    ) {
-        when (page.visualization) {
-            RationalVisualizationKind.NONE,
-            RationalVisualizationKind.HISTORY,
-            -> Unit
-            RationalVisualizationKind.OPPOSITE_QUANTITIES -> SignedMovementNumberLineVisual()
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION,
-            RationalVisualizationKind.INTEGER_TO_FRACTION,
-            -> IntegerToFractionTextbookVisual()
-            RationalVisualizationKind.NUMBER_LINE -> AdjustableNumberLine(NumberLineMode.VALUE)
-            RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
-            RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
-            RationalVisualizationKind.NUMBER_COMPARISON -> ComparisonVisual()
-            RationalVisualizationKind.ADDITION_PROCESS -> SignedUnitVisual()
-            RationalVisualizationKind.SUBTRACTION_TRANSFORM,
-            RationalVisualizationKind.DIVISION_TRANSFORM,
-            -> FormulaProcessVisual(page.formula)
-            RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
-            RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
-            else -> TextbookMathVisual(page.visualization, emptyMap())
         }
     }
 }

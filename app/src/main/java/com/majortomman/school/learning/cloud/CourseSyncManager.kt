@@ -32,7 +32,7 @@ object CourseSyncManager {
                 val store = CoursePackStore(appContext)
                 val planned = plannedUpdates(manifest, store)
                 if (planned.isEmpty()) {
-                    CourseUpdateCheckResult.NoUpdate(manifest.contentVersion)
+                    CourseUpdateCheckResult.NoUpdate
                 } else {
                     val kind = when {
                         planned.any { it.local == null } -> CourseUpdateKind.INITIAL
@@ -44,7 +44,6 @@ object CourseSyncManager {
                             kind = kind,
                             textbookCount = planned.size,
                             estimatedBytes = planned.sumOf(::estimatedTransferBytes),
-                            contentVersion = manifest.contentVersion,
                         ),
                     )
                 }
@@ -77,7 +76,7 @@ object CourseSyncManager {
                 val planned = plannedUpdates(manifest, store)
                 if (planned.isEmpty()) {
                     onProgress(CourseSyncProgress(0L, 0L, "", "课程已经是最新版本"))
-                    return@runCatching CourseSyncResult.Success(0, manifest.contentVersion)
+                    return@runCatching CourseSyncResult.Success(0)
                 }
 
                 val tracker = ProgressTracker(
@@ -117,7 +116,7 @@ object CourseSyncManager {
 
                 tracker.complete("正在校验并启用课程")
                 if (updatedCount > 0) CloudCourseRepository.markContentChanged()
-                CourseSyncResult.Success(updatedCount, manifest.contentVersion)
+                CourseSyncResult.Success(updatedCount)
             }.getOrElse { error ->
                 Log.e(LOG_TAG, "course sync failed; keep the previous verified cloud cache", error)
                 CourseSyncResult.Failed(error.message ?: error::class.java.simpleName)
@@ -129,13 +128,6 @@ object CourseSyncManager {
         manifest: CourseManifest,
         store: CoursePackStore,
     ): List<PlannedCourseUpdate> = manifest.textbooks.mapNotNull { remote ->
-        if (remote.minimumAppVersion > BuildConfig.VERSION_CODE) {
-            Log.i(
-                LOG_TAG,
-                "skip ${remote.id}: requires app ${remote.minimumAppVersion}, current ${BuildConfig.VERSION_CODE}",
-            )
-            return@mapNotNull null
-        }
         val local = store.readLocalState(remote.id)
         val plan = CourseUpdatePlanner.plan(remote, local)
         plan.takeUnless { it == CourseUpdatePlan.None }?.let {
@@ -154,14 +146,14 @@ object CourseSyncManager {
         local: LocalCourseState?,
     ): Long {
         val externalBytes = remote.files
-            .filterNot(CourseFileSpec::inFullPackage)
+            .filterNot(CourseFileSpec::bundled)
             .filter { file ->
                 local?.files?.get(file.path)?.let { state ->
                     state.size == file.size && state.sha256 == file.sha256
                 } != true
             }
             .sumOf(CourseFileSpec::size)
-        return remote.fullPackage.size + externalBytes
+        return remote.packageFile.size + externalBytes
     }
 
     private fun installFull(
@@ -172,7 +164,7 @@ object CourseSyncManager {
     ) {
         val packageFile = store.temporaryDownloadFile(remote.id, "full")
         try {
-            downloadToFile(context, remote.fullPackage, packageFile, tracker)
+            downloadToFile(context, remote.packageFile, packageFile, tracker)
             store.installFull(remote, packageFile) { file, destination ->
                 downloadToFile(context, file, destination, tracker)
             }
@@ -183,7 +175,7 @@ object CourseSyncManager {
 
     private fun downloadToFile(
         context: Context,
-        spec: CourseFileSpec,
+        spec: CourseDownloadSpec,
         destination: File,
         tracker: ProgressTracker,
     ) {
@@ -368,18 +360,17 @@ data class CourseUpdateOffer(
     val kind: CourseUpdateKind,
     val textbookCount: Int,
     val estimatedBytes: Long,
-    val contentVersion: Long,
 )
 
 sealed interface CourseUpdateCheckResult {
     data object Disabled : CourseUpdateCheckResult
-    data class NoUpdate(val contentVersion: Long) : CourseUpdateCheckResult
+    data object NoUpdate : CourseUpdateCheckResult
     data class Available(val offer: CourseUpdateOffer) : CourseUpdateCheckResult
     data class Failed(val message: String) : CourseUpdateCheckResult
 }
 
 sealed interface CourseSyncResult {
     data object Disabled : CourseSyncResult
-    data class Success(val updatedTextbooks: Int, val contentVersion: Long) : CourseSyncResult
+    data class Success(val updatedTextbooks: Int) : CourseSyncResult
     data class Failed(val message: String) : CourseSyncResult
 }

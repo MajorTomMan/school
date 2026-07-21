@@ -71,7 +71,7 @@ jobs:
               for section in chapter.get('sections', [])
               if section.get('id') == '1.1'
           )
-          assert section.get('manualReview', {}).get('printedPages') == [2, 3, 4, 5, 6]
+          assert set(section) <= {'id', 'number', 'title', 'aliases', 'pages'}
           titles = [page['title'] for page in section['pages']]
           assert len(titles) == 12
           assert all(not title.startswith('教材第') for title in titles)
@@ -80,7 +80,7 @@ jobs:
           print('manual section 1.1 applied:', titles)
           PY
 
-      - name: Validate every source anchor against its textbook
+      - name: Validate textbook wording against every source page
         shell: bash
         run: |
           set -euo pipefail
@@ -110,9 +110,6 @@ jobs:
             --source-root build/generated-course \
             --pdf-root build/course-source \
             --output build/course-release \
-            --textbook-version "${GITHUB_RUN_NUMBER}" \
-            --content-version "${GITHUB_RUN_NUMBER}" \
-            --minimum-app-version 26 \
             --release-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/course-latest"
 
       - name: Validate combined release
@@ -123,21 +120,31 @@ jobs:
           import zipfile
           root = Path('build/course-release')
           manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+          assert set(manifest) == {'textbooks'}
           assert len(manifest['textbooks']) == 6
           ids = {item['id'] for item in manifest['textbooks']}
           expected = {'pep-math-7-1','pep-math-7-2','pep-math-8-1','pep-math-8-2','pep-math-9-1','pep-math-9-2'}
           assert ids == expected
           for textbook in manifest['textbooks']:
+              assert set(textbook) == {'id', 'package', 'files'}
+              assert set(textbook['package']) == {'path', 'url', 'size', 'sha256'}
+              assert all(set(item) == {'path', 'url', 'size', 'sha256', 'bundled'} for item in textbook['files'])
               files = {item['path']: item for item in textbook['files']}
-              assert files['course.json']['inFullPackage'] is True
-              assert files['assets/textbook.pdf']['inFullPackage'] is False
+              assert files['course.json']['bundled'] is True
+              assert files['assets/textbook.pdf']['bundled'] is False
               with zipfile.ZipFile(root / f"{textbook['id']}.zip") as archive:
                   assert archive.namelist() == ['course.json']
               course = json.loads((root / f"{textbook['id']}-course.json").read_text(encoding='utf-8'))
-              assert not any(
-                  block.get('type') == 'source_excerpt'
+              assert set(course) == {'textbook', 'chapters'}
+              assert set(course['textbook']['pdf']) == {'path', 'pageCount', 'pageIndexOffset'}
+              sections = [
+                  section
                   for chapter in course['chapters']
-                  for section in chapter.get('sections', [])
+                  for section in chapter.get('sections', []) + ([chapter['review']] if chapter.get('review') else [])
+              ]
+              assert all(
+                  block.get('type') in {'heading','text','formula','list','example','exercise','conclusion','scene'}
+                  for section in sections
                   for page in section.get('pages', [])
                   for block in page.get('blocks', [])
               )

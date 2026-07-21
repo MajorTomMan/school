@@ -1,58 +1,43 @@
 {
   "id": "1.1",
-  "number": "1.1",
   "title": "1.1 正数和负数",
+  "number": "1.1",
   "aliases": [
     "1.1正数和负数",
     "正数和负数"
   ],
-  "manualReview": {
-    "textbookId": "pep-math-7-1",
-    "printedPages": [
-      2,
-      3,
-      4,
-      5,
-      6
-    ],
-    "method": "逐页人工核对教材正文、例题、练习与阅读材料"
-  },
   "pages": [
     {
       "id": "1.1-why-negative-numbers",
-      "type": "lesson",
       "title": "为什么需要负数",
       "sourcePage": 2,
-      "sourceAnchors": [
-        {
-          "page": 2,
-          "text": "数的产生和发展离不开生活和生产的需要"
-        },
-        {
-          "page": 2,
-          "text": "零上温度和零下温度是以0℃为分界点的具有相反意义的量"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "数的产生和发展离不开生活和生产的需要。人们对于数的认识就是伴随着记数、测量、运算等方面的需求不断拓展的（图1.1-1）。在小学，我们学过自然数、小数和分数，它们都是大于或等于0的数，但是在日常生活和生产实践中，为了表达和运算的需要，还有必要引入一类新的数。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "在本章引言的问题中，温度比0℃高，称为零上温度；温度比0℃低，称为零下温度。零上温度和零下温度是以0℃为分界点的具有相反意义的量。从图1.1-2的天气预报中可以看出，零上3摄氏度用3℃表示，零下3摄氏度则用−3℃表示，这里出现了“−3”。类似地，盈利额和亏损额是具有相反意义的量，如果用50万元表示盈利50万元，就可以用−10万元表示亏损10万元；增长的百分率和减少的百分率是具有相反意义的量，如果用7.8%表示增长7.8%，就可以用−0.7%表示减少0.7%。"
         },
         {
-          "type": "explanation",
+          "type": "text",
+          "style": "explanation",
           "text": "温度、盈亏和增减看起来是不同问题，但它们都有同一个结构：先确定一个基准，再区分两个相反方向。负数就是为了把基准另一侧的量也准确记下来。"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "三个相反量场景",
             "scene": "temperature",
-            "scenes": "temperature,account,change"
+            "scenes": [
+              "temperature",
+              "account",
+              "change"
+            ]
           }
         },
         {
@@ -63,34 +48,26 @@
     },
     {
       "id": "1.1-positive-negative-zero",
-      "type": "lesson",
       "title": "正数、负数与0",
       "sourcePage": 2,
-      "sourceAnchors": [
-        {
-          "page": 2,
-          "text": "像3，50，7.8%这样大于0的数叫作正数"
-        },
-        {
-          "page": 2,
-          "text": "0既不是正数，也不是负数"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "在数学中，像3，50，7.8%这样大于0的数叫作正数，像−3，−10，−0.7%这样在正数前加上符号“−”的数叫作负数，其中符号“−”是负号，读作“负”。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "有时，为了明确表达与负数的相反意义，在正数的前面也加上符号“+”（读作“正”）。例如，+1800，+3，+0.5，+1/3，…就是1800，3，0.5，1/3，…。一个数前面的“+”“−”号叫作这个数的符号。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "0既不是正数，也不是负数。"
         },
         {
-          "type": "summary",
+          "type": "list",
           "items": [
             "大于0的数是正数，正号通常可以省略。",
             "负数是在正数前加负号“−”得到的数。",
@@ -105,30 +82,22 @@
     },
     {
       "id": "1.1-negative-number-history",
-      "type": "lesson",
       "title": "负数的早期使用",
       "sourcePage": 3,
-      "sourceAnchors": [
-        {
-          "page": 3,
-          "text": "我国是历史上最早认识和使用负数的国家"
-        },
-        {
-          "page": 3,
-          "text": "红色为正，黑色为负"
-        }
-      ],
       "blocks": [
         {
-          "type": "historical_note",
+          "type": "text",
+          "style": "history",
           "text": "我国是历史上最早认识和使用负数的国家。至迟成书于东汉早期（约1世纪）的我国古代数学著作《九章算术》，在“方程”一章中提出了正数、负数的概念及其加减运算法则，如关于家畜买卖的第八题，使用“正与负”来表示“卖出与买入”，将卖出家畜获得的钱数记为正，买入家畜付出的钱数记为负。"
         },
         {
-          "type": "historical_note",
+          "type": "text",
+          "style": "history",
           "text": "魏晋时期的数学家刘徽在为《九章算术》作注时，用不同颜色的算筹分别表示正数和负数，红色为正，黑色为负。"
         },
         {
-          "type": "explanation",
+          "type": "text",
+          "style": "explanation",
           "text": "这里的“正”和“负”已经不是抽象符号，而是在同一记账规则下表示两个相反方向：收入与支出。"
         },
         {
@@ -139,26 +108,16 @@
     },
     {
       "id": "1.1-example-standard-mass",
-      "type": "lesson",
       "title": "例1：相对标准质量",
       "sourcePage": 3,
-      "sourceAnchors": [
-        {
-          "page": 3,
-          "text": "一箱橘子的标准质量为2.5kg"
-        },
-        {
-          "page": 3,
-          "text": "比标准质量多65g用+65g表示"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "如果一个问题中出现具有相反意义的量，就可以用正数和负数分别表示它们。"
         },
         {
-          "type": "worked_example",
+          "type": "example",
           "label": "例1",
           "statement": "某校组织学生去劳动实践基地采摘橘子，并称重、封装。一箱橘子的标准质量为2.5 kg。如果用正数表示超过标准质量的克数，那么：（1）比标准质量多65 g和比标准质量少30 g各怎么表示？（2）50 g，−27 g各表示什么意思？",
           "steps": [
@@ -168,12 +127,14 @@
           "result": "标准质量2.5 kg对应偏差0 g；正负数记录的是相对标准多了多少或少了多少。"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "相对标准质量的偏差",
             "scene": "deviation",
-            "scenes": "deviation"
+            "scenes": [
+              "deviation"
+            ]
           }
         },
         {
@@ -184,45 +145,34 @@
     },
     {
       "id": "1.1-practice-opposite-directions",
-      "type": "lesson",
       "title": "练习：表示相反方向",
       "sourcePage": 3,
-      "sourceAnchors": [
-        {
-          "page": 3,
-          "text": "指出下面各数中的正数、负数"
-        },
-        {
-          "page": 3,
-          "text": "如果80m表示向右走80m"
-        }
-      ],
       "blocks": [
         {
           "type": "exercise",
-          "number": "1",
           "stem": "指出下面各数中的正数、负数：4/3，−1，2.5，+1/4，0，−3.14，120，−2/7。",
+          "number": "1",
           "hints": [
             "先和0比较；0既不是正数，也不是负数。"
           ]
         },
         {
           "type": "exercise",
-          "number": "2",
           "stem": "如果80 m表示向右走80 m，那么怎样表示向左走60 m？",
+          "number": "2",
           "hints": [
             "向右与向左是两个相反方向。"
           ]
         },
         {
           "type": "exercise",
-          "number": "3",
-          "stem": "某天，月球表面白天的最高温度为零上126℃，如果把它记作126℃，那么夜间的最低温度零下150℃记作多少摄氏度？"
+          "stem": "某天，月球表面白天的最高温度为零上126℃，如果把它记作126℃，那么夜间的最低温度零下150℃记作多少摄氏度？",
+          "number": "3"
         },
         {
           "type": "exercise",
-          "number": "4",
-          "stem": "在足球比赛中，如果甲队进3个球，记作+3个，那么甲队失2个球，记作什么？"
+          "stem": "在足球比赛中，如果甲队进3个球，记作+3个，那么甲队失2个球，记作什么？",
+          "number": "4"
         },
         {
           "type": "conclusion",
@@ -232,44 +182,39 @@
     },
     {
       "id": "1.1-elevation-and-zero",
-      "type": "lesson",
       "title": "海拔中的正负数",
       "sourcePage": 3,
       "sourcePageEnd": 4,
-      "sourceAnchors": [
-        {
-          "page": 3,
-          "text": "通常以海平面为基准"
-        },
-        {
-          "page": 4,
-          "text": "0是正数与负数的分界"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "把0以外的数分为正数和负数，它们表示具有相反意义的量。随着人们对正数、负数意义认识的加深，正数和负数在实践中得到了广泛应用。例如，在表示某地的高度时，通常以海平面为基准，用0 m表示海平面的海拔，用正数表示高于海平面的海拔，用负数表示低于海平面的海拔。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "我国水准零点位于山东省青岛市（图1.1-3是“中华人民共和国水准零点”标志）；世界最高峰珠穆朗玛峰的海拔为8848.86 m；我国陆地海拔最低处位于新疆吐鲁番盆地的艾丁湖，其海拔为−154.31 m。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "0是正数与负数的分界。0℃是一个确定的温度，海拔0 m是一个确定的海拔。0已不只是表示“没有”。"
         },
         {
-          "type": "explanation",
+          "type": "text",
+          "style": "explanation",
           "text": "海平面不是“什么都没有”，而是一条人为选定的参考面。高于它记正，低于它记负，恰好位于参考面记0。"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "以海平面为基准",
             "scene": "elevation",
-            "scenes": "elevation"
+            "scenes": [
+              "elevation"
+            ]
           }
         },
         {
@@ -280,39 +225,34 @@
     },
     {
       "id": "1.1-real-life-meanings",
-      "type": "lesson",
       "title": "生活中的正负数",
       "sourcePage": 4,
-      "sourceAnchors": [
-        {
-          "page": 4,
-          "text": "图1.1-4是地理中的分层设色地形图"
-        },
-        {
-          "page": 4,
-          "text": "其中的正数和负数的意义分别是什么"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "图1.1-4是地理中的分层设色地形图，图1.1-5是手机中的部分收支款账单，其中的正数和负数的意义分别是什么？你能再举一些用正数、负数表示具有相反意义的量的例子吗？"
         },
         {
-          "type": "explanation",
+          "type": "text",
+          "style": "explanation",
           "text": "看见一个带正负号的数时，不要只读数值。先问三个问题：基准是什么？正方向表示什么？负方向表示什么？"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "切换场景辨认正负含义",
             "scene": "account",
-            "scenes": "account,elevation,change"
+            "scenes": [
+              "account",
+              "elevation",
+              "change"
+            ]
           }
         },
         {
-          "type": "summary",
+          "type": "list",
           "items": [
             "收支账单：收入为正，支出为负。",
             "海拔高度：高于海平面为正，低于海平面为负。",
@@ -323,23 +263,12 @@
     },
     {
       "id": "1.1-example-change-rate",
-      "type": "lesson",
       "title": "例2：变化量与增长率",
       "sourcePage": 4,
       "sourcePageEnd": 5,
-      "sourceAnchors": [
-        {
-          "page": 4,
-          "text": "一个月内，李明体重增加1.2kg"
-        },
-        {
-          "page": 5,
-          "text": "A品牌-2%，B品牌4%"
-        }
-      ],
       "blocks": [
         {
-          "type": "worked_example",
+          "type": "example",
           "label": "例2（1）",
           "statement": "一个月内，李明体重增加1.2 kg，张华体重减少0.5 kg，刘伟体重无变化，写出他们这个月的体重增长值。",
           "steps": [
@@ -350,7 +279,7 @@
           "result": "“增长值”为负，表示实际发生了减少；增长值为0，表示没有变化。"
         },
         {
-          "type": "worked_example",
+          "type": "example",
           "label": "例2（2）",
           "statement": "四种品牌的手机今年第二季度的销售量与第一季度相比，变化率如下：A品牌减少2%，B品牌增长4%，C品牌增长1%，D品牌减少3%。写出今年第二季度这些品牌的手机销售量的增长率。",
           "steps": [
@@ -360,12 +289,14 @@
           "result": "增长率是带方向的变化量，因此减少可以写成负的增长率。"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "增长与减少",
             "scene": "change",
-            "scenes": "change"
+            "scenes": [
+              "change"
+            ]
           }
         },
         {
@@ -376,34 +307,23 @@
     },
     {
       "id": "1.1-practice-water-mass-price",
-      "type": "lesson",
       "title": "练习：用正负数表示",
       "sourcePage": 5,
-      "sourceAnchors": [
-        {
-          "page": 5,
-          "text": "如果水库的水位升高3m时"
-        },
-        {
-          "page": 5,
-          "text": "若规定商品涨价为正"
-        }
-      ],
       "blocks": [
         {
           "type": "exercise",
-          "number": "1",
-          "stem": "如果水库的水位升高3 m时，水位变化记作+3 m，那么水位下降3 m时，水位变化怎样记录？水位不升不降时怎样记录？"
+          "stem": "如果水库的水位升高3 m时，水位变化记作+3 m，那么水位下降3 m时，水位变化怎样记录？水位不升不降时怎样记录？",
+          "number": "1"
         },
         {
           "type": "exercise",
-          "number": "2",
-          "stem": "一袋面粉的标准质量是10 kg，如果比标准质量多0.1 kg记作+0.1 kg，那么−0.1 kg、0 kg、+0.5 kg分别表示什么？"
+          "stem": "一袋面粉的标准质量是10 kg，如果比标准质量多0.1 kg记作+0.1 kg，那么−0.1 kg、0 kg、+0.5 kg分别表示什么？",
+          "number": "2"
         },
         {
           "type": "exercise",
-          "number": "3",
-          "stem": "若规定商品涨价为正，则甲商品涨价10%和乙商品降价5%分别怎样记录？"
+          "stem": "若规定商品涨价为正，则甲商品涨价10%和乙商品降价5%分别怎样记录？",
+          "number": "3"
         },
         {
           "type": "conclusion",
@@ -413,34 +333,23 @@
     },
     {
       "id": "1.1-review",
-      "type": "lesson",
       "title": "复习巩固",
       "sourcePage": 5,
-      "sourceAnchors": [
-        {
-          "page": 5,
-          "text": "指出下面各数中的正数、负数"
-        },
-        {
-          "page": 5,
-          "text": "不是正数的数一定是负数"
-        }
-      ],
       "blocks": [
         {
           "type": "exercise",
-          "number": "1",
-          "stem": "指出下面各数中的正数、负数：5，−5/7，0，0.56，−3，−25.8，12/5，−0.0001，+2，−600。"
+          "stem": "指出下面各数中的正数、负数：5，−5/7，0，0.56，−3，−25.8，12/5，−0.0001，+2，−600。",
+          "number": "1"
         },
         {
           "type": "exercise",
-          "number": "2",
-          "stem": "某年，我国全年平均降水量比上年增加53.5 mm，接下来的第二年比上年减少81.5 mm，第三年比上年增加108.7 mm。用正数和负数表示这三年我国全年平均降水量比上年的增长量。"
+          "stem": "某年，我国全年平均降水量比上年增加53.5 mm，接下来的第二年比上年减少81.5 mm，第三年比上年增加108.7 mm。用正数和负数表示这三年我国全年平均降水量比上年的增长量。",
+          "number": "2"
         },
         {
           "type": "exercise",
-          "number": "3",
           "stem": "“不是正数的数一定是负数，不是负数的数一定是正数”的说法对吗？为什么？",
+          "number": "3",
           "hints": [
             "检查0是否满足这两句话。"
           ]
@@ -453,45 +362,34 @@
     },
     {
       "id": "1.1-comprehensive-applications",
-      "type": "lesson",
       "title": "综合应用",
       "sourcePage": 5,
       "sourcePageEnd": 6,
-      "sourceAnchors": [
-        {
-          "page": 5,
-          "text": "原子核所带电荷为正电荷"
-        },
-        {
-          "page": 6,
-          "text": "如图是一种转盘型密码锁"
-        }
-      ],
       "blocks": [
         {
           "type": "exercise",
-          "number": "4",
-          "stem": "物理学中规定，原子核所带电荷为正电荷，核外电子所带电荷为负电荷。氢原子中的原子核与核外电子各带1个电荷，分别怎样表示？"
+          "stem": "物理学中规定，原子核所带电荷为正电荷，核外电子所带电荷为负电荷。氢原子中的原子核与核外电子各带1个电荷，分别怎样表示？",
+          "number": "4"
         },
         {
           "type": "exercise",
-          "number": "5",
-          "stem": "如果把一个物体向正后方移动5 m记作移动−5 m，那么这个物体又移动了+5 m是什么意思？这时物体距它两次移动前的位置多远？"
+          "stem": "如果把一个物体向正后方移动5 m记作移动−5 m，那么这个物体又移动了+5 m是什么意思？这时物体距它两次移动前的位置多远？",
+          "number": "5"
         },
         {
           "type": "exercise",
-          "number": "6",
-          "stem": "在测量某些量（如长度、质量、时间）时会产生误差，有时采用多次测量求平均值的方法可以减小误差。某班七组同学分别测量同一座楼的高度，测得的数据（单位：m）分别是：79.4，80.6，80.8，79.1，80，79.6，80.5。这些数据的平均值是多少？以平均值为标准，用正数表示超出的部分，用负数表示不足的部分，它们对应的数分别是什么？"
+          "stem": "在测量某些量（如长度、质量、时间）时会产生误差，有时采用多次测量求平均值的方法可以减小误差。某班七组同学分别测量同一座楼的高度，测得的数据（单位：m）分别是：79.4，80.6，80.8，79.1，80，79.6，80.5。这些数据的平均值是多少？以平均值为标准，用正数表示超出的部分，用负数表示不足的部分，它们对应的数分别是什么？",
+          "number": "6"
         },
         {
           "type": "exercise",
-          "number": "7",
-          "stem": "某地一天中午12时的气温是7℃，过5 h气温下降了4℃，再过7 h气温又下降了4℃。第二天0时的气温是多少？"
+          "stem": "某地一天中午12时的气温是7℃，过5 h气温下降了4℃，再过7 h气温又下降了4℃。第二天0时的气温是多少？",
+          "number": "7"
         },
         {
           "type": "exercise",
-          "number": "8",
-          "stem": "如图是一种转盘型密码锁，每次开锁时需要先把表示“0”的刻度线与固定盘上的标记线对齐，再按顺时针或逆时针方向旋转带有刻度的转盘三次。例如，按逆时针方向旋转5个小格记为“+5”，此时标记线对准的数是5，再顺时针旋转2个小格记为“−2”，再逆时针旋转3个小格记为“+3”，锁可以打开，那么开锁密码就可以记为“+5，−2，+3”，此时标记线对准的刻度线表示哪个数？如果一组开锁密码为“−15，+10，−5”，要想打开锁，应如何旋转锁盘？锁打开时标记线对准的刻度线表示哪个数？"
+          "stem": "如图是一种转盘型密码锁，每次开锁时需要先把表示“0”的刻度线与固定盘上的标记线对齐，再按顺时针或逆时针方向旋转带有刻度的转盘三次。例如，按逆时针方向旋转5个小格记为“+5”，此时标记线对准的数是5，再顺时针旋转2个小格记为“−2”，再逆时针旋转3个小格记为“+3”，锁可以打开，那么开锁密码就可以记为“+5，−2，+3”，此时标记线对准的刻度线表示哪个数？如果一组开锁密码为“−15，+10，−5”，要想打开锁，应如何旋转锁盘？锁打开时标记线对准的刻度线表示哪个数？",
+          "number": "8"
         },
         {
           "type": "conclusion",
@@ -501,43 +399,38 @@
     },
     {
       "id": "1.1-tolerance",
-      "type": "lesson",
       "title": "阅读与思考：允许偏差",
       "sourcePage": 6,
-      "sourceAnchors": [
-        {
-          "page": 6,
-          "text": "用正负数表示允许偏差"
-        },
-        {
-          "page": 6,
-          "text": "球的直径是40mm±0.05mm"
-        }
-      ],
       "blocks": [
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "在现代工业生产中，产品的尺寸、质量等都有标准规格。但是，一般在实际加工中，每个产品不可能都做得与标准规格完全一样。通常在某个范围内，只要不影响使用，产品比标准规格稍大或稍小一点，稍轻或稍重一点，都属于合格品，而超出这个范围的产品就是不合格品。"
         },
         {
-          "type": "textbook_text",
+          "type": "text",
+          "style": "textbook",
           "text": "生活中经常能看到用正负数表示允许偏差的情形。某品牌乒乓球的产品参数中标明球的直径是40 mm±0.05 mm，这表示乒乓球的标准直径是40 mm，允许偏差是±0.05 mm。也就是说实际直径最大可以是（40+0.05）mm，最小可以是（40−0.05）mm，直径在这个范围内的乒乓球都是合格的。"
         },
         {
-          "type": "prompt",
+          "type": "text",
+          "style": "prompt",
           "text": "类似地，你能说出图1中2.74 g±0.02 g的含义吗？你还能举出用正负数表示允许偏差的例子吗？"
         },
         {
-          "type": "explanation",
+          "type": "text",
+          "style": "explanation",
           "text": "“±0.05 mm”不是一个测量值，而是以标准值40 mm为中心，向偏大和偏小两个方向各允许0.05 mm。"
         },
         {
-          "type": "visualization",
-          "renderer": "opposite_quantities",
-          "params": {
+          "type": "scene",
+          "template": "opposite_quantities",
+          "data": {
             "title": "标准值与允许范围",
             "scene": "tolerance",
-            "scenes": "tolerance"
+            "scenes": [
+              "tolerance"
+            ]
           }
         },
         {

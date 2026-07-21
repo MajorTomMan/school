@@ -8,7 +8,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
-import org.json.JSONObject
 
 internal class CoursePackStore(context: Context) {
     private val root = File(context.filesDir, "course-packs")
@@ -45,6 +44,7 @@ internal class CoursePackStore(context: Context) {
         val staging = prepareStaging(remote.id)
         try {
             unzip(packageFile, staging)
+            validateBundledFiles(remote, staging)
             materializeRemoteFiles(remote, staging, download)
             validateStaging(remote, staging)
             writeState(remote, staging)
@@ -75,6 +75,20 @@ internal class CoursePackStore(context: Context) {
         } catch (error: Throwable) {
             staging.deleteRecursively()
             throw error
+        }
+    }
+
+
+    private fun validateBundledFiles(remote: CourseTextbookManifest, staging: File) {
+        val expected = remote.files.filter(CourseFileSpec::bundled).map(CourseFileSpec::path).toSet()
+        val actual = staging.walkTopDown()
+            .filter(File::isFile)
+            .map { it.relativeTo(staging).invariantSeparatorsPath }
+            .toSet()
+        require(actual == expected) {
+            val unexpected = (actual - expected).sorted()
+            val missing = (expected - actual).sorted()
+            "课程 ZIP 内容与 bundled 声明不一致：未声明=${unexpected.joinToString()}，缺失=${missing.joinToString()}"
         }
     }
 
@@ -135,33 +149,35 @@ internal class CoursePackStore(context: Context) {
 
     private fun validateStaging(remote: CourseTextbookManifest, staging: File) {
         remote.files.forEach { spec -> verifyFile(safeResolve(staging, spec.path), spec) }
+        val declaredFiles = remote.files.map(CourseFileSpec::path).toSet()
+        val actualFiles = staging.walkTopDown()
+            .filter(File::isFile)
+            .map { it.relativeTo(staging).invariantSeparatorsPath }
+            .filterNot { it in INTERNAL_CACHE_FILES || it.endsWith(".part") }
+            .toSet()
+        require(actualFiles == declaredFiles) {
+            val unexpected = (actualFiles - declaredFiles).sorted()
+            val missing = (declaredFiles - actualFiles).sorted()
+            "课程包文件清单不一致：未声明=${unexpected.joinToString()}，缺失=${missing.joinToString()}"
+        }
+
         val courseFile = File(staging, COURSE_FILE_NAME)
         require(courseFile.isFile) { "课程包缺少 $COURSE_FILE_NAME" }
-        val course = JSONObject(courseFile.readText(Charsets.UTF_8))
-        CloudCourseCodec.validate(course)
-        validatePdfAsset(remote, staging, course)
+        val document = CourseDocumentParser.decode(courseFile.readText(Charsets.UTF_8))
+        require(document.textbook.id == remote.id) {
+            "课程内容教材 ID 与更新清单不一致：${document.textbook.id} != ${remote.id}"
+        }
+        validatePdfAsset(remote, staging, document.textbook.pdf.path, document.textbook.pdf.pageCount)
     }
 
     private fun validatePdfAsset(
         remote: CourseTextbookManifest,
         staging: File,
-        course: JSONObject,
+        path: String,
+        expectedPageCount: Int,
     ) {
-        val textbook = course.getJSONObject("textbook")
-        val pdf = textbook.optJSONObject("pdf")
-            ?: error("课程包缺少 textbook.pdf")
-        val path = validateRelativePath(pdf.getString("path"))
-        require(path.endsWith(".pdf", ignoreCase = true)) { "textbook.pdf.path 必须指向 PDF 文件" }
-        val expectedSha = validateSha256(pdf.getString("sha256"))
-        val expectedPageCount = pdf.getInt("pageCount")
-        require(expectedPageCount > 0) { "textbook.pdf.pageCount 必须大于 0" }
-        require(pdf.optInt("pageIndexOffset", 0) in -10_000..10_000) {
-            "textbook.pdf.pageIndexOffset 超出允许范围"
-        }
-
         val spec = remote.files.firstOrNull { it.path == path }
             ?: error("课程清单未声明教材 PDF：$path")
-        require(spec.sha256 == expectedSha) { "课程文件与教材 PDF 摘要不一致" }
         val file = safeResolve(staging, path)
         verifyFile(file, spec)
         require(file.inputStream().buffered().use { input ->
@@ -173,7 +189,7 @@ internal class CoursePackStore(context: Context) {
             PdfRenderer(descriptor).use { renderer -> renderer.pageCount }
         }
         require(actualPageCount == expectedPageCount) {
-            "教材 PDF 页数不一致：清单 $expectedPageCount，实际 $actualPageCount"
+            "教材 PDF 页数不一致：课程 $expectedPageCount，实际 $actualPageCount"
         }
     }
 
@@ -251,6 +267,7 @@ internal class CoursePackStore(context: Context) {
     companion object {
         private const val COURSE_FILE_NAME = "course.json"
         private const val STATE_FILE_NAME = ".course-state.json"
+        private val INTERNAL_CACHE_FILES = setOf(STATE_FILE_NAME, "generated/lessons.json")
         private const val MAX_UNCOMPRESSED_PACKAGE_BYTES = 2L * 1024L * 1024L * 1024L
 
         fun sha256(file: File): String {

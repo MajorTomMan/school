@@ -30,7 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.majortomman.school.learning.course.RationalVisualizationKind
+import com.majortomman.school.learning.course.CourseSceneData
+import com.majortomman.school.learning.course.CourseSceneTemplate
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -116,10 +117,10 @@ internal fun IntegerToFractionTextbookVisual() {
 
 @Composable
 internal fun TextbookMathVisual(
-    kind: RationalVisualizationKind,
-    params: Map<String, String>,
+    kind: CourseSceneTemplate,
+    data: CourseSceneData,
 ) {
-    val title = params["title"].orEmpty()
+    val title = data.string("title")
     Column(Modifier.fillMaxSize()) {
         if (title.isNotBlank()) {
             Text(
@@ -132,21 +133,21 @@ internal fun TextbookMathVisual(
         }
         Canvas(Modifier.fillMaxWidth().weight(1f)) {
             when (kind) {
-                RationalVisualizationKind.ALGEBRA_PROCESS -> drawAlgebraProcess(params)
-                RationalVisualizationKind.EQUATION_BALANCE -> drawEquationBalance(params)
-                RationalVisualizationKind.ROOT_NUMBER_LINE -> drawRootNumberLine()
-                RationalVisualizationKind.CARTESIAN_PLANE -> drawCartesianPlane(null)
-                RationalVisualizationKind.FUNCTION_GRAPH -> drawCartesianPlane(params["function"] ?: "linear")
-                RationalVisualizationKind.GEOMETRY -> drawGeometry(params["shape"] ?: "triangle")
-                RationalVisualizationKind.TRANSFORMATION -> drawTransformation(params["mode"] ?: "translation")
-                RationalVisualizationKind.RIGHT_TRIANGLE -> drawRightTriangle(params)
-                RationalVisualizationKind.DATA_CHART -> drawDataChart(params["mode"] ?: "bar")
-                RationalVisualizationKind.PROBABILITY -> drawProbabilityTree()
-                RationalVisualizationKind.PROJECTION -> drawProjection()
+                CourseSceneTemplate.ALGEBRA_PROCESS -> drawAlgebraProcess(data)
+                CourseSceneTemplate.EQUATION_BALANCE -> drawEquationBalance(data)
+                CourseSceneTemplate.ROOT_NUMBER_LINE -> drawRootNumberLine()
+                CourseSceneTemplate.CARTESIAN_PLANE -> drawCartesianPlane(null)
+                CourseSceneTemplate.FUNCTION_GRAPH -> drawCartesianPlane(data.string("function", "linear"))
+                CourseSceneTemplate.GEOMETRY -> drawGeometry(data.string("shape", "triangle"))
+                CourseSceneTemplate.TRANSFORMATION -> drawTransformation(data.string("mode", "translation"))
+                CourseSceneTemplate.RIGHT_TRIANGLE -> drawRightTriangle(data)
+                CourseSceneTemplate.DATA_CHART -> drawDataChart(data.string("mode", "bar"))
+                CourseSceneTemplate.PROBABILITY -> drawProbabilityTree()
+                CourseSceneTemplate.PROJECTION -> drawProjection()
                 else -> Unit
             }
         }
-        params["note"]?.takeIf(String::isNotBlank)?.let {
+        data.string("note").takeIf(String::isNotBlank)?.let {
             Text(
                 it,
                 color = InteractiveMuted,
@@ -159,15 +160,15 @@ internal fun TextbookMathVisual(
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAlgebraProcess(params: Map<String, String>) {
-    val left = params["left"] ?: "3x + 2x"
-    val right = params["right"] ?: "5x"
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAlgebraProcess(data: CourseSceneData) {
+    val left = data.string("left", "3x + 2x")
+    val right = data.string("right", "5x")
     drawCenteredText(left, size.width * 0.25f, size.height * 0.48f, InteractiveWhite, 38f)
     drawArrow(size.width * 0.42f, size.height * 0.48f, size.width * 0.58f, size.height * 0.48f, InteractiveBlue)
     drawCenteredText(right, size.width * 0.76f, size.height * 0.48f, InteractiveYellow, 42f)
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEquationBalance(params: Map<String, String>) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEquationBalance(data: CourseSceneData) {
     val centerX = size.width / 2
     val beamY = size.height * 0.38f
     drawLine(InteractiveWhite, Offset(size.width * .18f, beamY), Offset(size.width * .82f, beamY), 4f, StrokeCap.Round)
@@ -181,8 +182,8 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawEquationBalance
     drawPath(base, InteractiveMuted.copy(alpha = .5f), style = Stroke(3f))
     drawLine(InteractiveBlue, Offset(size.width * .25f, beamY), Offset(size.width * .25f, beamY + 62f), 2f)
     drawLine(InteractiveYellow, Offset(size.width * .75f, beamY), Offset(size.width * .75f, beamY + 62f), 2f)
-    drawCenteredText(params["left"] ?: "x + 3", size.width * .25f, beamY + 92f, InteractiveBlue, 30f)
-    drawCenteredText(params["right"] ?: "7", size.width * .75f, beamY + 92f, InteractiveYellow, 30f)
+    drawCenteredText(data.string("left", "x + 3"), size.width * .25f, beamY + 92f, InteractiveBlue, 30f)
+    drawCenteredText(data.string("right", "7"), size.width * .75f, beamY + 92f, InteractiveYellow, 30f)
     drawCenteredText("等式两边进行相同的运算，等式仍成立", centerX, size.height * .94f, InteractiveMuted, 21f)
 }
 
@@ -289,7 +290,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTransformation(
     original.zip(transformed).forEach { (a, b) -> drawLine(InteractiveMuted.copy(alpha = .4f), a, b, 2f) }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRightTriangle(params: Map<String, String>) {
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRightTriangle(data: CourseSceneData) {
     val a = Offset(size.width * .2f, size.height * .78f)
     val b = Offset(size.width * .78f, size.height * .78f)
     val c = Offset(size.width * .2f, size.height * .2f)
@@ -298,7 +299,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRightTriangle(p
     drawLine(InteractiveYellow, c, b, 4f)
     drawLine(InteractiveMuted, Offset(a.x + 20f, a.y), Offset(a.x + 20f, a.y - 20f), 2f)
     drawLine(InteractiveMuted, Offset(a.x, a.y - 20f), Offset(a.x + 20f, a.y - 20f), 2f)
-    drawCenteredText(params["formula"] ?: "a² + b² = c²", size.width * .55f, size.height * .15f, InteractiveYellow, 28f)
+    drawCenteredText(data.string("formula", "a² + b² = c²"), size.width * .55f, size.height * .15f, InteractiveYellow, 28f)
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDataChart(mode: String) {
