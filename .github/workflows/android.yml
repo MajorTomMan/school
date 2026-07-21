@@ -3,6 +3,8 @@ name: Prepare APK release scope
 on:
   push:
     branches: [agent/disable-github-course-release]
+  pull_request:
+    branches: [master]
 
 permissions:
   contents: write
@@ -24,7 +26,9 @@ jobs:
           git show origin/master:.github/workflows/android.yml > "$RUNNER_TEMP/android.yml"
           python3 - <<'PY'
           from pathlib import Path
-          source = Path(__import__('os').environ['RUNNER_TEMP']) / 'android.yml'
+          import os
+
+          source = Path(os.environ['RUNNER_TEMP']) / 'android.yml'
           text = source.read_text(encoding='utf-8')
           old = """on:
             push:
