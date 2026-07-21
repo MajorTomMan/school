@@ -93,13 +93,11 @@ jobs:
           PY
           git diff --check
 
-      - name: Commit final source without migration machinery
+      - name: Commit final source
         shell: bash
         run: |
           set -euo pipefail
           rm -rf .automation
-          rm -f .github/workflows/apply-course-engine-refactor.yml
-          rm -f .github/workflows/export-course-engine-source.yml
           git add -A
           git diff --cached --check
           git config user.name "github-actions[bot]"
