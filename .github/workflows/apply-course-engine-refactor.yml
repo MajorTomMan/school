@@ -91,79 +91,57 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "refactor: rebuild course engine"
 
-      - name: Publish immutable Git objects
-        id: publish
-        continue-on-error: true
+      - name: Upload final file blobs
         shell: bash
         env:
           TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          set -o pipefail
-          python3 - <<'PY' > publish.log 2>&1
+          set -euo pipefail
+          python3 - <<'PY'
           import base64
           import json
           import os
           import subprocess
-          import traceback
-          import urllib.error
           import urllib.request
 
           token = os.environ['TOKEN']
           repository = os.environ['REPOSITORY']
           api = f'https://api.github.com/repos/{repository}'
 
-          def request(method, path, payload=None):
-              data = None if payload is None else json.dumps(payload).encode()
-              req = urllib.request.Request(api + path, data=data, method=method, headers={
-                  'Accept': 'application/vnd.github+json',
-                  'Authorization': f'Bearer {token}',
-                  'X-GitHub-Api-Version': '2022-11-28',
-                  'Content-Type': 'application/json',
-              })
-              try:
-                  with urllib.request.urlopen(req) as response:
-                      return json.load(response)
-              except urllib.error.HTTPError as error:
-                  print(f'HTTP {error.code} {method} {path}')
-                  print(error.read().decode(errors='replace'))
-                  raise
+          def request(path, payload):
+              req = urllib.request.Request(
+                  api + path,
+                  data=json.dumps(payload).encode(),
+                  method='POST',
+                  headers={
+                      'Accept': 'application/vnd.github+json',
+                      'Authorization': f'Bearer {token}',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                      'Content-Type': 'application/json',
+                  },
+              )
+              with urllib.request.urlopen(req) as response:
+                  return json.load(response)
 
-          try:
-              parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
-              parent_commit = request('GET', f'/git/commits/{parent}')
-              modified = subprocess.check_output(['git', 'diff', '--name-only', '--diff-filter=AM', 'HEAD^', 'HEAD'], text=True).splitlines()
-              deleted = subprocess.check_output(['git', 'diff', '--name-only', '--diff-filter=D', 'HEAD^', 'HEAD'], text=True).splitlines()
-              tree = []
-              for path in modified:
-                  raw = open(path, 'rb').read()
-                  blob = request('POST', '/git/blobs', {'content': base64.b64encode(raw).decode(), 'encoding': 'base64'})
-                  mode = subprocess.check_output(['git', 'ls-tree', 'HEAD', '--', path], text=True).split()[0]
-                  tree.append({'path': path, 'mode': mode, 'type': 'blob', 'sha': blob['sha']})
-              for path in deleted:
-                  tree.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
-              new_tree = request('POST', '/git/trees', {'base_tree': parent_commit['tree']['sha'], 'tree': tree})
-              new_commit = request('POST', '/git/commits', {'message': 'refactor: rebuild course engine', 'tree': new_tree['sha'], 'parents': [parent]})
-              open('final-commit-sha.txt', 'w').write(new_commit['sha'] + '\n')
-              print(new_commit['sha'])
-          except Exception:
-              traceback.print_exc()
-              raise
+          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
+          modified = subprocess.check_output(['git', 'diff', '--name-only', '--diff-filter=AM', 'HEAD^', 'HEAD'], text=True).splitlines()
+          deleted = subprocess.check_output(['git', 'diff', '--name-only', '--diff-filter=D', 'HEAD^', 'HEAD'], text=True).splitlines()
+          entries = []
+          for path in modified:
+              raw = open(path, 'rb').read()
+              blob = request('/git/blobs', {'content': base64.b64encode(raw).decode(), 'encoding': 'base64'})
+              mode = subprocess.check_output(['git', 'ls-tree', 'HEAD', '--', path], text=True).split()[0]
+              entries.append({'path': path, 'mode': mode, 'type': 'blob', 'sha': blob['sha']})
+          for path in deleted:
+              entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
+          output = {'parent': parent, 'entries': entries}
+          open('course-engine-tree.json', 'w', encoding='utf-8').write(json.dumps(output, indent=2) + '\n')
+          print(f'prepared {len(entries)} tree entries for parent {parent}')
           PY
-          status=$?
-          cat publish.log
-          exit $status
 
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: course-engine-object-publication
-          path: |
-            final-commit-sha.txt
-            publish.log
-          if-no-files-found: warn
+          name: course-engine-tree
+          path: course-engine-tree.json
           compression-level: 0
-
-      - name: Require published commit
-        if: steps.publish.outcome != 'success'
-        run: exit 1
