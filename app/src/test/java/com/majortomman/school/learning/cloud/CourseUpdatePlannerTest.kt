@@ -72,21 +72,21 @@ class CourseUpdatePlannerTest {
                 "id": "pep-math-7-1",
                 "package": {
                   "path": "pep-math-7-1.zip",
-                  "url": "https://github.com/example.zip",
+                  "url": "https://courses.example.invalid/pep-math-7-1.zip",
                   "size": 100,
                   "sha256": "$SHA_D"
                 },
                 "files": [
                   {
                     "path": "course.json",
-                    "url": "https://github.com/course.json",
+                    "url": "https://courses.example.invalid/course.json",
                     "size": 100,
                     "sha256": "$SHA_A",
                     "bundled": true
                   },
                   {
                     "path": "assets/textbook.pdf",
-                    "url": "https://drive.google.com/file/d/example/view",
+                    "url": "https://courses.example.invalid/textbook.pdf",
                     "size": 700,
                     "sha256": "$SHA_B",
                     "bundled": false
@@ -99,7 +99,6 @@ class CourseUpdatePlannerTest {
 
         assertFalse(manifest.textbooks.single().files.last().bundled)
     }
-
 
     @Test
     fun duplicatedBusinessMetadataAndArchiveOnlyFieldsAreRejected() {
@@ -119,20 +118,19 @@ class CourseUpdatePlannerTest {
         }
     }
 
-
     private fun validManifest(): String = """
         {
           "textbooks": [{
             "id": "pep-math-7-1",
             "package": {
               "path": "pep-math-7-1.zip",
-              "url": "https://github.com/example.zip",
+              "url": "https://courses.example.invalid/pep-math-7-1.zip",
               "size": 100,
               "sha256": "$SHA_D"
             },
             "files": [{
               "path": "course.json",
-              "url": "https://github.com/course.json",
+              "url": "https://courses.example.invalid/course.json",
               "size": 100,
               "sha256": "$SHA_A",
               "bundled": true
@@ -148,7 +146,7 @@ class CourseUpdatePlannerTest {
         id = "pep-math-7-1",
         packageFile = CourseArchiveSpec(
             path = "pep-math-7-1.zip",
-            url = "https://example.com/pep-math-7-1.zip",
+            url = "https://courses.example.invalid/pep-math-7-1.zip",
             size = packageSize,
             sha256 = SHA_D,
         ),
@@ -166,7 +164,7 @@ class CourseUpdatePlannerTest {
         bundled: Boolean = true,
     ) = CourseFileSpec(
         path = path,
-        url = "https://example.com/$path",
+        url = "https://courses.example.invalid/$path",
         size = size,
         sha256 = sha,
         bundled = bundled,
