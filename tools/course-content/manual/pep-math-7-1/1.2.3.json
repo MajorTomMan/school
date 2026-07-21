@@ -45,7 +45,7 @@
         },
         {
           "type": "visualization",
-          "renderer": "opposite_number_lesson",
+          "renderer": "opposite_numbers",
           "params": {
             "mode": "mirror",
             "initial": "3"
@@ -88,7 +88,7 @@
         },
         {
           "type": "visualization",
-          "renderer": "opposite_number_lesson",
+          "renderer": "opposite_numbers",
           "params": {
             "mode": "mirror",
             "initial": "1.5"
@@ -130,7 +130,7 @@
         },
         {
           "type": "visualization",
-          "renderer": "opposite_number_lesson",
+          "renderer": "opposite_numbers",
           "params": {
             "mode": "symbol"
           }
@@ -167,7 +167,7 @@
         },
         {
           "type": "visualization",
-          "renderer": "opposite_number_lesson",
+          "renderer": "opposite_numbers",
           "params": {
             "mode": "symbol"
           }
