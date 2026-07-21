@@ -36,7 +36,7 @@ internal fun StageListPage(
     CenterScrollPage {
         Text("学习阶段", color = SelectionWhite, fontSize = 48.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
-        Text("课程、教材和题库由云端课程包统一发布。", color = SelectionMuted, lineHeight = 23.sp)
+        Text("课程、教材和题库由已安装课程包提供。", color = SelectionMuted, lineHeight = 23.sp)
         Spacer(Modifier.height(42.dp))
         EducationStage.entries.forEachIndexed { index, stage ->
             val installedCount = libraryState.installedTextbooks.count { it.slot.stage == stage }
@@ -123,7 +123,7 @@ internal fun GradeListPage(
                         val installed = libraryState.installed(slot)
                         SlotButton(
                             label = volume.labelFor(stage),
-                            status = if (installed != null) "已下载" else "云端未提供",
+                            status = if (installed != null) "已下载" else "尚未安装",
                             color = if (installed != null) SelectionBlue else SelectionWhite.copy(alpha = 0.42f),
                             modifier = Modifier.weight(1f),
                             onClick = { onSelect(slot) },
@@ -188,10 +188,10 @@ internal fun SlotPage(
                 )
             }
         } else {
-            Text("该教材尚未从云端发布或下载。", color = SelectionMuted, fontSize = 18.sp)
+            Text("该教材尚未安装。", color = SelectionMuted, fontSize = 18.sp)
             Spacer(Modifier.height(12.dp))
             Text(
-                "应用启动时会后台检查课程清单；本机不再提供 PDF 选择、目录授权或手动导入。",
+                "配置课程源后，应用可以检查并下载课程包；未配置时仅显示设备上已经安装并通过校验的课程。",
                 color = SelectionWhite.copy(alpha = 0.34f),
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
