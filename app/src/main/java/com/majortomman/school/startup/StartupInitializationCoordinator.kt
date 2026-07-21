@@ -56,7 +56,7 @@ object StartupInitializationCoordinator {
             if (checkCourseUpdatesOnStartup) {
                 checkCourseUpdates(appContext, onCourseUpdateAvailable)
             } else {
-                Log.i(LOG_TAG, "initial course download waits for user confirmation")
+                Log.i(LOG_TAG, "startup course update check skipped")
             }
 
             delay(ANALYTICS_GRACE_MILLIS)
