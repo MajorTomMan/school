@@ -231,26 +231,35 @@ private fun CloudVisualizationBlock(
     page: RationalLessonPage,
     compact: Boolean,
 ) {
-    val height = visualizationHeight(block.kind, compact)
+    val isNumberLineLesson = block.renderer.equals("number_line_lesson", ignoreCase = true)
+    val height = if (isNumberLineLesson) {
+        if (compact) 360.dp else 420.dp
+    } else {
+        visualizationHeight(block.kind, compact)
+    }
     Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
-        when (block.kind) {
-            RationalVisualizationKind.NONE,
-            RationalVisualizationKind.HISTORY,
-            -> Unit
-            RationalVisualizationKind.OPPOSITE_QUANTITIES -> OppositeQuantitiesSceneVisual(block.params)
-            RationalVisualizationKind.RATIONAL_CLASSIFICATION -> RationalConceptFlowVisual(block.params)
-            RationalVisualizationKind.INTEGER_TO_FRACTION -> IntegerToFractionTextbookVisual()
-            RationalVisualizationKind.NUMBER_LINE -> NumberLineLessonVisual(block.params)
-            RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
-            RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
-            RationalVisualizationKind.NUMBER_COMPARISON -> ComparisonVisual()
-            RationalVisualizationKind.ADDITION_PROCESS -> SignedUnitVisual()
-            RationalVisualizationKind.SUBTRACTION_TRANSFORM,
-            RationalVisualizationKind.DIVISION_TRANSFORM,
-            -> FormulaProcessVisual(page.formula)
-            RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
-            RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
-            else -> TextbookMathVisual(block.kind, block.params)
+        if (isNumberLineLesson) {
+            NumberLineLessonVisual(block.params)
+        } else {
+            when (block.kind) {
+                RationalVisualizationKind.NONE,
+                RationalVisualizationKind.HISTORY,
+                -> Unit
+                RationalVisualizationKind.OPPOSITE_QUANTITIES -> OppositeQuantitiesSceneVisual(block.params)
+                RationalVisualizationKind.RATIONAL_CLASSIFICATION -> RationalConceptFlowVisual(block.params)
+                RationalVisualizationKind.INTEGER_TO_FRACTION -> IntegerToFractionTextbookVisual()
+                RationalVisualizationKind.NUMBER_LINE -> NumberLineLessonVisual(block.params)
+                RationalVisualizationKind.OPPOSITE_NUMBERS -> AdjustableNumberLine(NumberLineMode.OPPOSITE)
+                RationalVisualizationKind.ABSOLUTE_VALUE -> AbsoluteValueNumberLineVisual()
+                RationalVisualizationKind.NUMBER_COMPARISON -> ComparisonVisual()
+                RationalVisualizationKind.ADDITION_PROCESS -> SignedUnitVisual()
+                RationalVisualizationKind.SUBTRACTION_TRANSFORM,
+                RationalVisualizationKind.DIVISION_TRANSFORM,
+                -> FormulaProcessVisual(page.formula)
+                RationalVisualizationKind.MULTIPLICATION_SIGN -> SignRuleVisual()
+                RationalVisualizationKind.POWER_PROCESS -> PowerVisual()
+                else -> TextbookMathVisual(block.kind, block.params)
+            }
         }
     }
 }
