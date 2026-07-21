@@ -1,96 +1,168 @@
-name: Scope APK engine PR
+name: Course Release
 
 on:
-  push:
-    branches: [agent/course-engine-rebuild]
   pull_request:
+    paths:
+      - "tools/course-content/**"
+      - ".github/workflows/course-release.yml"
+  push:
     branches: [master]
+    paths:
+      - "tools/course-content/**"
+      - ".github/workflows/course-release.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: course-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  scope:
+  build-course:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          ref: agent/course-engine-rebuild
-          fetch-depth: 0
+          python-version: "3.12"
 
-      - name: Restore course business data and publishing workflow
+      - name: Install PDF validation dependency
+        run: python3 -m pip install --disable-pip-version-check --quiet PyMuPDF
+
+      - name: Download six textbook PDFs
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin master
-          git restore --source=origin/master --staged --worktree \
-            .github/workflows/course-release.yml \
-            tools/course-content
-          rm -f .github/workflows/scope-apk-engine-pr.yml
-          rm -f noop-test*.txt
-          git add -A
-          git diff --cached --check
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: separate APK engine from course publishing"
+          root="build/course-source"
+          mkdir -p "$root"
+          download() {
+            local id="$1" name="$2" size="$3" digest="$4"
+            local target="$root/$name"
+            curl --fail --location --retry 4 --retry-delay 2 \
+              --output "$target" \
+              "https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
+            test "$(stat -c%s "$target")" = "$size"
+            printf '%s  %s\n' "$digest" "$target" | sha256sum --check --strict
+          }
+          download 1zPJIoh7Ora3AOMLXfDll8YbAZ8u1v78N '义务教育教科书·数学七年级上册.pdf' 12915486 11b6f1fbfa46eee4158953ef745ae1e6fbe6b9527a1423d55cbe75729e8210b9
+          download 15pn2jQjlWO6g4SCK5w2ys3SO8aTE-Kjh '义务教育教科书·数学七年级下册.pdf' 29820133 a58d058dd4f6a0855558a90a24640d9cf3ff8430112fb4d1f434bd881f836210
+          download 1spnH7HoU9wSX_J3HqdClU8an4wsWNTB6 '义务教育教科书·数学八年级上册.pdf' 10148104 e21e7094a470f74a5be947e5fa8a9eee57bd6a4deaaaba3dbd09b811590838ed
+          download 1lJJzJupEt6FThZDB6WMH8AI09W2fT20D '义务教育教科书·数学八年级下册.pdf' 20284130 4979e490f518912473519aafc2b7e016aa804741ac7efbaa4156d230d9dc8b3c
+          download 1ArtD3pcWtIeawWPNSAVudUVk1X0hqWKx '义务教育教科书·数学九年级上册.pdf' 9609936 b6d43c0601c07a6a6f68d3be065c863b41529745e739b4496154c90ecbe7140d
+          download 12p2aGGugc_EvrO-Kqb17MHzMAqXvHTBn '义务教育教科书·数学九年级下册.pdf' 11303872 a71d30eb32b0e43737c88ada99a76ae6b5959050dc53c491b5206bae2d31b0ce
 
-      - name: Upload final file blobs
-        shell: bash
-        env:
-          TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
+      - name: Build course skeleton and apply manually reviewed sections
         run: |
-          set -euo pipefail
+          python3 tools/course-content/generate_math_courses.py \
+            --pdf-root build/course-source \
+            --output-root build/generated-course
+          python3 tools/course-content/postprocess_math_courses.py \
+            --source-root build/generated-course
           python3 - <<'PY'
-          import base64
           import json
-          import os
-          import subprocess
-          import urllib.request
-
-          token = os.environ['TOKEN']
-          repository = os.environ['REPOSITORY']
-          api = f'https://api.github.com/repos/{repository}'
-
-          def request(method, path, payload):
-              data = json.dumps(payload).encode()
-              req = urllib.request.Request(api + path, data=data, method=method, headers={
-                  'Accept': 'application/vnd.github+json',
-                  'Authorization': f'Bearer {token}',
-                  'X-GitHub-Api-Version': '2022-11-28',
-                  'Content-Type': 'application/json',
-              })
-              with urllib.request.urlopen(req) as response:
-                  return json.load(response)
-
-          parent = subprocess.check_output(['git', 'rev-parse', 'HEAD^'], text=True).strip()
-          base_tree = subprocess.check_output(['git', 'show', '-s', '--format=%T', 'HEAD^'], text=True).strip()
-          modified = subprocess.check_output(
-              ['git', 'diff', '--name-only', '--diff-filter=AM', 'HEAD^', 'HEAD'], text=True
-          ).splitlines()
-          deleted = subprocess.check_output(
-              ['git', 'diff', '--name-only', '--diff-filter=D', 'HEAD^', 'HEAD'], text=True
-          ).splitlines()
-
-          entries = []
-          for path in modified:
-              raw = open(path, 'rb').read()
-              blob = request('POST', '/git/blobs', {
-                  'content': base64.b64encode(raw).decode(),
-                  'encoding': 'base64',
-              })
-              mode = subprocess.check_output(['git', 'ls-tree', 'HEAD', '--', path], text=True).split()[0]
-              entries.append({'path': path, 'mode': mode, 'type': 'blob', 'sha': blob['sha']})
-          for path in deleted:
-              entries.append({'path': path, 'mode': '100644', 'type': 'blob', 'sha': None})
-
-          with open('apk-engine-scope-tree.json', 'w', encoding='utf-8') as handle:
-              json.dump({'parent': parent, 'baseTree': base_tree, 'entries': entries}, handle, ensure_ascii=False, indent=2)
+          from pathlib import Path
+          course = json.loads(Path('build/generated-course/pep-math-7-1/course.json').read_text(encoding='utf-8'))
+          section = next(
+              section
+              for chapter in course['chapters']
+              for section in chapter.get('sections', [])
+              if section.get('id') == '1.1'
+          )
+          assert section.get('manualReview', {}).get('printedPages') == [2, 3, 4, 5, 6]
+          titles = [page['title'] for page in section['pages']]
+          assert len(titles) == 12
+          assert all(not title.startswith('教材第') for title in titles)
+          assert titles[0] == '为什么需要负数'
+          assert titles[-1] == '阅读与思考：允许偏差'
+          print('manual section 1.1 applied:', titles)
           PY
 
-      - uses: actions/upload-artifact@v4
+      - name: Validate every source anchor against its textbook
+        shell: bash
+        run: |
+          set -euo pipefail
+          validate() {
+            python3 tools/course-content/validate_course_sources.py \
+              --source "build/generated-course/$1/course.json" \
+              --pdf "build/course-source/$2" \
+              --page-index-offset 7 \
+              --expected-page-count "$3"
+          }
+          validate pep-math-7-1 '义务教育教科书·数学七年级上册.pdf' 202
+          validate pep-math-7-2 '义务教育教科书·数学七年级下册.pdf' 202
+          validate pep-math-8-1 '义务教育教科书·数学八年级上册.pdf' 182
+          validate pep-math-8-2 '义务教育教科书·数学八年级下册.pdf' 206
+          validate pep-math-9-1 '义务教育教科书·数学九年级上册.pdf' 163
+          validate pep-math-9-2 '义务教育教科书·数学九年级下册.pdf' 122
+
+      - name: Audit packaged wording and renderer coverage
+        run: |
+          python3 tools/course-content/audit_math_courses.py \
+            --source-root build/generated-course \
+            --pdf-root build/course-source
+
+      - name: Build combined course release
+        run: |
+          python3 tools/course-content/build_all_math_course_release.py \
+            --source-root build/generated-course \
+            --pdf-root build/course-source \
+            --output build/course-release \
+            --textbook-version "${GITHUB_RUN_NUMBER}" \
+            --content-version "${GITHUB_RUN_NUMBER}" \
+            --minimum-app-version 26 \
+            --release-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/course-latest"
+
+      - name: Validate combined release
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import zipfile
+          root = Path('build/course-release')
+          manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+          assert len(manifest['textbooks']) == 6
+          ids = {item['id'] for item in manifest['textbooks']}
+          expected = {'pep-math-7-1','pep-math-7-2','pep-math-8-1','pep-math-8-2','pep-math-9-1','pep-math-9-2'}
+          assert ids == expected
+          for textbook in manifest['textbooks']:
+              files = {item['path']: item for item in textbook['files']}
+              assert files['course.json']['inFullPackage'] is True
+              assert files['assets/textbook.pdf']['inFullPackage'] is False
+              with zipfile.ZipFile(root / f"{textbook['id']}.zip") as archive:
+                  assert archive.namelist() == ['course.json']
+              course = json.loads((root / f"{textbook['id']}-course.json").read_text(encoding='utf-8'))
+              assert not any(
+                  block.get('type') == 'source_excerpt'
+                  for chapter in course['chapters']
+                  for section in chapter.get('sections', [])
+                  for page in section.get('pages', [])
+                  for block in page.get('blocks', [])
+              )
+          print('six-book course release validated')
+          PY
+
+      - name: Upload course diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: apk-engine-scope-tree
-          path: apk-engine-scope-tree.json
-          compression-level: 0
+          name: complete-math-course-release
+          path: build/course-release/
+          if-no-files-found: ignore
+
+      - name: Publish stable course release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view course-latest >/dev/null 2>&1; then
+            gh release create course-latest \
+              --target "${GITHUB_SHA}" \
+              --title "School 初中数学课程包" \
+              --notes "课程按教材逐节人工校对并持续更新；教材 PDF 由课程清单引用，不包含在 Release 中。" \
+              --prerelease
+          fi
+          gh release upload course-latest build/course-release/* --clobber

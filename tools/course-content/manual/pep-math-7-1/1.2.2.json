@@ -1,44 +1,61 @@
 {
   "id": "1.2.2",
-  "title": "1.2.2 数轴",
   "number": "1.2.2",
+  "title": "1.2.2 数轴",
   "aliases": [
     "1.2.2数轴",
     "数轴"
   ],
+  "manualReview": {
+    "textbookId": "pep-math-7-1",
+    "printedPages": [
+      8,
+      9,
+      10,
+      11
+    ],
+    "method": "逐页人工核对教材问题、定义、例题与练习"
+  },
   "pages": [
     {
       "id": "1.2.2-road-relative-position",
+      "type": "lesson",
       "title": "马路旁的相对位置",
       "sourcePage": 8,
       "sourcePageEnd": 9,
+      "sourceAnchors": [
+        {
+          "page": 8,
+          "text": "在小学，我们曾经在有刻度的直线上表示出0和正数"
+        },
+        {
+          "page": 8,
+          "text": "在一条东西向的马路旁，有一个汽车站牌"
+        }
+      ],
       "blocks": [
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "在小学，我们曾经在有刻度的直线上表示出0和正数，并借助这种图形来直观理解和分析问题。下面我们在此基础上直观表示有理数。看下面的问题。"
         },
         {
-          "type": "text",
-          "style": "prompt",
+          "type": "prompt",
           "text": "在一条东西向的马路旁，有一个汽车站牌，汽车站牌东侧3 m和7.5 m处分别有一棵柳树和一根交通标志杆，汽车站牌西侧3 m和4.8 m处分别有一棵槐树和一根电线杆，试画图表示这一情境。"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "画一条直线表示马路，从左到右表示从西到东的方向，在直线上任取一点O表示汽车站牌的位置，规定1个单位长度代表1 m长。于是，在点O右边，与点O距离3个和7.5个单位长度的点B和点C，分别表示柳树和交通标志杆的位置；在点O左边，与点O距离3个和4.8个单位长度的点D和点E，分别表示槐树和电线杆的位置。"
         },
         {
-          "type": "text",
-          "style": "explanation",
+          "type": "explanation",
           "text": "直线先保留了两类信息：物体在站牌的哪一侧，以及它离站牌多远。下一步要把“方向”和“距离”同时压缩进一个数。"
         },
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "road",
-            "signed": false
+            "signed": "false"
           }
         },
         {
@@ -49,30 +66,38 @@
     },
     {
       "id": "1.2.2-signed-relative-position",
+      "type": "lesson",
       "title": "用数表示方向和距离",
       "sourcePage": 9,
+      "sourceAnchors": [
+        {
+          "page": 9,
+          "text": "怎样用数简明地表示柳树、交通标志杆、槐树、电线杆与汽车站牌的相对位置关系"
+        },
+        {
+          "page": 9,
+          "text": "用负数表示点O左边的点，用正数表示点O右边的点"
+        }
+      ],
       "blocks": [
         {
-          "type": "text",
-          "style": "prompt",
+          "type": "prompt",
           "text": "怎样用数简明地表示柳树、交通标志杆、槐树、电线杆与汽车站牌的相对位置关系（方向、距离）？"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "在上面的问题中，“东”与“西”、“左”与“右”都具有相反意义。在一条直线上任取一点O为基准点，规定1个单位长度代表1 m长，再用0表示点O，用负数表示点O左边的点，用正数表示点O右边的点。这样，我们就用负数、0、正数表示出了这条直线上的点。"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "用上述方法，我们就可以把柳树、交通标志杆、槐树、电线杆与汽车站牌的相对位置关系表示出来了。例如，3表示位于汽车站牌东侧3 m处的柳树的位置，−4.8表示位于汽车站牌西侧4.8 m处的电线杆的位置，等等。"
         },
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "road",
-            "signed": true
+            "signed": "true"
           }
         },
         {
@@ -83,22 +108,31 @@
     },
     {
       "id": "1.2.2-three-elements",
+      "type": "lesson",
       "title": "数轴的三个要素",
       "sourcePage": 9,
       "sourcePageEnd": 10,
+      "sourceAnchors": [
+        {
+          "page": 9,
+          "text": "在数学中，可以用一条直线上的点表示数，它满足以下三个条件"
+        },
+        {
+          "page": 10,
+          "text": "选取适当的长度为单位长度"
+        }
+      ],
       "blocks": [
         {
-          "type": "text",
-          "style": "prompt",
+          "type": "prompt",
           "text": "温度计也可以看作表示正数、0和负数的直线。它与表示马路相对位置的直线有什么共同点？"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "在数学中，可以用一条直线上的点表示数，它满足以下三个条件："
         },
         {
-          "type": "list",
+          "type": "summary",
           "items": [
             "在直线上任取一个点表示数0，这个点叫作原点（origin）。",
             "通常规定直线上从原点向右（或上）为正方向，从原点向左（或下）为负方向。",
@@ -106,9 +140,9 @@
           ]
         },
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "construction"
           }
         },
@@ -120,35 +154,42 @@
     },
     {
       "id": "1.2.2-axis-and-rational-points",
+      "type": "lesson",
       "title": "数轴与正负半轴",
       "sourcePage": 10,
+      "sourceAnchors": [
+        {
+          "page": 10,
+          "text": "规定了原点、正方向和单位长度的直线叫作数轴"
+        },
+        {
+          "page": 10,
+          "text": "有理数可以用数轴上的点表示"
+        }
+      ],
       "blocks": [
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "规定了原点、正方向和单位长度的直线叫作数轴（number axis）。原点将数轴（原点除外）分成两部分，其中正方向一侧的部分叫作数轴的正半轴；另一侧的部分叫作数轴的负半轴。"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "有理数可以用数轴上的点表示。例如，在数轴的正半轴上，距离原点6.5个单位长度的点表示数6.5；在数轴的负半轴上，距离原点3/2个单位长度的点表示数−3/2。"
         },
         {
-          "type": "text",
-          "style": "textbook",
+          "type": "textbook_text",
           "text": "一般地，设a是一个正数，则数轴上表示数a的点在数轴的正半轴上，与原点的距离是a个单位长度；表示数−a的点在数轴的负半轴上，与原点的距离是a个单位长度。"
         },
         {
-          "type": "text",
-          "style": "explanation",
+          "type": "explanation",
           "text": "拖动数轴上的点，观察符号、所在半轴和到原点的距离如何同步变化。"
         },
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "value",
-            "initial": 6.5
+            "initial": "6.5"
           }
         },
         {
@@ -159,11 +200,22 @@
     },
     {
       "id": "1.2.2-example-plot-numbers",
+      "type": "lesson",
       "title": "例2：在数轴上表示有理数",
       "sourcePage": 10,
+      "sourceAnchors": [
+        {
+          "page": 10,
+          "text": "画出数轴，并在数轴上表示下列各数"
+        },
+        {
+          "page": 10,
+          "text": "例2 画出数轴，并在数轴上表示下列各数"
+        }
+      ],
       "blocks": [
         {
-          "type": "example",
+          "type": "worked_example",
           "label": "例2",
           "statement": "画出数轴，并在数轴上表示下列各数：3，−4，4，0.5，0，−5/2，−1。",
           "steps": [
@@ -173,9 +225,9 @@
           "result": "先把数转换成便于定位的形式，再根据正负方向和到原点的距离描点。"
         },
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "example"
           }
         },
@@ -187,35 +239,46 @@
     },
     {
       "id": "1.2.2-practice-read-plot-move",
+      "type": "lesson",
       "title": "练习：读数、描点与移动",
       "sourcePage": 11,
+      "sourceAnchors": [
+        {
+          "page": 11,
+          "text": "写出数轴上点A，B，C，D，E表示的数"
+        },
+        {
+          "page": 11,
+          "text": "从点A出发，沿数轴向某一方向移动4个单位长度"
+        }
+      ],
       "blocks": [
         {
-          "type": "scene",
-          "template": "number_line",
-          "data": {
+          "type": "visualization",
+          "renderer": "number_line_lesson",
+          "params": {
             "mode": "read_points"
           }
         },
         {
           "type": "exercise",
-          "stem": "观察上面的数轴，写出点A、B、C、D、E表示的数。",
-          "number": "1"
+          "number": "1",
+          "stem": "观察上面的数轴，写出点A、B、C、D、E表示的数。"
         },
         {
           "type": "exercise",
-          "stem": "画出数轴，并在数轴上表示下列有理数：−5，3.5，−7/2，−1/2，3/2，5，9/2。",
-          "number": "2"
+          "number": "2",
+          "stem": "画出数轴，并在数轴上表示下列有理数：−5，3.5，−7/2，−1/2，3/2，5，9/2。"
         },
         {
           "type": "exercise",
-          "stem": "在数轴上，表示−2与4的点之间（包括这两个点）有多少个点表示的数是整数？它们表示的数分别是什么？其中负整数有几个？",
-          "number": "3"
+          "number": "3",
+          "stem": "在数轴上，表示−2与4的点之间（包括这两个点）有多少个点表示的数是整数？它们表示的数分别是什么？其中负整数有几个？"
         },
         {
           "type": "exercise",
-          "stem": "在数轴上，点A表示的数是−3，从点A出发，沿数轴向某一方向移动4个单位长度到达点B，则点B表示的数是多少？",
           "number": "4",
+          "stem": "在数轴上，点A表示的数是−3，从点A出发，沿数轴向某一方向移动4个单位长度到达点B，则点B表示的数是多少？",
           "hints": [
             "“某一方向”可能是向右，也可能是向左，因此要分别考虑。"
           ]

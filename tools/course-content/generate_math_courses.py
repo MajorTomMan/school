@@ -179,17 +179,18 @@ def block_to_course(raw: dict[str, Any], printed: int) -> list[dict[str, Any]]:
             "fallbackText": text,
             "altText": "教材原式与图示",
         }]
-    style = "textbook"
+    role = "textbook_text"
     if EXAMPLE_RE.match(text):
+        # Keep textbook wording intact while making its instructional stage visible.
         stage = EXAMPLE_RE.match(text).group(1)
         return [{"type": "heading", "text": stage}] + [
-            {"type": "text", "style": "textbook", "text": part} for part in split_long_text(text)
+            {"type": "textbook_text", "text": part} for part in split_long_text(text)
         ]
     if CAPTION_RE.match(text):
-        style = "caption"
+        role = "caption"
     elif text.endswith("?") or text.endswith("？"):
-        style = "prompt"
-    return [{"type": "text", "style": style, "text": part} for part in split_long_text(text)]
+        role = "prompt"
+    return [{"type": role, "text": part} for part in split_long_text(text)]
 
 
 def visual_for(title: str) -> tuple[str, dict[str, str]] | None:
@@ -329,39 +330,47 @@ def manual_rational_pages() -> list[dict[str, Any]]:
     return [
         {
             "id": "1.2.1-p07-a",
-                        "title": "整数和分数",
+            "type": "lesson",
+            "title": "整数和分数",
             "sourcePage": 7,
+            "sourceAnchors": [{"page": 7, "text": "正整数、0、负整数统称为整数"}],
             "blocks": [
-                {"type": "text", "style": "textbook", "text": "在小学阶段和上一节中，我们认识了很多数。回想一下，到目前为止，我们认识了哪些数？"},
-                {"type": "text", "style": "textbook", "text": "我们学习过正整数，如1，2，3，…；0；负整数，如−1，−2，−3，…。正整数、0、负整数统称为整数。"},
+                {"type": "textbook_text", "text": "在小学阶段和上一节中，我们认识了很多数。回想一下，到目前为止，我们认识了哪些数？"},
+                {"type": "textbook_text", "text": "我们学习过正整数，如1，2，3，…；0；负整数，如−1，−2，−3，…。正整数、0、负整数统称为整数。"},
                 {"type": "source_excerpt", "sourcePage": 7, "bbox": [86.0, 327.0, 482.0, 493.0], "fallbackText": "正分数、负分数以及有限小数、无限循环小数的教材示例。", "altText": "教材中的分数与小数示例"},
-                {"type": "text", "style": "textbook", "text": "事实上，有限小数和无限循环小数都可以化为分数，因此它们也可以看成分数。"},
+                {"type": "textbook_text", "text": "事实上，有限小数和无限循环小数都可以化为分数，因此它们也可以看成分数。"},
             ],
         },
         {
             "id": "1.2.1-p07-b",
-                        "title": "整数写成分数形式",
+            "type": "lesson",
+            "title": "整数写成分数形式",
             "sourcePage": 7,
+            "sourceAnchors": [{"page": 7, "text": "这样，整数可以写成分数的形式"}],
             "blocks": [
-                {"type": "text", "style": "textbook", "text": "进一步地，正整数可以写成正分数的形式，例如2=2/1；负整数可以写成负分数的形式，例如−3=−3/1；0也可以写成分数的形式0/1。这样，整数可以写成分数的形式。"},
-                {"type": "scene", "template": "integer_to_fraction", "data": {"title": "整数写成分数形式"}},
+                {"type": "textbook_text", "text": "进一步地，正整数可以写成正分数的形式，例如2=2/1；负整数可以写成负分数的形式，例如−3=−3/1；0也可以写成分数的形式0/1。这样，整数可以写成分数的形式。"},
+                {"type": "visualization", "renderer": "integer_to_fraction", "params": {"title": "整数写成分数形式"}},
             ],
         },
         {
             "id": "1.2.1-p07-c",
-                        "title": "有理数的概念",
+            "type": "lesson",
+            "title": "有理数的概念",
             "aliases": ["有理数概念"],
             "sourcePage": 7,
+            "sourceAnchors": [{"page": 7, "text": "可以写成分数形式的数称为有理数"}],
             "blocks": [
-                {"type": "text", "style": "textbook", "text": "可以写成分数形式的数称为有理数（rational number）。其中，可以写成正分数形式的数为正有理数，可以写成负分数形式的数为负有理数。"},
-                {"type": "text", "style": "textbook", "text": "这样，引入负数后，我们对数的认识就扩大到了有理数范围。"},
+                {"type": "textbook_text", "text": "可以写成分数形式的数称为有理数（rational number）。其中，可以写成正分数形式的数为正有理数，可以写成负分数形式的数为负有理数。"},
+                {"type": "textbook_text", "text": "这样，引入负数后，我们对数的认识就扩大到了有理数范围。"},
             ],
         },
         {
             "id": "1.2.1-p07-d",
-                        "title": "例1 辨认有理数",
+            "type": "lesson",
+            "title": "例1 辨认有理数",
             "sourcePage": 7,
             "sourcePageEnd": 8,
+            "sourceAnchors": [{"page": 7, "text": "指出下列各数中的正有理数、负有理数"}, {"page": 8, "text": "其中正整数有13，20"}],
             "blocks": [
                 {"type": "heading", "text": "例1"},
                 {"type": "source_excerpt", "sourcePage": 7, "bbox": [62.0, 573.0, 486.0, 681.0], "fallbackText": "指出下列各数中的正有理数、负有理数，并分别指出其中的正整数、负整数。", "altText": "教材例1题目"},
@@ -387,9 +396,7 @@ def generate_book(spec: BookSpec, pdf_root: Path, output_root: Path) -> dict[str
             chapter_id = f"chapter-{chapter_index:02d}"
             sections: list[dict[str, Any]] = []
             for section_index, section in enumerate(chapter["sections"], 1):
-                section_number_match = re.match(r"\*?\d+(?:\.\d+)*", section["title"])
-                section_number = section_number_match.group(0) if section_number_match else ""
-                section_id = section_number or f"{chapter_id}-section-{section_index:02d}"
+                section_id = re.sub(r"[^0-9A-Za-z._-]+", "-", section["title"]).strip("-") or f"section-{section_index:02d}"
                 pages: list[dict[str, Any]] = []
                 if spec.textbook_id == "pep-math-7-1" and "有理数的概念" in section["title"]:
                     pages.extend(manual_rational_pages())
@@ -414,18 +421,20 @@ def generate_book(spec: BookSpec, pdf_root: Path, output_root: Path) -> dict[str
                         for raw in group:
                             course_blocks.extend(block_to_course(raw, printed))
                         if visual and not visual_added:
-                            course_blocks.append({"type": "scene", "template": visual[0], "data": visual[1]})
+                            course_blocks.append({"type": "visualization", "renderer": visual[0], "params": visual[1]})
                             visual_added = True
                         pages.append({
                             "id": f"{spec.textbook_id}-{chapter_index:02d}-{section_index:02d}-p{printed:03d}-{part_index + 1}",
+                            "type": "lesson",
                             "title": page_title(section["title"], printed, group, part_index, len(groups)),
                             "sourcePage": printed,
+                            "sourceAnchors": source_anchor_for(group, printed, raw_blocks),
                             "blocks": course_blocks,
                         })
                 if pages:
                     sections.append({
                         "id": section_id,
-                        "number": section_number,
+                        "number": re.match(r"\*?\d+(?:\.\d+)*", section["title"]).group(0) if re.match(r"\*?\d+(?:\.\d+)*", section["title"]) else "",
                         "title": section["title"],
                         "aliases": [section["title"].replace(" ", "")],
                         "pages": pages,
@@ -438,6 +447,7 @@ def generate_book(spec: BookSpec, pdf_root: Path, output_root: Path) -> dict[str
                 "sections": sections,
             })
         payload = {
+            "schemaVersion": 1,
             "textbook": {
                 "id": spec.textbook_id,
                 "title": spec.title,
@@ -448,6 +458,9 @@ def generate_book(spec: BookSpec, pdf_root: Path, output_root: Path) -> dict[str
                 "subject": "数学",
                 "pdf": {
                     "path": "assets/textbook.pdf",
+                    "url": f"https://drive.google.com/file/d/{spec.drive_id}/view",
+                    "size": pdf_path.stat().st_size,
+                    "sha256": spec.sha256,
                     "pageCount": spec.page_count,
                     "pageIndexOffset": spec.page_index_offset,
                 },
